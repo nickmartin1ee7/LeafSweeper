@@ -106,8 +106,11 @@ jobs:
           curl -fsSLo godot.zip \
             "https://github.com/godotengine/godot-builds/releases/download/${GODOT_RELEASE}/Godot_v${GODOT_RELEASE}_mono_linux_x86_64.zip"
           unzip -q godot.zip
+          # NB: the binary inside uses a dot before the arch (…_linux.x86_64),
+          # unlike the folder name (…_linux_x86_64).
+          sudo rm -rf /opt/godot
           sudo mv Godot_v${GODOT_RELEASE}_mono_linux_x86_64 /opt/godot
-          sudo ln -sf /opt/godot/Godot_v${GODOT_RELEASE}_mono_linux_x86_64 /usr/local/bin/godot
+          sudo ln -sf /opt/godot/Godot_v${GODOT_RELEASE}_mono_linux.x86_64 /usr/local/bin/godot
           if [ ! -d ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable.mono ]; then
             curl -fsSLo templates.tpz \
               "https://github.com/godotengine/godot-builds/releases/download/${GODOT_RELEASE}/Godot_v${GODOT_RELEASE}_mono_export_templates.tpz"
