@@ -74,6 +74,8 @@ public sealed class Sweeper
 
     public void Begin(Vector2 worldPos, ulong ticks)
     {
+        if (_dragging)
+            return; // a second simultaneous touch must not reset the in-flight gesture
         _dragging = true;
         _lastPos = worldPos;
         _lastTicks = ticks;
