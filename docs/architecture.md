@@ -37,7 +37,7 @@ Main (Node2D, scripts/Main.cs)
 |--------|----------------|
 | `scripts/Main.cs` | Controller: builds tree, state machine, level setup/teardown, input routing, win flow, debris spawn layout, petal sparkle. Also hosts the `LEAF_AUTOPLAY=1` headless self-test. |
 | `scripts/Sweeper.cs` | Input-to-interaction: converts touch stream into flings. Uses a **segment-vs-circle sweep test** (sweep radius 55 + 30 margin) between successive touch positions so fast swipes can't tunnel over debris, and enforces a **per-swipe cap** of 4 cleared debris (`MaxDebrisPerSwipe`). Emits `onSwipeCompleted` per finished touch. |
-| `scripts/Debris.cs` | One debris item: weight class (Light/Medium/Heavy → fling factor 1.0/0.78/0.55, friction 2.2/3.0/4.2), `Fling(velocity, rng)`, per-frame slide+spin+fade, `QueueFree` when faded. |
+| `scripts/Debris.cs` | One debris item: weight class (Light/Medium/Heavy → fling factor 0.65/0.5/0.35, friction 3.4/2.3/1.5, fade-delay scale 1.0/1.35/1.7 — heavier pieces launch slower but glide farther and linger before fading), `Fling(velocity, rng)`, per-frame slide+spin+fade, `QueueFree` when faded. |
 | `scripts/Bug.cs` | Bug display: `Setup(type, scale, camouflage)` tints toward leaf color, `ContainsPoint(world)` uses the type's tap radius × scale, `Celebrate()` tween pulse. |
 | `scripts/BugTypes.cs` | Static catalog of 8 bug types (texture path, display name, relative size, tap radius) with `Random()`/`ById()`. |
 | `scripts/RoundConfig.cs` | Difficulty curves saturating at level 200: `Coverage` (debris density as floor-area fraction), `BugScale`, `Camouflage`. Pure functions — easy to tune. |

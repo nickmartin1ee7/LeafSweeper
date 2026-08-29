@@ -23,7 +23,9 @@ Title menu → Play → Round (sweep debris, find bug) → Tap bug
    flung with velocity + spin, slides with friction, fades and is removed.
    A single swipe clears **at most 4 pieces of debris** — sweeps stay
    deliberate rather than screen-wiping.
-   Weight matters: rocks/sticks/moss resist; leaves and petals fly easily.
+   Weight matters: rocks/sticks/moss resist; leaves and petals fly easily —
+   but heavier pieces glide farther and fade later, so their long slide
+   reads as weight rather than the debris dying where it was swept.
 3. Finding the bug and **tapping it** wins the round: petal sparkles, a
    celebration pulse, and the win overlay with a friendly comment and the
    round's stats (time, swipes).

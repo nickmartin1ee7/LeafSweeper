@@ -12,12 +12,19 @@ public enum DebrisWeight
 /// <summary>
 /// One piece of ground clutter. Swept debris gets a velocity + spin,
 /// slides with exponential friction, fades out and frees itself.
+/// Heavier pieces launch slower but glide farther and linger longer
+/// before fading, so their slide reads as weight.
 /// Lightweight custom movement: no physics engine.
 /// </summary>
 public partial class Debris : Node2D
 {
     private static readonly float[] FlingFactor = { 0.65f, 0.5f, 0.35f };
-    private static readonly float[] Friction = { 3.2f, 4.2f, 5.5f };
+    // Friction drops with weight: total slide distance ≈ v0/friction, so
+    // sticks and rocks glide out of the swept patch while leaves flick
+    // away and vanish almost where they land.
+    private static readonly float[] Friction = { 3.4f, 2.3f, 1.5f };
+    // Heavier debris lingers before fading so its longer slide is visible.
+    private static readonly float[] FadeDelayScale = { 1.0f, 1.35f, 1.7f };
 
     private Sprite2D _sprite = null!;
     private Vector2 _velocity;
@@ -59,7 +66,7 @@ public partial class Debris : Node2D
 
         _velocity = dir * fling;
         _angularVel = rng.RandfRange(-7f, 7f) * Mathf.Clamp(fling / 400f, 0.3f, 1.6f);
-        _fadeDelay = rng.RandfRange(0.35f, 0.6f);
+        _fadeDelay = rng.RandfRange(0.35f, 0.6f) * FadeDelayScale[w];
     }
 
     public override void _Process(double delta)
