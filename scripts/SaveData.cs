@@ -33,6 +33,9 @@ public sealed class SaveData
     public Dictionary<string, int> BugFindCounts { get; } = new();
     public List<LevelResult> History { get; } = new();
 
+    private static Variant Get(Godot.Collections.Dictionary d, string key, Variant fallback) =>
+        d.TryGetValue(key, out Variant v) ? v : fallback;
+
     public static SaveData Load()
     {
         var data = new SaveData();
@@ -48,26 +51,26 @@ public sealed class SaveData
                 return data;
             var root = parsed.AsGodotDictionary();
 
-            data.CurrentLevel = root.Get("currentLevel", 1).AsInt32();
-            data.LevelsCleared = root.Get("levelsCleared", 0).AsInt32();
-            data.TotalSwipes = root.Get("totalSwipes", 0).AsInt32();
-            data.TotalSeconds = root.Get("totalSeconds", 0).AsInt32();
+            data.CurrentLevel = Get(root, "currentLevel", 1).AsInt32();
+            data.LevelsCleared = Get(root, "levelsCleared", 0).AsInt32();
+            data.TotalSwipes = Get(root, "totalSwipes", 0).AsInt32();
+            data.TotalSeconds = Get(root, "totalSeconds", 0).AsInt32();
 
-            if (root.Get("bugFindCounts", default).AsGodotDictionary() is { } finds)
-                foreach (var (k, v) in finds)
-                    data.BugFindCounts[k.AsString()] = v.AsInt32();
+            if (Get(root, "bugFindCounts", default).AsGodotDictionary() is { } finds)
+                foreach (var kv in finds)
+                    data.BugFindCounts[kv.Key.AsString()] = kv.Value.AsInt32();
 
-            if (root.Get("history", default).AsGodotArray() is { } history)
+            if (Get(root, "history", default).AsGodotArray() is { } history)
                 foreach (var entry in history)
                 {
                     var d = entry.AsGodotDictionary();
                     data.History.Add(new LevelResult
                     {
-                        Level = d.Get("level", 0).AsInt32(),
-                        Swipes = d.Get("swipes", 0).AsInt32(),
-                        Seconds = d.Get("seconds", 0).AsInt32(),
-                        BugType = d.Get("bugType", "").AsString(),
-                        ClearedAt = d.Get("clearedAt", "").AsString(),
+                        Level = Get(d, "level", 0).AsInt32(),
+                        Swipes = Get(d, "swipes", 0).AsInt32(),
+                        Seconds = Get(d, "seconds", 0).AsInt32(),
+                        BugType = Get(d, "bugType", "").AsString(),
+                        ClearedAt = Get(d, "clearedAt", "").AsString(),
                     });
                 }
 
@@ -87,6 +90,23 @@ public sealed class SaveData
 
     public void Save()
     {
+        var finds = new Godot.Collections.Dictionary();
+        foreach (var kv in BugFindCounts)
+            finds[kv.Key] = (Variant)kv.Value;
+
+        var history = new Godot.Collections.Array();
+        foreach (var r in History)
+        {
+            history.Add(new Godot.Collections.Dictionary
+            {
+                ["level"] = r.Level,
+                ["swipes"] = r.Swipes,
+                ["seconds"] = r.Seconds,
+                ["bugType"] = r.BugType,
+                ["clearedAt"] = r.ClearedAt,
+            });
+        }
+
         var root = new Godot.Collections.Dictionary
         {
             ["version"] = 1,
@@ -94,17 +114,8 @@ public sealed class SaveData
             ["levelsCleared"] = LevelsCleared,
             ["totalSwipes"] = TotalSwipes,
             ["totalSeconds"] = TotalSeconds,
-            ["bugFindCounts"] = new Godot.Collections.Dictionary(
-                BugFindCounts.ToDictionary(kv => kv.Key, kv => (Variant)kv.Value)),
-            ["history"] = new Godot.Collections.Array(
-                History.Select(r => (Variant)new Godot.Collections.Dictionary
-                {
-                    ["level"] = r.Level,
-                    ["swipes"] = r.Swipes,
-                    ["seconds"] = r.Seconds,
-                    ["bugType"] = r.BugType,
-                    ["clearedAt"] = r.ClearedAt,
-                })),
+            ["bugFindCounts"] = finds,
+            ["history"] = history,
         };
 
         var err = FileAccess.Open(TempPath, FileAccess.ModeFlags.Write);
