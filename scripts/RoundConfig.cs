@@ -1,0 +1,46 @@
+namespace LeafSweeper;
+
+/// <summary>
+/// Very gentle, casual-tuned difficulty curve. Saturates by level 200 so
+/// late levels are only moderately harder than level 1. All values are
+/// deterministic functions of the level number so any level can be rebuilt.
+/// </summary>
+public static class RoundConfig
+{
+    public const int SaturateLevel = 200;
+
+    public const int MinDebris = 40;
+    public const int MaxDebris = 90;
+
+    public const float StartBugScale = 1.0f;
+    public const float MinBugScale = 0.75f;
+
+    // Camouflage stays at zero until CamoStartLevel, then eases to MaxCamo.
+    public const int CamoStartLevel = 60;
+    public const float MaxCamo = 0.25f;
+
+    /// <summary>0..1 ramp that saturates at <see cref="SaturateLevel"/>.</summary>
+    public static float Progress(int level)
+    {
+        if (level >= SaturateLevel)
+            return 1f;
+        // Square-root-ish early growth that keeps levels 1-20 nearly identical.
+        float t = (level - 1f) / (SaturateLevel - 1f);
+        return t * t * (3f - 2f * t); // smoothstep: gentle start and end
+    }
+
+    public static int DebrisCount(int level) =>
+        (int)(MinDebris + (MaxDebris - MinDebris) * Progress(level));
+
+    public static float BugScale(int level) =>
+        StartBugScale - (StartBugScale - MinBugScale) * Progress(level);
+
+    /// <summary>0..1 how strongly the bug blends toward leaf colors.</summary>
+    public static float Camouflage(int level)
+    {
+        if (level < CamoStartLevel)
+            return 0f;
+        float t = (level - (float)CamoStartLevel) / (SaturateLevel - CamoStartLevel);
+        return MaxCamo * t;
+    }
+}
