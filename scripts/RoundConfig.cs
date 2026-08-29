@@ -10,10 +10,10 @@ public static class RoundConfig
     public const int SaturateLevel = 200;
 
     // Fraction of the floor's area that should be occupied by debris sprites.
-    // ~0.00013 ≈ 1.6× pixel coverage (fully hidden floor) at 1080×2340;
-    // saturates around 2.5× for a thick late-game litter.
-    public const float CoverageStart = 0.000135f;
-    public const float CoverageEnd = 0.00021f;
+    // ~0.00054 ≈ 6× pixel coverage (floor completely hidden) at 1080×2340;
+    // saturates around 9× for a thick late-game litter.
+    public const float CoverageStart = 0.00054f;
+    public const float CoverageEnd = 0.00084f;
 
     public const float StartBugScale = 1.0f;
     public const float MinBugScale = 0.75f;
