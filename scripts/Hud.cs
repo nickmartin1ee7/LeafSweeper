@@ -551,19 +551,22 @@ public partial class Hud : CanvasLayer
         };
     }
 
-    internal static Button MakeButton(string text, Color bg)
+    internal static Button MakeButton(string text, Color bg, int fontSize = 42)
     {
+        // Scale padding and corners with the font so larger buttons stay
+        // visually proportional.
+        float scale = fontSize / 42f;
         var normal = new StyleBoxFlat
         {
             BgColor = bg,
-            CornerRadiusBottomLeft = 20,
-            CornerRadiusBottomRight = 20,
-            CornerRadiusTopLeft = 20,
-            CornerRadiusTopRight = 20,
-            ContentMarginLeft = 40,
-            ContentMarginRight = 40,
-            ContentMarginTop = 18,
-            ContentMarginBottom = 18,
+            CornerRadiusBottomLeft = (int)(20 * scale),
+            CornerRadiusBottomRight = (int)(20 * scale),
+            CornerRadiusTopLeft = (int)(20 * scale),
+            CornerRadiusTopRight = (int)(20 * scale),
+            ContentMarginLeft = 40 * scale,
+            ContentMarginRight = 40 * scale,
+            ContentMarginTop = 18 * scale,
+            ContentMarginBottom = 18 * scale,
         };
         var hover = (StyleBoxFlat)normal.Duplicate();
         hover.BgColor = bg.Lightened(0.12f);
@@ -577,7 +580,7 @@ public partial class Hud : CanvasLayer
         button.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
         button.AddThemeColorOverride("font_color", new Color("fff8ec"));
         button.AddThemeColorOverride("font_hover_color", new Color("ffffff"));
-        button.AddThemeFontSizeOverride("font_size", 42);
+        button.AddThemeFontSizeOverride("font_size", fontSize);
         return button;
     }
 }

@@ -31,17 +31,17 @@ public partial class MainMenu : CanvasLayer
         title.Text = "LeafSweeper";
         title.HorizontalAlignment = HorizontalAlignment.Center;
 
-        var subtitle = Hud.MakeLabel(38, false, new Color("f0e2c4"));
+        var subtitle = Hud.MakeLabel(48, false, new Color("f0e2c4"));
         subtitle.Text = "A cozy little search";
         subtitle.HorizontalAlignment = HorizontalAlignment.Center;
 
-        _progressLabel = Hud.MakeLabel(34, true, new Color("f5e8cd"));
+        _progressLabel = Hud.MakeLabel(42, true, new Color("f5e8cd"));
         _progressLabel.HorizontalAlignment = HorizontalAlignment.Center;
 
-        _playButton = Hud.MakeButton("Play", new Color("6f9a44"));
+        _playButton = Hud.MakeButton("Play", new Color("6f9a44"), 56);
         _playButton.Pressed += () => PlayPressed?.Invoke();
 
-        _newGameButton = Hud.MakeButton("New game", new Color("a08a68"));
+        _newGameButton = Hud.MakeButton("New game", new Color("a08a68"), 56);
         _newGameButton.Pressed += () => NewGamePressed?.Invoke();
 
         box.AddChild(title);
