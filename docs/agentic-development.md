@@ -23,7 +23,10 @@ Each slice of work went through the same six steps:
    finding), it becomes a new todo instead of loose work.
 3. **Implement in small vertical slices.** One todo = one coherent change
    (a data layer, a controller, a menu). No drive-by refactors of unrelated
-   code.
+   code. Each slice is implemented in its own git worktree on a short-lived
+   branch (see the worktree slice loop under *Patterns and practices*), so
+   the main checkout — which often carries in-progress human edits — is
+   never disturbed mid-slice.
 4. **Validate headlessly after every slice.** See the validation ladder
    below. Nothing is committed without a green build plus the cheapest
    meaningful runtime check.
@@ -31,7 +34,9 @@ Each slice of work went through the same six steps:
    or a doc alignment, never a mixed bag. Commit messages lead with the
    change ("Cover the whole floor with debris…") and explain the *why* in
    the body. Generated metadata (`.uid`, `.import` files) gets its own
-   commit, separate from behavior changes.
+   commit, separate from behavior changes. When the slice is green, merge
+   its branch into `main` locally, then always remove the worktree and
+   delete the branch — merged branches are never left behind.
 6. **Hand off to the human for playtesting.** The agent stops at "buildable
    and headlessly verified" and the human verifies feel and visuals in the
    editor or on device. Feedback comes back as concrete findings
@@ -39,9 +44,9 @@ Each slice of work went through the same six steps:
    new todos and a new loop iteration.
 
 ```
-plan (approved) ─► todos ─► implement ─► headless validate ─► atomic commit
-      ▲                                                            │
-      └────────── human playtest feedback ◄────────────────────────┘
+plan (approved) ─► todos ─► implement in a worktree ─► headless validate ─► atomic commit
+      ▲                                                                        │
+      └───────────── human playtest feedback ◄─────────────────────────────────┘
 ```
 
 ## Headless validation ladder
@@ -126,6 +131,14 @@ they produce, so a playtest finding maps to one named knob:
 | "A Control (dock/HUD) is invisible despite being added" | `SetAnchorsPreset` sets anchors but **not offsets** — a zero-height rect pinned to the screen edge; set anchors *and* offsets explicitly (`Hud.BuildDock`) |
 | "Sweeps act through the dock/HUD" | GUI input dies there: dock uses `MouseFilter.Stop`, sweeping is `_UnhandledInput` |
 
+**Slices happen in worktrees.** Each slice is implemented in a dedicated
+git worktree beside the main checkout, on a short-lived branch — never in
+the main checkout itself, which routinely carries the human's uncommitted
+in-progress edits. Validate and commit in the worktree, merge the branch
+into `main` locally, then clean up without being asked: `git worktree
+remove` the slice directory and `git branch -d` the merged branch.
+Merged branches are never left behind.
+
 **Docs live with code.** Behavior changes update `README.md` and
 `docs/*` in the same session — numbers in prose (counts, radii) drift
 fast, so doc alignment is part of the slice, not a cleanup phase.
@@ -162,6 +175,13 @@ dotnet build                                   # 1. compile
 godot --headless --import                      # 2. import
 godot --headless --quit-after 180              # 3. boot smoke
 LEAF_AUTOPLAY=1 godot --headless --quit-after 300   # 4. gameplay self-test
+
+# Worktree slice loop (run from the main checkout)
+git worktree add ../LeafSweeper-<slice> -b <slice>   # isolate the slice
+# ...dotnet build / headless checks / atomic commits in the worktree...
+git merge <slice>                                    # absorb into main
+git worktree remove ../LeafSweeper-<slice>           # clean up (always)
+git branch -d <slice>
 ```
 
 See also: [`docs/architecture.md`](architecture.md) for the code map,
