@@ -122,7 +122,9 @@ fast, so doc alignment is part of the slice, not a cleanup phase.
   `GODOT_ANDROID_KEYSTORE_RELEASE_*` env vars — no editor-settings
   fallback — so secrets stay out of the repo. Export headlessly with
   `godot --headless --path . --export-release Android build/LeafSweeper.apk`
-  (see README for the full command).
+  (see README for the full command). The demo identity is package
+  `com.gitgoodsoftware.leafsweeper`, signed by the
+  `CN=GitGoodSoftware, O=GitGoodSoftware, C=US` release keystore.
 - **Machine-specific paths are not in the repo.** Editor settings (Android
   SDK, JDK paths, keystores) live in the user's Godot editor settings or
   `~/.local/share/godot/keystores`; only portable configuration is committed.

@@ -57,7 +57,7 @@ Play — mouse input is emulated as touch.
 
 The preset `Android` is configured for a signed release build via gradle
 (`use_gradle_build=true`, output `build/LeafSweeper.apk`, package
-`com.nickmartin1ee7.leafsweeper`). Prerequisites: Godot 4.7.1 mono export
+`com.gitgoodsoftware.leafsweeper`). Prerequisites: Godot 4.7.1 mono export
 templates, the Android build template (`android/build` in the project),
 an Android SDK + JDK configured in Editor Settings → Export → Android,
 and a release keystore.
