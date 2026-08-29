@@ -45,7 +45,10 @@ public partial class Bug : Node2D
     }
 
     public bool ContainsPoint(Vector2 worldPoint) =>
-        Position.DistanceTo(worldPoint) <= _type.TapRadius * Scale.X;
+        Position.DistanceTo(worldPoint) <= TapRadius;
+
+    /// <summary>World-space radius where taps register: type radius × node scale.</summary>
+    public float TapRadius => _type.TapRadius * Scale.X;
 
     /// <summary>
     /// Golden discovery moment: the outline shines in while the bug grows,

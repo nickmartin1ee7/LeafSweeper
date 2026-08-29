@@ -35,6 +35,19 @@ public partial class Debris : Node2D
     public bool Swept { get; private set; }
     public DebrisWeight Weight { get; private set; }
 
+    /// <summary>
+    /// Approximate world-space radius this piece covers — half its widest
+    /// scaled extent (circle approximation; good enough for overlap tests).
+    /// </summary>
+    public float CoverRadius
+    {
+        get
+        {
+            Vector2 size = _sprite.Texture.GetSize() * _sprite.Scale.X;
+            return Mathf.Max(size.X, size.Y) * 0.5f;
+        }
+    }
+
     public void Setup(string texturePath, Vector2 pos, float rotDeg,
         float scale, DebrisWeight weight, RandomNumberGenerator rng)
     {

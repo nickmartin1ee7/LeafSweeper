@@ -56,6 +56,24 @@ public partial class Main : Node2D
     {
         _save.Reset(); // deterministic: the test assumes a fresh save file
         StartLevel(3);
+
+        // Covered-bug rule: debris parked on the bug blocks selection, and
+        // sweeping every overlapping piece away makes it selectable again.
+        var blocker = _debris.Find(d => IsInstanceValid(d) && !d.Swept);
+        bool blocked = false;
+        bool uncovered = false;
+        if (blocker != null)
+        {
+            blocker.Position = _bug.Position;
+            blocked = BugIsCovered();
+            foreach (var d in _debris)
+                if (IsInstanceValid(d) && !d.Swept
+                    && d.Position.DistanceTo(_bug.Position) <= _bug.TapRadius + d.CoverRadius)
+                    d.Fling(Vector2.Right * 2000f, _rng);
+            uncovered = !BugIsCovered();
+        }
+        GD.Print($"AUTOPLAY uncover: blocked={blocked} cleared={uncovered}");
+
         for (int i = 0; i < 7; i++)
         {
             _stats.Tick(1.0);
@@ -65,7 +83,8 @@ public partial class Main : Node2D
         WinLevel();
 
         var reloaded = SaveData.Load();
-        bool ok = reloaded.CurrentLevel == 4
+        bool ok = blocked && uncovered
+            && reloaded.CurrentLevel == 4
             && reloaded.LevelsCleared == 1
             && reloaded.TotalSwipes == 7
             && reloaded.TotalGusts == 1
@@ -96,7 +115,9 @@ public partial class Main : Node2D
             case InputEventScreenTouch { Pressed: true } touch:
             {
                 Vector2 world = ToWorld(touch.Position);
-                if (_bug.ContainsPoint(world))
+                // The bug hides below the debris: while any unswept piece
+                // overlaps its tap area a tap just starts sweeping there.
+                if (_bug.ContainsPoint(world) && !BugIsCovered())
                 {
                     WinLevel();
                     return;
@@ -125,6 +146,20 @@ public partial class Main : Node2D
             return;
         _stats.CountSwipe();
         _hud.ShowSwipes(_stats.Swipes);
+    }
+
+    /// <summary>
+    /// True while any unswept debris still overlaps the bug's tap area —
+    /// the bug can only be selected (and the round won) once it's uncovered.
+    /// </summary>
+    private bool BugIsCovered()
+    {
+        float radius = _bug.TapRadius;
+        foreach (var d in _debris)
+            if (IsInstanceValid(d) && !d.Swept
+                && d.Position.DistanceTo(_bug.Position) <= radius + d.CoverRadius)
+                return true;
+        return false;
     }
 
     // ------------------------------------------------------------- setup --
