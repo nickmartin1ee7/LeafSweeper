@@ -66,10 +66,10 @@ extra challenge in late levels, never a color hunt.
 ## Bug catalog
 
 Each round picks a random bug type (`scripts/BugTypes.cs`). Types differ in
-texture, relative size (0.8–1.15×) and tap radius so players learn
+texture, relative size (0.6–1.15×) and tap radius so players learn
 **silhouettes**:
 
-Ladybug · Butterfly · Centipede · Moth · Grasshopper · Dragonfly · Beetle · Snail · Firefly · Bumblebee · Caterpillar
+Ladybug · Butterfly · Centipede · Moth · Grasshopper · Dragonfly · Beetle · Snail · Firefly · Bumblebee · Caterpillar · Mantis · Stick Insect · Weevil · Pill Bug · Ant · Fly
 
 ## Debris taxonomy
 
