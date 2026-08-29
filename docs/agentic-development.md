@@ -110,10 +110,9 @@ fast, so doc alignment is part of the slice, not a cleanup phase.
 
 ## Environment constraints discovered
 
-- **.NET target is net9.0** (`LeafSweeper.csproj`, default and Android).
-  Originally net8.0 while the contributor's SDK was 8.0.x; retargeted to
-  net9.0 once the toolchain moved — keep TFM and SDKs in lockstep, and
-  check Godot's exported assemblies after any further TFM bump.
+- **.NET target pinned to net8.0.** The contributor's local SDK is 8.0.x
+  (`NETSDK1045` on net9.0). Keep `LeafSweeper.csproj` at net8.0 unless the
+  whole toolchain moves together.
 - **C# Android exports need a gradle build.** The prebuilt export template
   does not package the game's .NET assemblies; the APK installs but dies
   at boot (`.NET: Assemblies not found`). `gradle_build/use_gradle_build`
