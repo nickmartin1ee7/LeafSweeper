@@ -9,7 +9,8 @@ warm autumn palette — reproducible from a single script.
 
 - **Bugs** are cartoon-cute, round, with big simple features: ladybug,
   butterfly, centipede, moth, grasshopper, dragonfly, beetle, snail,
-  firefly, bumblebee, caterpillar.
+  firefly, bumblebee, caterpillar, mantis, stick insect, weevil,
+  pill bug, ant, fly.
 - **Debris** falls into a fixed taxonomy: leaves (red / yellow / green),
   moss clusters, sticks, rocks, flower petals.
 - **Ground** is a soft, low-contrast forest floor so debris and bugs pop.
@@ -42,7 +43,7 @@ node tools/gen_art.mjs
 ```
 
 - `assets/textures/*.svg` — debris variants + 1080×2340 ground.
-- `assets/textures/bugs/*.svg` — the 11-bug catalog (100×100 viewBox).
+- `assets/textures/bugs/*.svg` — the 17-bug catalog (100×100 viewBox).
 
 After regenerating, re-run `godot --headless --import` so Godot reimports
 the changed SVGs.
