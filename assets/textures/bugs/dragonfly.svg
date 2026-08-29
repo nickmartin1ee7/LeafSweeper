@@ -1,12 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <ellipse cx="50" cy="88" rx="20" ry="3.6" fill="#000" opacity="0.12"/>
   <g fill="#cfe3ef" fill-opacity="0.75" stroke="#7ba3bd" stroke-width="2">
-    <!-- Forewings: steeper, pulled slightly outward and upward -->
-    <ellipse cx="24" cy="34" rx="26" ry="6.4" transform="rotate(-32 24 34)"/>
-    <ellipse cx="76" cy="34" rx="26" ry="6.4" transform="rotate(32 76 34)"/>
-    <!-- Hindwings: shallower, pulled outward and down to create a visible gap -->
-    <ellipse cx="24" cy="54" rx="20" ry="5.6" transform="rotate(28 24 54)"/>
-    <ellipse cx="76" cy="54" rx="20" ry="5.6" transform="rotate(-28 76 54)"/>
+    <!-- Forewings anchored to trunk at (50,36), theta=30deg, rx=24, ry=6 -->
+    <ellipse cx="29.2" cy="24" rx="24" ry="6" transform="rotate(30 29.2 24)"/>
+    <ellipse cx="70.8" cy="24" rx="24" ry="6" transform="rotate(-30 70.8 24)"/>
+    <!-- Hindwings anchored to trunk at (50,41), theta=-16deg, rx=21, ry=5.4 -->
+    <ellipse cx="29.8" cy="46.8" rx="21" ry="5.4" transform="rotate(-16 29.8 46.8)"/>
+    <ellipse cx="70.2" cy="46.8" rx="21" ry="5.4" transform="rotate(16 70.2 46.8)"/>
   </g>
   <path d="M50 34 L50 84" stroke="#5f8aa8" stroke-width="6.4" stroke-linecap="round"/>
   <path d="M50 34 L50 84" stroke="#8fb6cd" stroke-width="3" stroke-linecap="round"/>

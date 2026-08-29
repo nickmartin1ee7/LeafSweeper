@@ -364,12 +364,12 @@ function dragonfly() {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <ellipse cx="50" cy="88" rx="20" ry="3.6" fill="#000" opacity="0.12"/>
   <g fill="#cfe3ef" fill-opacity="0.75" stroke="#7ba3bd" stroke-width="2">
-    <!-- Forewings: steeper, pulled slightly outward and upward -->
-    <ellipse cx="24" cy="34" rx="26" ry="6.4" transform="rotate(-32 24 34)"/>
-    <ellipse cx="76" cy="34" rx="26" ry="6.4" transform="rotate(32 76 34)"/>
-    <!-- Hindwings: shallower, pulled outward and down to create a visible gap -->
-    <ellipse cx="24" cy="54" rx="20" ry="5.6" transform="rotate(28 24 54)"/>
-    <ellipse cx="76" cy="54" rx="20" ry="5.6" transform="rotate(-28 76 54)"/>
+    <!-- Forewings anchored to trunk at (50,36), theta=30deg, rx=24, ry=6 -->
+    <ellipse cx="29.2" cy="24" rx="24" ry="6" transform="rotate(30 29.2 24)"/>
+    <ellipse cx="70.8" cy="24" rx="24" ry="6" transform="rotate(-30 70.8 24)"/>
+    <!-- Hindwings anchored to trunk at (50,41), theta=-16deg, rx=21, ry=5.4 -->
+    <ellipse cx="29.8" cy="46.8" rx="21" ry="5.4" transform="rotate(-16 29.8 46.8)"/>
+    <ellipse cx="70.2" cy="46.8" rx="21" ry="5.4" transform="rotate(16 70.2 46.8)"/>
   </g>
   <path d="M50 34 L50 84" stroke="#5f8aa8" stroke-width="6.4" stroke-linecap="round"/>
   <path d="M50 34 L50 84" stroke="#8fb6cd" stroke-width="3" stroke-linecap="round"/>
@@ -520,45 +520,40 @@ function caterpillar() {
     .map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}"/>`)
     .join(" ");
 
-  // Build visible legs after the body so they appear on top of the circles.
-  // Pick the two rearmost segments (by vertical position) and give them
-  // chunky stub legs that extend below the body's lowest edge. Keep legs
-  // short (around 9-12px) and angled down-and-out.
-  const sortedByBottom = segs.map((s, i) => [s[1] + s[2], i]).sort((a, b) => a[0] - b[0]);
-  const tailPairs = sortedByBottom.slice(-2).map(([_, i]) => i); // indices of the 2 lowest segments
-  const legLength = 11; // within requested 9-12px
-  const legs = tailPairs
-    .map(i => {
-      const [x, y, r] = segs[i];
-      const lx0 = Math.round(x - r * 0.6);
-      const ly0 = Math.round(y + r * 0.6);
-      const lx1 = Math.round(x - (r * 0.9) - Math.round(legLength * 0.9));
-      const ly1 = Math.round(y + r + legLength);
-      const rx0 = Math.round(x + r * 0.6);
-      const rx1 = Math.round(x + (r * 0.9) + Math.round(legLength * 0.9));
-      const ry0 = ly0;
-      const ry1 = ly1;
-      return `<path d="M${lx0} ${ly0} L${lx1} ${ly1} M${rx0} ${ry0} L${rx1} ${ry1}"/>`;
+  // Build legs BEFORE drawing the body so the body fill covers the
+  // upper part of each leg. Give every segment one pair of short stub
+  // legs (down-and-out). Ensure legs end above the ground shadow (<= y=79).
+  const legLength = 9; // visible extent below the body
+  const legs = segs
+    .map(([x, y, r]) => {
+      const startY = Math.round(y + r - 2);
+      const endY = Math.min(79, Math.round(y + r + legLength));
+      const leftStartX = Math.round(x - r * 0.5);
+      const leftEndX = Math.round(leftStartX - 7);
+      const rightStartX = Math.round(x + r * 0.5);
+      const rightEndX = Math.round(rightStartX + 7);
+      return `<path d="M${leftStartX} ${startY} L${leftEndX} ${endY} M${rightStartX} ${startY} L${rightEndX} ${endY}"/>`;
     })
     .join(" ");
 
-  // Tail prolegs (2-3 little stubs centered under the last segment)
+  // Tail prolegs (2-3 little vertical stubs under the last segment), end by y=79
   const [tx, ty, tr] = segs[segs.length - 1];
-  const prolegs = [-4, 0, 4]
+  const prolegs = [-3, 0, 3]
     .map(off => {
       const sx = tx + off;
       const sy0 = Math.round(ty + tr * 0.7);
-      const sy1 = Math.round(ty + tr + 11);
+      const sy1 = Math.min(79, sy0 + legLength);
       return `<path d="M${sx} ${sy0} L${sx} ${sy1}"/>`;
     })
     .join(" ");
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <ellipse cx="50" cy="84" rx="34" ry="5" fill="#000" opacity="0.13"/>
+  <!-- legs drawn BEFORE the body so the body fill covers their tops and only the lower
+       portions of the legs peek out beneath the silhouette -->
+  <g stroke="#3e6323" stroke-width="2.6" stroke-linecap="round" fill="none">${legs} ${prolegs}</g>
   <g fill="#7fae4e" stroke="#3e6323" stroke-width="3">${circles}</g>
   <g fill="#7fae4e">${circles}</g>
-  <!-- legs drawn after the body so they show up clearly -->
-  <g stroke="#3e6323" stroke-width="2.6" stroke-linecap="round" fill="none">${legs} ${prolegs}</g>
   <circle cx="48" cy="50" r="2.1" fill="#a8d06e"/>
   <circle cx="60" cy="54" r="2.1" fill="#a8d06e"/>
   <circle cx="22" cy="60" r="9.5" fill="#8fbf4e" stroke="#3e6323" stroke-width="3"/>
