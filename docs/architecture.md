@@ -36,11 +36,11 @@ Main (Node2D, scripts/Main.cs)
 | Script | Responsibility |
 |--------|----------------|
 | `scripts/Main.cs` | Controller: builds tree, state machine, level setup/teardown, input routing, win flow, debris spawn layout, petal sparkle. Also hosts the `LEAF_AUTOPLAY=1` headless self-test. |
-| `scripts/Sweeper.cs` | Input-to-interaction: converts touch stream into flings. Uses a **segment-vs-circle sweep test** (sweep radius 95 + 30 margin) between successive touch positions so fast swipes can't tunnel over debris. Emits `onSwipeCompleted` per finished touch. |
+| `scripts/Sweeper.cs` | Input-to-interaction: converts touch stream into flings. Uses a **segment-vs-circle sweep test** (sweep radius 55 + 30 margin) between successive touch positions so fast swipes can't tunnel over debris. Emits `onSwipeCompleted` per finished touch. |
 | `scripts/Debris.cs` | One debris item: weight class (Light/Medium/Heavy → fling factor 1.0/0.78/0.55, friction 2.2/3.0/4.2), `Fling(velocity, rng)`, per-frame slide+spin+fade, `QueueFree` when faded. |
 | `scripts/Bug.cs` | Bug display: `Setup(type, scale, camouflage)` tints toward leaf color, `ContainsPoint(world)` uses the type's tap radius × scale, `Celebrate()` tween pulse. |
 | `scripts/BugTypes.cs` | Static catalog of 8 bug types (texture path, display name, relative size, tap radius) with `Random()`/`ById()`. |
-| `scripts/RoundConfig.cs` | Difficulty curves saturating at level 200: `DebrisCount`, `BugScale`, `Camouflage`. Pure functions — easy to tune. |
+| `scripts/RoundConfig.cs` | Difficulty curves saturating at level 200: `Coverage` (debris density as floor-area fraction), `BugScale`, `Camouflage`. Pure functions — easy to tune. |
 | `scripts/LevelStats.cs` | Round statistics: tick, swipe count, formatted time, and `Comment(save, bug)` template picker (praise / cozy / best-yet / time / color lines). |
 | `scripts/Hud.cs` | In-game UI: top bar (level, swipes) and win overlay (comment, stats, Next/Menu). Static `MakeLabel`/`MakeButton` helpers shared with the menu. |
 | `scripts/MainMenu.cs` | Title screen: Play (resume), New game (shown only after ≥1 clear), lifetime progress + favorite critter. |
