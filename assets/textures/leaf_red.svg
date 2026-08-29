@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="#d9583b"/>
+      <stop offset="1" stop-color="#a93a26"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="50" cy="90" rx="26" ry="5" fill="#000" opacity="0.10"/>
+  <polygon points="50,8 57,22 72,15 68,31 84,33 72,45 83,58 66,57 68,74 55,63 50,84 45,63 32,74 34,57 17,58 28,45 16,33 32,31 28,15 43,22" fill="url(#g)" stroke="#7c2818" stroke-width="3"
+           stroke-linejoin="round"/>
+  <path d="M50 18 L50 78 M50 34 L62 28 M50 34 L38 28 M50 50 L66 46 M50 50 L34 46"
+        fill="none" stroke="#7c2818" stroke-width="2.2" stroke-linecap="round"/>
+</svg>
