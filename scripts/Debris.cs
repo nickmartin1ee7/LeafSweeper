@@ -16,8 +16,8 @@ public enum DebrisWeight
 /// </summary>
 public partial class Debris : Node2D
 {
-    private static readonly float[] FlingFactor = { 1.0f, 0.78f, 0.55f };
-    private static readonly float[] Friction = { 2.2f, 3.0f, 4.2f };
+    private static readonly float[] FlingFactor = { 0.65f, 0.5f, 0.35f };
+    private static readonly float[] Friction = { 3.2f, 4.2f, 5.5f };
 
     private Sprite2D _sprite = null!;
     private Vector2 _velocity;

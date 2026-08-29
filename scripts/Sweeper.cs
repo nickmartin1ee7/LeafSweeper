@@ -11,7 +11,7 @@ namespace LeafSweeper;
 /// </summary>
 public sealed class Sweeper
 {
-    private const float SweepRadius = 95f;
+    private const float SweepRadius = 55f;
 
     private readonly Func<IEnumerable<Debris>> _debris;
     private readonly RandomNumberGenerator _rng;
