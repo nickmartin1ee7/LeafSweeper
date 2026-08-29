@@ -55,10 +55,23 @@ Play — mouse input is emulated as touch.
 
 ### Android export
 
-1. Install the Godot 4.7.1 export templates and the Android build template.
-2. Set the Android SDK path in Editor Settings → Export → Android.
-3. Create a debug keystore, then export a debug APK with the preset
-   `LeafSweeper Android` and install it:
+The preset `Android` is configured for a signed release build via gradle
+(`use_gradle_build=true`, output `build/LeafSweeper.apk`, package
+`com.nickmartin1ee7.leafsweeper`). Prerequisites: Godot 4.7.1 mono export
+templates, the Android build template (`android/build` in the project),
+an Android SDK + JDK configured in Editor Settings → Export → Android,
+and a release keystore.
+
+The keystore is supplied through environment variables (never committed):
+
+```sh
+GODOT_ANDROID_KEYSTORE_RELEASE_PATH=/path/to/leafsweeper-release.keystore \
+GODOT_ANDROID_KEYSTORE_RELEASE_USER=leafsweeper \
+GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD=<pass> \
+godot --headless --path . --export-release Android build/LeafSweeper.apk
+```
+
+Then share or install it:
 
 ```sh
 adb install -r build/LeafSweeper.apk

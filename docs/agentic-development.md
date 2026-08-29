@@ -112,17 +112,24 @@ fast, so doc alignment is part of the slice, not a cleanup phase.
 
 - **.NET target pinned to net8.0.** The contributor's local SDK is 8.0.x
   (`NETSDK1045` on net9.0). Keep `LeafSweeper.csproj` at net8.0 unless the
-  whole toolchain moves together.
-- **C# Android exports need a gradle build.** The prebuilt export template
-  does not package the game's .NET assemblies; the APK installs but dies
-  at boot (`.NET: Assemblies not found`). `gradle_build/use_gradle_build`
-  is set in `export_presets.cfg` for this reason.
+  whole toolchain moves together. (net9.0 was tried once and reverted for
+  exactly this reason.)
+- **Android APKs need gradle builds + a keystore via env vars.** The
+  prebuilt export template does not package the game's .NET assemblies;
+  the APK installs but dies at boot (`.NET: Assemblies not found`).
+  `gradle_build/use_gradle_build=true` fixes that. Godot 4.7 reads the
+  release keystore from the preset `keystore/release` options **or**
+  `GODOT_ANDROID_KEYSTORE_RELEASE_*` env vars — no editor-settings
+  fallback — so secrets stay out of the repo. Export headlessly with
+  `godot --headless --path . --export-release Android build/LeafSweeper.apk`
+  (see README for the full command).
 - **Machine-specific paths are not in the repo.** Editor settings (Android
-  SDK, keystore, JDK paths) live in the user's Godot editor settings;
-  only portable configuration is committed.
-- **Long-running installs/exports are human-run.** Android template
-  installation and gradle exports are done from the editor by the human;
-  the agent handles code, docs and headless validation.
+  SDK, JDK paths, keystores) live in the user's Godot editor settings or
+  `~/.local/share/godot/keystores`; only portable configuration is committed.
+- **Long-running installs are human-run; exports can be headless.** Android
+  SDK/template installation is done from the editor by the human, but the
+  APK export itself runs headlessly with the command in the README — the
+  42 MB signed demo APK builds in a few minutes once gradle is warm.
 
 ## Quick reference
 
