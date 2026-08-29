@@ -29,7 +29,10 @@ Title menu → Play → Round (sweep debris, find bug) → Tap bug
 3. Two helpers live in a **wooden dock** along the bottom of the screen while
    playing: **Gust** (wind icon on a dark-gold coin) blows a gust across the
    floor, sweeping away about **10% of the remaining debris** in one shared
-   direction; and **Restart** (circular arrow on a dark-gold coin) opens a
+   direction — each gust **spends one gust power** from the player's balance,
+   and a small **counter circle on the coin's top-right** shows how many are
+   left (the button greys out at ×0); and **Restart** (circular arrow on a
+   dark-gold coin) opens a
    confirmation dialog before re-scattering the same level with a fresh
    swipe count. The dock is the game's only chrome — the **Level label sits
    at the top-middle** of the screen, and **nothing ever spawns under the
@@ -42,7 +45,12 @@ Title menu → Play → Round (sweep debris, find bug) → Tap bug
    **flies to the center of the screen** and seats itself on the win card —
    below the "Bug found!" title, above the stats — as the overlay fades in
    with a friendly comment and the round's numbers (time, swipes, gusts).
-5. **Next** starts the following level. **Menu** returns to the title screen.
+5. **Gold gust coins** hide below the debris too — **three per round** — and
+   follow the same uncovering rule. Tapping an uncovered coin doesn't end
+   the round: it shines golden and **grows, then spirals into the dock's
+   gust button**, banking **+1 gust power**. The balance **persists across
+   rounds** (new games start with 3).
+6. **Next** starts the following level. **Menu** returns to the title screen.
 
 ## Design values
 
@@ -94,6 +102,7 @@ No score — only **friendly numbers**:
 
 - Swipes used this round.
 - Gust powers blown this round (shown on the win card only when used).
+- Gust power balance (coins found − gusts spent) — persists across rounds.
 - Time since round start (m:ss).
 - Lifetime aggregates (levels cleared, swipes, gusts, time) and per-bug find
   counts, kept in the save file.
@@ -119,6 +128,8 @@ app-private storage on Android — no Android permissions needed):
 - `currentLevel` — next level to play (Play resumes here).
 - `levelsCleared`, `totalSwipes`, `totalGusts`, `totalSeconds` — lifetime
   aggregates.
+- `gustPower` — current gust power balance (starts at 3; coins add +1,
+  each gust spent takes −1; missing on old saves → 3).
 - `bugFindCounts` — finds per bug type (drives "favorite critter").
 - `history` — last 50 cleared levels `{level, swipes, gusts, seconds, bugType,
   clearedAt}`.

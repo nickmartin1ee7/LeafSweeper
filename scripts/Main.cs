@@ -29,8 +29,12 @@ public partial class Main : Node2D
     private LevelStats _stats = new();
     private Sweeper _sweeper = null!;
     private List<Debris> _debris = new();
+    private List<GustCoin> _coins = new();
     private GameState _state = GameState.Menu;
     private Vector2 _viewSize;
+
+    /// <summary>Gold gust coins hidden below the debris each round.</summary>
+    private const int GustCoinsPerLevel = 3;
 
     public override void _Ready()
     {
@@ -74,20 +78,35 @@ public partial class Main : Node2D
         }
         GD.Print($"AUTOPLAY uncover: blocked={blocked} cleared={uncovered}");
 
+        // Gust coins: three hide below the debris each round; collecting one
+        // banks +1 power, spending a gust takes −1.
+        var coin = _coins.Find(c => IsInstanceValid(c) && !c.Collected);
+        bool coinSpawned = _coins.Count == GustCoinsPerLevel;
+        bool coinBanked = false;
+        if (coin != null)
+        {
+            CollectCoin(coin);
+            coinBanked = _save.GustPower == SaveData.StartingGustPower + 1;
+        }
+        GD.Print($"AUTOPLAY coins: spawned={_coins.Count} banked={coinBanked} " +
+                 $"power={_save.GustPower}");
+
         for (int i = 0; i < 7; i++)
         {
             _stats.Tick(1.0);
             _stats.CountSwipe();
         }
-        OnWindPressed(); // one gust power use should be counted and persisted
+        OnWindPressed(); // spends one gust power and counts the use
+        bool gustSpent = _save.GustPower == SaveData.StartingGustPower;
         WinLevel();
 
         var reloaded = SaveData.Load();
-        bool ok = blocked && uncovered
+        bool ok = blocked && uncovered && coinSpawned && coinBanked && gustSpent
             && reloaded.CurrentLevel == 4
             && reloaded.LevelsCleared == 1
             && reloaded.TotalSwipes == 7
             && reloaded.TotalGusts == 1
+            && reloaded.GustPower == SaveData.StartingGustPower
             && reloaded.BugFindCounts.Count == 1
             && reloaded.History.Count == 1
             && reloaded.History[0].Level == 3
@@ -115,6 +134,15 @@ public partial class Main : Node2D
             case InputEventScreenTouch { Pressed: true } touch:
             {
                 Vector2 world = ToWorld(touch.Position);
+                // Gold gust coins act like the bug: hidden below the debris
+                // until uncovered. An uncovered coin is collected instead of
+                // starting a sweep; a covered one falls through to sweeping.
+                GustCoin coin = SelectableCoinAt(world);
+                if (coin != null)
+                {
+                    CollectCoin(coin);
+                    return;
+                }
                 // The bug hides below the debris: while any unswept piece
                 // overlaps its tap area a tap just starts sweeping there.
                 if (_bug.ContainsPoint(world) && !BugIsCovered())
@@ -149,17 +177,58 @@ public partial class Main : Node2D
     }
 
     /// <summary>
+    /// True while any unswept debris overlaps a circular tap area — shared by
+    /// the bug and gust coins, which both hide below the debris.
+    /// </summary>
+    private bool DebrisOverlaps(Vector2 pos, float radius)
+    {
+        foreach (var d in _debris)
+            if (IsInstanceValid(d) && !d.Swept
+                && d.Position.DistanceTo(pos) <= radius + d.CoverRadius)
+                return true;
+        return false;
+    }
+
+    /// <summary>
     /// True while any unswept debris still overlaps the bug's tap area —
     /// the bug can only be selected (and the round won) once it's uncovered.
     /// </summary>
-    private bool BugIsCovered()
+    private bool BugIsCovered() => DebrisOverlaps(_bug.Position, _bug.TapRadius);
+
+    /// <summary>The nearest uncovered gust coin under a tap, or null.</summary>
+    private GustCoin SelectableCoinAt(Vector2 world)
     {
-        float radius = _bug.TapRadius;
-        foreach (var d in _debris)
-            if (IsInstanceValid(d) && !d.Swept
-                && d.Position.DistanceTo(_bug.Position) <= radius + d.CoverRadius)
-                return true;
-        return false;
+        GustCoin best = null;
+        float bestDist = float.MaxValue;
+        foreach (var c in _coins)
+        {
+            if (!IsInstanceValid(c) || c.Collected || !c.ContainsPoint(world))
+                continue;
+            // A covered coin can't be collected — like a covered bug, the
+            // tap starts sweeping there instead.
+            if (DebrisOverlaps(c.Position, c.TapRadius))
+                continue;
+            float dist = c.Position.DistanceSquaredTo(world);
+            if (dist < bestDist)
+            {
+                bestDist = dist;
+                best = c;
+            }
+        }
+        return best;
+    }
+
+    /// <summary>
+    /// An uncovered gust coin was tapped: bank the power right away (and
+    /// persist it), then let the coin fly its golden spiral into the dock's
+    /// gust button.
+    /// </summary>
+    private void CollectCoin(GustCoin coin)
+    {
+        _save.GustPower++;
+        _save.Save();
+        _hud.ShowGustPower(_save.GustPower);
+        coin.Collect(ToWorld(_hud.WindButtonCenter));
     }
 
     // ------------------------------------------------------------- setup --
@@ -246,6 +315,11 @@ public partial class Main : Node2D
         foreach (var d in _debris)
             if (IsInstanceValid(d) && !d.Swept)
                 d.Position *= floorRatio;
+        // Coins still hiding in the debris stretch along; collected ones are
+        // mid-flight toward the dock and are left alone.
+        foreach (var c in _coins)
+            if (IsInstanceValid(c) && !c.Collected)
+                c.Position *= floorRatio;
     }
 
     private void ClearLevel()
@@ -254,6 +328,10 @@ public partial class Main : Node2D
             if (IsInstanceValid(d))
                 d.QueueFree();
         _debris.Clear();
+        foreach (var c in _coins)
+            if (IsInstanceValid(c))
+                c.QueueFree();
+        _coins.Clear();
         _bug.Visible = false;
     }
 
@@ -280,10 +358,12 @@ public partial class Main : Node2D
         _bug.Visible = true;
 
         SpawnDebris(level, floor);
+        SpawnGustCoins(floor);
 
         _stats.Start(level);
         _hud.ShowLevel(level);
         _hud.ShowSwipes(0);
+        _hud.ShowGustPower(_save.GustPower);
         _hud.HideWin();
         SetState(GameState.Playing);
     }
@@ -353,6 +433,44 @@ public partial class Main : Node2D
         }
     }
 
+    private void SpawnGustCoins(Rect2 floor)
+    {
+        for (int i = 0; i < GustCoinsPerLevel; i++)
+        {
+            var coin = new GustCoin { Name = $"GustCoin{i}" };
+            coin.Setup(_rng.RandfRange(84f, 100f), _rng);
+            coin.Position = CoinSpot(floor);
+            // The coin frees itself once its spiral flight finishes.
+            coin.CollectionFlightFinished += coin.QueueFree;
+            AddChild(coin);
+            _coins.Add(coin);
+        }
+    }
+
+    /// <summary>A spread-out coin spot: inside the floor, away from the bug and other coins.</summary>
+    private Vector2 CoinSpot(Rect2 floor)
+    {
+        Vector2 pos = default;
+        for (int attempt = 0; attempt < 40; attempt++)
+        {
+            pos = new Vector2(
+                _rng.RandfRange(150f, floor.Size.X - 150f),
+                _rng.RandfRange(260f, floor.Size.Y - 170f));
+            if (pos.DistanceTo(_bug.Position) < 280f)
+                continue;
+            bool tooClose = false;
+            foreach (var c in _coins)
+                if (c.Position.DistanceTo(pos) < 300f)
+                {
+                    tooClose = true;
+                    break;
+                }
+            if (!tooClose)
+                return pos;
+        }
+        return pos; // crowded floor: the last roll is good enough
+    }
+
     private static (string, DebrisWeight, int) Pick(
         (string path, DebrisWeight weight, int freq)[] palette, int roll)
     {
@@ -409,6 +527,14 @@ public partial class Main : Node2D
                 alive.Add(d);
         if (alive.Count == 0)
             return;
+
+        // Spend one gust from the persistent power counter; the button is
+        // disabled at zero, but guard anyway so nothing can go negative.
+        if (_save.GustPower <= 0)
+            return;
+        _save.GustPower--;
+        _save.Save();
+        _hud.ShowGustPower(_save.GustPower);
 
         // A gust is only spent once it actually blows anything away.
         _stats.CountGust();

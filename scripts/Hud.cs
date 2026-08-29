@@ -24,6 +24,8 @@ public partial class Hud : CanvasLayer
     private Label _swipesWordLabel = null!;
     private Button _windButton = null!;
     private Button _restartButton = null!;
+    private Panel _gustBadge = null!;
+    private Label _gustBadgeLabel = null!;
 
     private Control _winOverlay = null!;
     private Control _bugSlot = null!;
@@ -84,6 +86,10 @@ public partial class Hud : CanvasLayer
         _windButton = MakeCoinButton("res://assets/icons/wind.svg");
         _windButton.TooltipText = "Gust: blow away some debris";
         _windButton.Pressed += () => WindPressed?.Invoke();
+        // The persistent gust power balance, shown as a small counter circle
+        // pinned to the gust coin's top-right (like a coin stack badge).
+        _gustBadge = BuildGustBadge();
+        _windButton.AddChild(_gustBadge);
 
         _restartButton = MakeCoinButton("res://assets/icons/restart.svg");
         _restartButton.TooltipText = "Restart this level";
@@ -227,6 +233,19 @@ public partial class Hud : CanvasLayer
 
     public void ShowSwipes(int swipes) => _swipeLabel.Text = swipes.ToString();
 
+    /// <summary>
+    /// Updates the gust power counter on the dock and greys the gust button
+    /// out once the balance runs dry.
+    /// </summary>
+    public void ShowGustPower(int power)
+    {
+        _gustBadgeLabel.Text = $"×{power}";
+        _windButton.Disabled = power <= 0;
+    }
+
+    /// <summary>Gust button center in screen coordinates, the coin flight's target.</summary>
+    public Vector2 WindButtonCenter => _windButton.GetGlobalRect().GetCenter();
+
     public void ShowWin(string comment, string statsLine, Node2D? bug = null)
     {
         if (bug != null)
@@ -344,6 +363,51 @@ public partial class Hud : CanvasLayer
     private static Control Spacer(float height) =>
         new() { CustomMinimumSize = new Vector2(0, height) };
 
+    /// <summary>Small bronze counter circle pinned to the gust coin's top-right.</summary>
+    private Panel BuildGustBadge()
+    {
+        var badge = new Panel { MouseFilter = Control.MouseFilterEnum.Ignore };
+        var style = new StyleBoxFlat
+        {
+            BgColor = new Color("8a5c17"),
+            CornerRadiusBottomLeft = 48,
+            CornerRadiusBottomRight = 48,
+            CornerRadiusTopLeft = 48,
+            CornerRadiusTopRight = 48,
+            BorderWidthBottom = 5,
+            BorderWidthTop = 5,
+            BorderWidthLeft = 5,
+            BorderWidthRight = 5,
+            BorderColor = new Color("5f3f0e"),
+        };
+        badge.AddThemeStyleboxOverride("panel", style);
+        // Anchored inside the button's top-right corner; buttons don't clip
+        // children, so the badge can overhang the coin's edge.
+        badge.AnchorLeft = 1f;
+        badge.AnchorTop = 0f;
+        badge.AnchorRight = 1f;
+        badge.AnchorBottom = 0f;
+        badge.OffsetLeft = -104f;
+        badge.OffsetTop = 10f;
+        badge.OffsetRight = -12f;
+        badge.OffsetBottom = 102f;
+
+        _gustBadgeLabel = MakeLabel(44, true, new Color("fff8ec"), 8);
+        _gustBadgeLabel.Text = "×0";
+        _gustBadgeLabel.HorizontalAlignment = HorizontalAlignment.Center;
+        _gustBadgeLabel.VerticalAlignment = VerticalAlignment.Center;
+        _gustBadgeLabel.AnchorLeft = 0f;
+        _gustBadgeLabel.AnchorTop = 0f;
+        _gustBadgeLabel.AnchorRight = 1f;
+        _gustBadgeLabel.AnchorBottom = 1f;
+        _gustBadgeLabel.OffsetLeft = 0f;
+        _gustBadgeLabel.OffsetTop = 0f;
+        _gustBadgeLabel.OffsetRight = 0f;
+        _gustBadgeLabel.OffsetBottom = 0f;
+        badge.AddChild(_gustBadgeLabel);
+        return badge;
+    }
+
     /// <summary>Circular dark-gold coin button with embossed shading.</summary>
     private Button MakeCoinButton(string iconPath)
     {
@@ -387,6 +451,9 @@ public partial class Hud : CanvasLayer
         button.AddThemeStyleboxOverride("normal", normal);
         button.AddThemeStyleboxOverride("hover", hover);
         button.AddThemeStyleboxOverride("pressed", pressed);
+        var disabled = (StyleBoxTexture)pressed.Duplicate();
+        disabled.ModulateColor = new Color(0.55f, 0.52f, 0.45f);
+        button.AddThemeStyleboxOverride("disabled", disabled);
         button.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
         return button;
     }

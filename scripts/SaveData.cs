@@ -27,11 +27,16 @@ public sealed class SaveData
     private const string TempPath = "user://save.json.tmp";
     private const int HistoryLimit = 50;
 
+    /// <summary>Gust power granted on a new game (and for old saves missing the key).</summary>
+    public const int StartingGustPower = 3;
+
     public int CurrentLevel { get; set; } = 1;
     public int LevelsCleared { get; set; }
     public int TotalSwipes { get; set; }
     public int TotalGusts { get; set; }
     public int TotalSeconds { get; set; }
+    /// <summary>Current gust power balance: coins found add +1, each gust spent takes −1.</summary>
+    public int GustPower { get; set; } = StartingGustPower;
     public Dictionary<string, int> BugFindCounts { get; } = new();
     public List<LevelResult> History { get; } = new();
 
@@ -58,6 +63,7 @@ public sealed class SaveData
             data.TotalSwipes = Get(root, "totalSwipes", 0).AsInt32();
             data.TotalGusts = Get(root, "totalGusts", 0).AsInt32();
             data.TotalSeconds = Get(root, "totalSeconds", 0).AsInt32();
+            data.GustPower = Get(root, "gustPower", StartingGustPower).AsInt32();
 
             if (Get(root, "bugFindCounts", default).AsGodotDictionary() is { } finds)
                 foreach (var kv in finds)
@@ -82,6 +88,8 @@ public sealed class SaveData
                 data.CurrentLevel = 1;
             if (data.LevelsCleared < 0)
                 data.LevelsCleared = 0;
+            if (data.GustPower < 0)
+                data.GustPower = 0;
         }
         catch (System.Exception e)
         {
@@ -120,6 +128,7 @@ public sealed class SaveData
             ["totalSwipes"] = TotalSwipes,
             ["totalGusts"] = TotalGusts,
             ["totalSeconds"] = TotalSeconds,
+            ["gustPower"] = GustPower,
             ["bugFindCounts"] = finds,
             ["history"] = history,
         };
@@ -174,6 +183,7 @@ public sealed class SaveData
         TotalSwipes = 0;
         TotalGusts = 0;
         TotalSeconds = 0;
+        GustPower = StartingGustPower;
         BugFindCounts.Clear();
         History.Clear();
         Save();
