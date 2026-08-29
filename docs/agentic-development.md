@@ -71,6 +71,28 @@ pass, `1` on failure, so it can gate commits or CI. Lessons baked in:
   resets first.
 - **Env-gated hooks beat test frameworks** for this scale — no extra
   dependencies, runs with the same binary the player runs.
+- **A fresh worktree needs `--import` before level 4.** Without a prior
+  import pass nothing boots and autoplay **silently exits 0 with no
+  `AUTOPLAY` output** — always grep for `AUTOPLAY`, never trust the exit
+  code alone.
+- **Animation-gated assertions.** Outcomes that land at the end of a tween
+  (a coin arriving at the dock button before its +1 banks) are tested the
+  way players experience them: `RunHeadlessAutoplay` is `async void` and
+  `await ToSignal(coin, GustCoin.SignalName.CollectionFlightFinished)`
+  before asserting. `--quit-after 300` must outlast the awaited animation
+  (~1.6 s ≈ 100 frames).
+- **Import artifacts dirty the worktree.** Each `--import` run rewrites
+  `LeafSweeper.csproj` (dropping a redundant line) and leaves
+  `LeafSweeper.csproj.old` — `git checkout -- LeafSweeper.csproj` and
+  delete the `.old` before committing. A new script's generated `.cs.uid`
+  is committed together with the script.
+- **Whitespace drift on the main checkout.** Tab-reindent edits keep
+  reappearing in the main checkout (editor auto-format on save). Before
+  committing there, confirm `git diff --ignore-all-space --stat` is empty
+  and discard them — the repo standard is 4-space indent.
+- **C# API surface ≠ GDScript.** `GD.RandfRange` doesn't exist in Godot C#
+  (it's `GD.RandRange`, doubles, or a `RandomNumberGenerator`) — the level 1
+  build catches these, so never skip it.
 
 **Level 5 exists because headless tests are blind.** During the wood-dock
 slice every rung above was green while the entire dock was invisible on
@@ -113,10 +135,18 @@ never tree-order luck — `ZIndex` beats tree order anyway:
 
 | Layer | Z | Note |
 |-------|---|------|
-| Ground, bug | 0 | bug stays below *every* debris piece until tapped |
-| DebrisBottom / DebrisTop | 1 / 2 | both render over the bug by design |
+| Ground, bug, hidden gust coins | 0 | bug and coins stay below *every* debris piece until tapped |
+| DebrisBottom / DebrisTop | 1 / 2 | both render over the bug and coins by design |
 | Gust streaks, petal sparkles | 3 | effects ride above all debris |
 | Celebrated bug | 100 | discovery pop — still below the HUD CanvasLayer |
+| Collected gust coin | on the HUD layer | its flight must pass *above* the dock (see below) |
+
+**CanvasLayer beats `ZIndex`.** A `Node2D` can never render above the HUD
+dock by raising `ZIndex` — the dock lives on a `CanvasLayer`, a separate
+canvas that always draws over the default one (this is why the coin's fade
+"under the dock" was wrong). When a world-space thing must fly over UI —
+the gust coin spiralling into the dock button — reparent it onto the HUD
+layer and convert to screen space with `GetCanvasTransform() * worldPos`.
 
 **Tunables as named constants.** Sweep radius, fling factors, friction and
 coverage are `const`s in small files with comments explaining the feel
@@ -130,6 +160,9 @@ they produce, so a playtest finding maps to one named knob:
 | "Menu looks wrong at odd aspects" | fit-on-resize (`Main.FitGround` + `Main.OnViewportResized`) |
 | "A Control (dock/HUD) is invisible despite being added" | `SetAnchorsPreset` sets anchors but **not offsets** — a zero-height rect pinned to the screen edge; set anchors *and* offsets explicitly (`Hud.BuildDock`) |
 | "Sweeps act through the dock/HUD" | GUI input dies there: dock uses `MouseFilter.Stop`, sweeping is `_UnhandledInput` |
+| "Gust power feels stingy / generous" | `SaveData.StartingGustPower`, `Main.GustCoinsPerLevel` |
+| "Coin flight / arrival feel off" | `GustCoin.SpiralSeconds`, `GustCoin.SpiralTurns`, `GustCoin.WindIconRatio`, the pulse in `Hud.PulseGustPower` |
+| "Badge/popup scales from a corner" | Controls scale around `PivotOffset` — set it to the center before tweening `scale` (`Hud.PulseGustPower`) |
 
 **Slices happen in worktrees.** Each slice is implemented in a dedicated
 git worktree beside the main checkout, on a short-lived branch — never in
@@ -163,6 +196,15 @@ fast, so doc alignment is part of the slice, not a cleanup phase.
 - **Machine-specific paths are not in the repo.** Editor settings (Android
   SDK, JDK paths, keystores) live in the user's Godot editor settings or
   `~/.local/share/godot/keystores`; only portable configuration is committed.
+- **This is a NixOS machine — resolve local tools once per session.** The
+  Godot binary is a Nix store wrapper (glob
+  `/nix/store/*godot-mono-wrapper*/bin/godot-mono`), not a stable PATH
+  entry. `git-remote-https` crashes with `version 'CURL_OPENSSL_4' not
+  found`, so pushes inject the authenticated token into the URL instead:
+  `git -c credential.helper= -c http.sslVerify=false push
+  https://<user>:$(gh auth token)@github.com/<owner>/<repo>.git <branch>`.
+  `/tmp` is volatile between agent tool calls — keep scratch artifacts in
+  persistent paths.
 - **Long-running installs are human-run; exports can be headless.** Android
   SDK/template installation is done from the editor by the human, but the
   APK export itself runs headlessly with the command in the README — the
@@ -182,6 +224,8 @@ git worktree add ../LeafSweeper-<slice> -b <slice>   # isolate the slice
 git merge <slice>                                    # absorb into main
 git worktree remove ../LeafSweeper-<slice>           # clean up (always)
 git branch -d <slice>
+
+git diff --ignore-all-space --stat   # main checkout: confirm stray whitespace-only edits before discarding
 ```
 
 See also: [`docs/architecture.md`](architecture.md) for the code map,

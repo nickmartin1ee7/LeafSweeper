@@ -9,9 +9,16 @@
 | Boot smoke | `godot --headless --quit-after 180` | no errors in output |
 | Save round-trip | `LEAF_AUTOPLAY=1 godot --headless --quit-after 300` | `ok=True`, exit 0 |
 
-`LEAF_AUTOPLAY` makes `Main` play a level end-to-end headlessly (7 swipes →
-win → save → reload) and verifies `currentLevel`, `levelsCleared`,
-`totalSwipes`, bug find counts and history round-trip correctly.
+`LEAF_AUTOPLAY` makes `Main` play a level end-to-end headlessly (covered-bug
+uncover rule → collect a gust coin and **await its arrival animation** →
+7 swipes → gust spend → win → save → reload) and verifies `currentLevel`,
+`levelsCleared`, `totalSwipes`, `totalGusts`, `gustPower`, bug find counts
+and history round-trip correctly. It is `async void` and awaits in-game
+signals, so `--quit-after` must outlast the animations it waits on.
+
+**Fresh checkout/worktree?** Run `--headless --import` once before the
+autoplay, or nothing boots and it **silently exits 0 with no `AUTOPLAY`
+output** — grep for `AUTOPLAY`, don't trust the exit code alone.
 
 ## Visual smoke (windowed)
 
@@ -52,16 +59,22 @@ adb logcat | grep -iE "LeafSweeper|godot|mono|FATAL|AndroidRuntime"
    sticks resist more; fast swipes don't miss debris (no tunneling).
 4. **Find & tap bug** — petal sparkles, celebration pulse, win overlay with
    comment + stats (time · swipes).
-5. **Dock** — wood tray pinned to the bottom; gust coin centered, restart
+5. **Gust coins** — three gold coins (wind icon on the face) hide under the
+   debris; uncover one and tap it: it shines golden, grows, spirals **above
+   the dock** into the gust button, fires a gold ring-and-spark burst, and
+   the ×N badge pulses as it ticks up; pressing Gust spends one (×0 leaves
+   the button disabled).
+6. **Dock** — wood tray pinned to the bottom; gust coin centered, restart
    coin rightmost, swipe counter left, level label top-middle; sweeping
    can't act through it; debris never *spawns* under it but may drift over
    it while fading.
-6. **Next** — starts next level; level counter increments.
-7. **Persistence** — force-stop the app, relaunch: Play resumes at the
-   correct level; menu shows lifetime stats.
-8. **New game** — after ≥1 clear, New game resets progress to level 1.
-9. **Rotation/aspect sanity** — HUD stays pinned to edges (portrait lock is
-   the shipped orientation).
+7. **Next** — starts next level; level counter increments.
+8. **Persistence** — force-stop the app, relaunch: Play resumes at the
+   correct level; menu shows lifetime stats; the gust power balance resumes.
+9. **New game** — after ≥1 clear, New game resets progress to level 1
+   (gust power back to 3).
+10. **Rotation/aspect sanity** — HUD stays pinned to edges (portrait lock is
+    the shipped orientation).
 
 Useful adb helpers while testing:
 
