@@ -26,13 +26,16 @@ public partial class Main : Node2D
     private Sweeper _sweeper = null!;
     private List<Debris> _debris = new();
     private GameState _state = GameState.Menu;
+    private Vector2 _viewSize;
 
     public override void _Ready()
     {
         _rng.Randomize();
 
         BuildTree();
+        _viewSize = GetViewportRect().Size;
         FitGround();
+        GetViewport().SizeChanged += OnViewportResized;
 
         _save = SaveData.Load();
         _sweeper = new Sweeper(() => _debris, _rng, OnSwipeCompleted);
@@ -155,6 +158,35 @@ public partial class Main : Node2D
         float s = Mathf.Max(view.Size.X / texSize.X, view.Size.Y / texSize.Y) * 1.05f;
         sprite.Scale = new Vector2(s, s);
         _ground.Position = view.GetCenter();
+    }
+
+    /// <summary>
+    /// Keeps the ground and a live round covering the viewport when the
+    /// window dimensions change (desktop resize, rotation, split-screen).
+    /// </summary>
+    private void OnViewportResized()
+    {
+        Vector2 newSize = GetViewportRect().Size;
+        if (newSize == _viewSize || newSize == Vector2.Zero)
+            return;
+
+        Vector2 oldSize = _viewSize;
+        _viewSize = newSize;
+        FitGround();
+
+        if (_state == GameState.Menu)
+            return;
+
+        // Stretch the live round's layout from the old rect onto the new
+        // one so the floor never shows bare background mid-level.
+        if (oldSize.X <= 0f || oldSize.Y <= 0f)
+            return;
+        Vector2 ratio = new(newSize.X / oldSize.X, newSize.Y / oldSize.Y);
+        if (IsInstanceValid(_bug) && _bug.Visible)
+            _bug.Position *= ratio;
+        foreach (var d in _debris)
+            if (IsInstanceValid(d) && !d.Swept)
+                d.Position *= ratio;
     }
 
     private void ClearLevel()

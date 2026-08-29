@@ -61,7 +61,9 @@ so UI-anchored touches match world-space debris under stretch/expand.
 
 - Base viewport **1080×2340**, stretch mode `canvas_items`, aspect `expand` —
   taller/shorter phones simply show more/less ground; the ground sprite is
-  rescaled every round to cover the visible rect.
+  rescaled on startup, every round **and on every viewport resize**
+  (`Main.OnViewportResized`), which also stretches a live round's unswept
+  debris + bug positions onto the new rect so no bare floor shows mid-level.
 - Portrait orientation, touch emulation from mouse for desktop testing.
 - Textures are SVGs rasterized by Godot at import; the source is regenerated
   by `tools/gen_art.mjs`.

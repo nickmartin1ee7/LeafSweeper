@@ -102,7 +102,7 @@ they produce, so a playtest finding maps to one named knob:
 | "Floor is visible / bug is findable too fast" | `RoundConfig.CoverageStart/End` |
 | "Bug shows stacked sprites" | node lifecycle in `Bug.Setup` |
 | "Sweeps clear too much / too little" | `Sweeper.SweepRadius`, `Sweeper.MaxDebrisPerSwipe`, `Debris.FlingFactor`, `Debris.Friction`, `Debris.FadeDelayScale` |
-| "Menu looks wrong at odd aspects" | fit-on-startup (`Main.FitGround`) |
+| "Menu looks wrong at odd aspects" | fit-on-resize (`Main.FitGround` + `Main.OnViewportResized`) |
 
 **Docs live with code.** Behavior changes update `README.md` and
 `docs/*` in the same session — numbers in prose (counts, radii) drift
