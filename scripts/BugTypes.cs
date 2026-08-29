@@ -50,11 +50,24 @@ public static class BugTypes
         new("bumblebee", "Bumblebee", "res://assets/textures/bugs/bumblebee.svg", 0.85f, 64f);
     public static readonly BugType Caterpillar =
         new("caterpillar", "Caterpillar", "res://assets/textures/bugs/caterpillar.svg", 1.0f, 76f);
+    public static readonly BugType Mantis =
+        new("mantis", "Mantis", "res://assets/textures/bugs/mantis.svg", 1.1f, 80f);
+    public static readonly BugType StickInsect =
+        new("stick_insect", "Stick Insect", "res://assets/textures/bugs/stick_insect.svg", 1.15f, 78f);
+    public static readonly BugType Weevil =
+        new("weevil", "Weevil", "res://assets/textures/bugs/weevil.svg", 0.8f, 62f);
+    public static readonly BugType Pillbug =
+        new("pillbug", "Pill Bug", "res://assets/textures/bugs/pillbug.svg", 0.7f, 56f);
+    public static readonly BugType Ant =
+        new("ant", "Ant", "res://assets/textures/bugs/ant.svg", 0.6f, 48f);
+    public static readonly BugType Fly =
+        new("fly", "Fly", "res://assets/textures/bugs/fly.svg", 0.65f, 52f);
 
     public static readonly BugType[] All =
     {
         Ladybug, Butterfly, Centipede, Moth, Grasshopper, Dragonfly, Beetle, Snail,
-        Firefly, Bumblebee, Caterpillar,
+        Firefly, Bumblebee, Caterpillar, Mantis, StickInsect, Weevil, Pillbug, Ant,
+        Fly,
     };
 
     private static readonly RandomNumberGenerator Rng = new();
