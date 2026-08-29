@@ -14,18 +14,18 @@ config/name="LeafSweeper"
 config/description="A cozy puzzle game about sweeping forest-floor debris to find the hidden bug."
 config/version="0.1.0"
 run/main_scene="res://scenes/Main.tscn"
-config/features=PackedStringArray("4.7", "Mobile", "C#")
-config/icon="res://icon.svg"
+config/features=PackedStringArray("4.7", "C#", "Mobile")
+config/icon="res://assets/icons/app_icon.png"
 
 [display]
 
 window/size/viewport_width=1080
 window/size/viewport_height=2340
-window/handheld/orientation=1
-window/stretch/mode="canvas_items"
-window/stretch/aspect="expand"
 window/size/window_width_override=540
 window/size/window_height_override=1170
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/handheld/orientation=1
 
 [dotnet]
 
