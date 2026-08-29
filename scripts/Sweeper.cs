@@ -16,7 +16,7 @@ public sealed class Sweeper
     private const float SweepRadius = 55f;
 
     /// <summary>Max debris one swipe gesture may clear.</summary>
-    public const int MaxDebrisPerSwipe = 4;
+    public const int MaxDebrisPerSwipe = 12;
 
     private readonly Func<IEnumerable<Debris>> _debris;
     private readonly RandomNumberGenerator _rng;
