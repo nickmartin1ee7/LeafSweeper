@@ -178,7 +178,7 @@ function ladybug() {
   <circle cx="55" cy="23" r="2.6" fill="#fff"/>
   <path d="M43 15 C40 10 36 8 32 8 M57 15 C60 10 64 8 68 8"
         fill="none" stroke="#26201c" stroke-width="2.6" stroke-linecap="round"/>
-  <path d="M50 30 L50 85" stroke="#5e1713" stroke-width="3"/>
+  <path d="M50 30 L50 85" stroke="#26201c" stroke-width="3.4"/>
   <g fill="#26201c">
     <circle cx="36" cy="44" r="5"/><circle cx="64" cy="44" r="5"/>
     <circle cx="30" cy="60" r="4"/><circle cx="70" cy="60" r="4"/>
@@ -222,35 +222,70 @@ function butterfly() {
 }
 
 function centipede() {
-  // Clear segmented chain: head left, tapering body curving to the tail,
-  // many legs underneath. Stroke pass then fill pass hides inner outlines.
+  // Flatter, elongated segmented body with many long splayed legs.
+  // Keep orange body (#d99a4e) with darker outline (#8a5318), head at left.
+  // Use ellipses for a low profile and 7 pairs of long thin legs alternating.
   const segs = [
-    [28, 48, 7.5], [40, 46, 7.5], [52, 48, 7.5],
-    [64, 52, 7.0], [75, 56, 6.2], [84, 60, 5.2],
+    // x, y, rx, ry, rotation
+    [18, 48, 9.5, 5.2, -6], // head/first
+    [30, 48, 8.6, 4.4, -4],
+    [40, 48, 8.0, 4.0, -2],
+    [50, 49, 7.2, 3.6, 0],
+    [60, 50, 6.2, 3.2, 2],
+    [70, 51, 5.4, 2.8, 4],
+    [80, 52, 4.6, 2.4, 6],
   ];
-  const legs = [
-    [28, 48], [40, 46], [52, 48], [64, 52], [75, 56], [84, 60],
-  ]
-    .map(([x, y]) => `<path d="M${x - 3} ${y + 4} L${x - 8} ${y + 14} M${x + 3} ${y + 4} L${x + 8} ${y + 14}"/>`)
-    .join(" ");
+
+  // legs: long, thin, alternately angled. Produce a pair per segment except head.
+  const legLines = segs
+    .slice(1) // skip head for leg pairing start
+    .map(([x, y, rx, ry], i) => {
+      const baseY = y + ry - 1; // emerge from just under ellipse
+      const out = 14 + (i % 3); // length 14-16
+      const spread = 10 + (i % 2) * 4; // how far sideways they go
+      // alternate angles: even index -> left leg steeper, odd -> right leg steeper
+      const leftEndX = x - spread - (i % 2 === 0 ? 2 : 0);
+      const rightEndX = x + spread + (i % 2 === 1 ? 2 : 0);
+      const endY = baseY + out;
+      // give each leg a two-segment feel (joint) with a mid point for a slight kink
+      const leftMidX = x - (spread * 0.5);
+      const leftMidY = baseY + out * 0.45;
+      const rightMidX = x + (spread * 0.5);
+      const rightMidY = baseY + out * 0.45;
+      return `
+        <path d="M${x - 2} ${baseY} L${leftMidX.toFixed(1)} ${leftMidY.toFixed(1)} L${leftEndX} ${endY}" />
+        <path d="M${x + 2} ${baseY} L${rightMidX.toFixed(1)} ${rightMidY.toFixed(1)} L${rightEndX} ${endY}" />`;
+    })
+    .join("\n      ");
+
   const spots = segs
     .filter((_, i) => i % 2 === 0)
-    .map(([x, y]) => `<circle cx="${x}" cy="${y - 2.5}" r="2.1" fill="#f0bd7e"/>`)
+    .map(([x, y]) => `<circle cx="${x + 2}" cy="${y - 2}" r="1.9" fill="#f0bd7e"/>`)
     .join("");
-  const circles = segs
-    .map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}"/>`)
+
+  const ellipses = segs
+    .map(([x, y, rx, ry, rot]) =>
+      `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" transform="rotate(${rot} ${x} ${y})"/>`
+    )
     .join(" ");
+
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <ellipse cx="52" cy="80" rx="36" ry="5" fill="#000" opacity="0.13"/>
-  <g stroke="#8a5318" stroke-width="2.6" stroke-linecap="round" fill="none">${legs}</g>
-  <g fill="#d99a4e" stroke="#8a5318" stroke-width="3">${circles}</g>
-  <g fill="#d99a4e">${circles}</g>
+  <!-- body stroke pass -->
+  <g stroke="#8a5318" stroke-width="3" stroke-linejoin="round" fill="none">${ellipses}</g>
+  <!-- body fill pass to hide inner strokes -->
+  <g fill="#d99a4e">${ellipses}</g>
   ${spots}
-  <circle cx="16" cy="50" r="9.5" fill="#d99a4e" stroke="#8a5318" stroke-width="3"/>
-  <circle cx="13" cy="48" r="2.2" fill="#26201c"/>
-  <path d="M13 42 C10 35 6 31 3 29 M19 41 C19 34 17 28 14 24"
+  <!-- long splayed legs drawn on top so they read clearly -->
+  <g stroke="#6e3f10" stroke-width="2.4" stroke-linecap="round" fill="none">
+      ${legLines}
+  </g>
+  <!-- head details -->
+  <ellipse cx="12" cy="48" rx="6.8" ry="4.6" fill="#d99a4e" stroke="#8a5318" stroke-width="3"/>
+  <circle cx="10.2" cy="46.6" r="1.9" fill="#26201c"/>
+  <path d="M10.5 42 C8.5 36 6 33 4 31 M14 42 C15.8 36 16 31 14 27"
         fill="none" stroke="#8a5318" stroke-width="2.4" stroke-linecap="round"/>
-  <path d="M10 55 C12 57 15 57 17 55" fill="none" stroke="#8a5318"
+  <path d="M7 54 C9 56 12 56 14 54" fill="none" stroke="#8a5318"
         stroke-width="1.6" stroke-linecap="round"/>
 </svg>`;
   write(join(BUGS, "centipede.svg"), svg);
@@ -329,10 +364,12 @@ function dragonfly() {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <ellipse cx="50" cy="88" rx="20" ry="3.6" fill="#000" opacity="0.12"/>
   <g fill="#cfe3ef" fill-opacity="0.75" stroke="#7ba3bd" stroke-width="2">
-    <ellipse cx="28" cy="38" rx="24" ry="6.4" transform="rotate(-22 28 38)"/>
-    <ellipse cx="72" cy="38" rx="24" ry="6.4" transform="rotate(22 72 38)"/>
-    <ellipse cx="28" cy="50" rx="21" ry="5.6" transform="rotate(14 28 50)"/>
-    <ellipse cx="72" cy="50" rx="21" ry="5.6" transform="rotate(-14 72 50)"/>
+    <!-- Forewings: steeper, pulled slightly outward and upward -->
+    <ellipse cx="24" cy="34" rx="26" ry="6.4" transform="rotate(-32 24 34)"/>
+    <ellipse cx="76" cy="34" rx="26" ry="6.4" transform="rotate(32 76 34)"/>
+    <!-- Hindwings: shallower, pulled outward and down to create a visible gap -->
+    <ellipse cx="24" cy="54" rx="20" ry="5.6" transform="rotate(28 24 54)"/>
+    <ellipse cx="76" cy="54" rx="20" ry="5.6" transform="rotate(-28 76 54)"/>
   </g>
   <path d="M50 34 L50 84" stroke="#5f8aa8" stroke-width="6.4" stroke-linecap="round"/>
   <path d="M50 34 L50 84" stroke="#8fb6cd" stroke-width="3" stroke-linecap="round"/>
@@ -450,10 +487,10 @@ function bumblebee() {
     </radialGradient>
   </defs>
   <ellipse cx="50" cy="88" rx="22" ry="4" fill="#000" opacity="0.13"/>
-  <ellipse cx="35" cy="36" rx="13" ry="7.5" fill="#dfeaf2" fill-opacity="0.85"
-           stroke="#8fb6cd" stroke-width="2.2" transform="rotate(-32 35 36)"/>
-  <ellipse cx="65" cy="36" rx="13" ry="7.5" fill="#dfeaf2" fill-opacity="0.85"
-           stroke="#8fb6cd" stroke-width="2.2" transform="rotate(32 65 36)"/>
+  <ellipse cx="35" cy="46" rx="13" ry="7.5" fill="#dfeaf2" fill-opacity="0.85"
+           stroke="#8fb6cd" stroke-width="2.2" transform="rotate(-32 35 46)"/>
+  <ellipse cx="65" cy="46" rx="13" ry="7.5" fill="#dfeaf2" fill-opacity="0.85"
+           stroke="#8fb6cd" stroke-width="2.2" transform="rotate(32 65 46)"/>
   <ellipse cx="50" cy="60" rx="20" ry="24" fill="url(#b)"
            stroke="#8a5b14" stroke-width="3.4"/>
   <ellipse cx="50" cy="52" rx="18.5" ry="5.2" fill="#26201c"/>
@@ -482,14 +519,46 @@ function caterpillar() {
   const circles = segs
     .map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}"/>`)
     .join(" ");
-  const stubs = segs
-    .map(([x, y]) => `<path d="M${x - 2} ${y + 5} L${x - 4} ${y + 13}"/>`)
+
+  // Build visible legs after the body so they appear on top of the circles.
+  // Pick the two rearmost segments (by vertical position) and give them
+  // chunky stub legs that extend below the body's lowest edge. Keep legs
+  // short (around 9-12px) and angled down-and-out.
+  const sortedByBottom = segs.map((s, i) => [s[1] + s[2], i]).sort((a, b) => a[0] - b[0]);
+  const tailPairs = sortedByBottom.slice(-2).map(([_, i]) => i); // indices of the 2 lowest segments
+  const legLength = 11; // within requested 9-12px
+  const legs = tailPairs
+    .map(i => {
+      const [x, y, r] = segs[i];
+      const lx0 = Math.round(x - r * 0.6);
+      const ly0 = Math.round(y + r * 0.6);
+      const lx1 = Math.round(x - (r * 0.9) - Math.round(legLength * 0.9));
+      const ly1 = Math.round(y + r + legLength);
+      const rx0 = Math.round(x + r * 0.6);
+      const rx1 = Math.round(x + (r * 0.9) + Math.round(legLength * 0.9));
+      const ry0 = ly0;
+      const ry1 = ly1;
+      return `<path d="M${lx0} ${ly0} L${lx1} ${ly1} M${rx0} ${ry0} L${rx1} ${ry1}"/>`;
+    })
     .join(" ");
+
+  // Tail prolegs (2-3 little stubs centered under the last segment)
+  const [tx, ty, tr] = segs[segs.length - 1];
+  const prolegs = [-4, 0, 4]
+    .map(off => {
+      const sx = tx + off;
+      const sy0 = Math.round(ty + tr * 0.7);
+      const sy1 = Math.round(ty + tr + 11);
+      return `<path d="M${sx} ${sy0} L${sx} ${sy1}"/>`;
+    })
+    .join(" ");
+
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <ellipse cx="50" cy="84" rx="34" ry="5" fill="#000" opacity="0.13"/>
-  <g stroke="#3e6323" stroke-width="2.4" stroke-linecap="round" fill="none">${stubs}</g>
   <g fill="#7fae4e" stroke="#3e6323" stroke-width="3">${circles}</g>
   <g fill="#7fae4e">${circles}</g>
+  <!-- legs drawn after the body so they show up clearly -->
+  <g stroke="#3e6323" stroke-width="2.6" stroke-linecap="round" fill="none">${legs} ${prolegs}</g>
   <circle cx="48" cy="50" r="2.1" fill="#a8d06e"/>
   <circle cx="60" cy="54" r="2.1" fill="#a8d06e"/>
   <circle cx="22" cy="60" r="9.5" fill="#8fbf4e" stroke="#3e6323" stroke-width="3"/>
@@ -518,10 +587,11 @@ function mantis() {
     <path d="M54 60 L46 76 L52 80"/>
     <path d="M66 64 L62 78 L68 82"/>
   </g>
-  <g stroke="#3e6323" stroke-width="3.4" fill="none" stroke-linecap="round"
+  <g stroke="#3e6323" stroke-width="3.2" fill="none" stroke-linecap="round"
      stroke-linejoin="round">
-    <path d="M38 32 L29 43 L39 49"/>
-    <path d="M45 34 L36 47 L46 52"/>
+    <!-- Single clean folded foreleg PAIR (praying pose). Each arm folds up-forward then sharply down. -->
+    <path d="M44 44 L50 30 L56 44"/>
+    <path d="M46 46 L52 32 L58 46"/>
   </g>
   <g transform="rotate(38 58 62)">
     <ellipse cx="58" cy="62" rx="24" ry="9" fill="url(#m)"
@@ -583,14 +653,14 @@ function weevil() {
     <circle cx="56" cy="64" r="2.2"/>
   </g>
   <circle cx="32" cy="44" r="7" fill="#8a6538" stroke="#4a3418" stroke-width="2.8"/>
-  <path d="M28 42 C22 40 16 40 12 42" stroke="#4a3418" stroke-width="6.5"
-        fill="none" stroke-linecap="round"/>
-  <path d="M28 42 C22 40 16 40 12 42" stroke="#a8794a" stroke-width="3"
-        fill="none" stroke-linecap="round"/>
-  <circle cx="10.5" cy="42" r="1.6" fill="#26201c"/>
-  <circle cx="31" cy="41" r="1.9" fill="#26201c"/>
-  <path d="M17 39 C15 34 13 31 10 29" fill="none" stroke="#4a3418"
-        stroke-width="1.8" stroke-linecap="round"/>
+  <!-- tapered snout: dark under-shape then lighter inner fill -->
+  <path d="M28 42 L11 46 L14 44 Z" fill="#4a3418" stroke="none"/>
+  <path d="M28 42 L13 45 L13 44 Z" fill="#a8794a" stroke="none"/>
+  <!-- tip dot -->
+  <circle cx="11" cy="46" r="1.6" fill="#26201c"/>
+  <!-- small antenna along snout -->
+  <path d="M20 43 C19 41 17 40 16 41" fill="none" stroke="#4a3418" stroke-width="1.6" stroke-linecap="round"/>
+  <circle cx="16.2" cy="41.1" r="0.9" fill="#26201c"/>
 </svg>`;
   write(join(BUGS, "weevil.svg"), svg);
 }

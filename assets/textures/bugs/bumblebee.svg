@@ -6,10 +6,10 @@
     </radialGradient>
   </defs>
   <ellipse cx="50" cy="88" rx="22" ry="4" fill="#000" opacity="0.13"/>
-  <ellipse cx="35" cy="36" rx="13" ry="7.5" fill="#dfeaf2" fill-opacity="0.85"
-           stroke="#8fb6cd" stroke-width="2.2" transform="rotate(-32 35 36)"/>
-  <ellipse cx="65" cy="36" rx="13" ry="7.5" fill="#dfeaf2" fill-opacity="0.85"
-           stroke="#8fb6cd" stroke-width="2.2" transform="rotate(32 65 36)"/>
+  <ellipse cx="35" cy="46" rx="13" ry="7.5" fill="#dfeaf2" fill-opacity="0.85"
+           stroke="#8fb6cd" stroke-width="2.2" transform="rotate(-32 35 46)"/>
+  <ellipse cx="65" cy="46" rx="13" ry="7.5" fill="#dfeaf2" fill-opacity="0.85"
+           stroke="#8fb6cd" stroke-width="2.2" transform="rotate(32 65 46)"/>
   <ellipse cx="50" cy="60" rx="20" ry="24" fill="url(#b)"
            stroke="#8a5b14" stroke-width="3.4"/>
   <ellipse cx="50" cy="52" rx="18.5" ry="5.2" fill="#26201c"/>

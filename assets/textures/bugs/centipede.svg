@@ -1,13 +1,36 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <ellipse cx="52" cy="80" rx="36" ry="5" fill="#000" opacity="0.13"/>
-  <g stroke="#8a5318" stroke-width="2.6" stroke-linecap="round" fill="none"><path d="M25 52 L20 62 M31 52 L36 62"/> <path d="M37 50 L32 60 M43 50 L48 60"/> <path d="M49 52 L44 62 M55 52 L60 62"/> <path d="M61 56 L56 66 M67 56 L72 66"/> <path d="M72 60 L67 70 M78 60 L83 70"/> <path d="M81 64 L76 74 M87 64 L92 74"/></g>
-  <g fill="#d99a4e" stroke="#8a5318" stroke-width="3"><circle cx="28" cy="48" r="7.5"/> <circle cx="40" cy="46" r="7.5"/> <circle cx="52" cy="48" r="7.5"/> <circle cx="64" cy="52" r="7"/> <circle cx="75" cy="56" r="6.2"/> <circle cx="84" cy="60" r="5.2"/></g>
-  <g fill="#d99a4e"><circle cx="28" cy="48" r="7.5"/> <circle cx="40" cy="46" r="7.5"/> <circle cx="52" cy="48" r="7.5"/> <circle cx="64" cy="52" r="7"/> <circle cx="75" cy="56" r="6.2"/> <circle cx="84" cy="60" r="5.2"/></g>
-  <circle cx="28" cy="45.5" r="2.1" fill="#f0bd7e"/><circle cx="52" cy="45.5" r="2.1" fill="#f0bd7e"/><circle cx="75" cy="53.5" r="2.1" fill="#f0bd7e"/>
-  <circle cx="16" cy="50" r="9.5" fill="#d99a4e" stroke="#8a5318" stroke-width="3"/>
-  <circle cx="13" cy="48" r="2.2" fill="#26201c"/>
-  <path d="M13 42 C10 35 6 31 3 29 M19 41 C19 34 17 28 14 24"
+  <!-- body stroke pass -->
+  <g stroke="#8a5318" stroke-width="3" stroke-linejoin="round" fill="none"><ellipse cx="18" cy="48" rx="9.5" ry="5.2" transform="rotate(-6 18 48)"/> <ellipse cx="30" cy="48" rx="8.6" ry="4.4" transform="rotate(-4 30 48)"/> <ellipse cx="40" cy="48" rx="8" ry="4" transform="rotate(-2 40 48)"/> <ellipse cx="50" cy="49" rx="7.2" ry="3.6" transform="rotate(0 50 49)"/> <ellipse cx="60" cy="50" rx="6.2" ry="3.2" transform="rotate(2 60 50)"/> <ellipse cx="70" cy="51" rx="5.4" ry="2.8" transform="rotate(4 70 51)"/> <ellipse cx="80" cy="52" rx="4.6" ry="2.4" transform="rotate(6 80 52)"/></g>
+  <!-- body fill pass to hide inner strokes -->
+  <g fill="#d99a4e"><ellipse cx="18" cy="48" rx="9.5" ry="5.2" transform="rotate(-6 18 48)"/> <ellipse cx="30" cy="48" rx="8.6" ry="4.4" transform="rotate(-4 30 48)"/> <ellipse cx="40" cy="48" rx="8" ry="4" transform="rotate(-2 40 48)"/> <ellipse cx="50" cy="49" rx="7.2" ry="3.6" transform="rotate(0 50 49)"/> <ellipse cx="60" cy="50" rx="6.2" ry="3.2" transform="rotate(2 60 50)"/> <ellipse cx="70" cy="51" rx="5.4" ry="2.8" transform="rotate(4 70 51)"/> <ellipse cx="80" cy="52" rx="4.6" ry="2.4" transform="rotate(6 80 52)"/></g>
+  <circle cx="20" cy="46" r="1.9" fill="#f0bd7e"/><circle cx="42" cy="46" r="1.9" fill="#f0bd7e"/><circle cx="62" cy="48" r="1.9" fill="#f0bd7e"/><circle cx="82" cy="50" r="1.9" fill="#f0bd7e"/>
+  <!-- long splayed legs drawn on top so they read clearly -->
+  <g stroke="#6e3f10" stroke-width="2.4" stroke-linecap="round" fill="none">
+      
+        <path d="M28 51.4 L25.0 57.7 L18 65.4" />
+        <path d="M32 51.4 L35.0 57.7 L40 65.4" />
+      
+        <path d="M38 51 L33.0 57.8 L26 66" />
+        <path d="M42 51 L47.0 57.8 L56 66" />
+      
+        <path d="M48 51.6 L45.0 58.8 L38 67.6" />
+        <path d="M52 51.6 L55.0 58.8 L60 67.6" />
+      
+        <path d="M58 52.2 L53.0 58.5 L46 66.2" />
+        <path d="M62 52.2 L67.0 58.5 L76 66.2" />
+      
+        <path d="M68 52.8 L65.0 59.5 L58 67.8" />
+        <path d="M72 52.8 L75.0 59.5 L80 67.8" />
+      
+        <path d="M78 53.4 L73.0 60.6 L66 69.4" />
+        <path d="M82 53.4 L87.0 60.6 L96 69.4" />
+  </g>
+  <!-- head details -->
+  <ellipse cx="12" cy="48" rx="6.8" ry="4.6" fill="#d99a4e" stroke="#8a5318" stroke-width="3"/>
+  <circle cx="10.2" cy="46.6" r="1.9" fill="#26201c"/>
+  <path d="M10.5 42 C8.5 36 6 33 4 31 M14 42 C15.8 36 16 31 14 27"
         fill="none" stroke="#8a5318" stroke-width="2.4" stroke-linecap="round"/>
-  <path d="M10 55 C12 57 15 57 17 55" fill="none" stroke="#8a5318"
+  <path d="M7 54 C9 56 12 56 14 54" fill="none" stroke="#8a5318"
         stroke-width="1.6" stroke-linecap="round"/>
 </svg>

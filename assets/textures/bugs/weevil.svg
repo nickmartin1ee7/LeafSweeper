@@ -17,12 +17,12 @@
     <circle cx="56" cy="64" r="2.2"/>
   </g>
   <circle cx="32" cy="44" r="7" fill="#8a6538" stroke="#4a3418" stroke-width="2.8"/>
-  <path d="M28 42 C22 40 16 40 12 42" stroke="#4a3418" stroke-width="6.5"
-        fill="none" stroke-linecap="round"/>
-  <path d="M28 42 C22 40 16 40 12 42" stroke="#a8794a" stroke-width="3"
-        fill="none" stroke-linecap="round"/>
-  <circle cx="10.5" cy="42" r="1.6" fill="#26201c"/>
-  <circle cx="31" cy="41" r="1.9" fill="#26201c"/>
-  <path d="M17 39 C15 34 13 31 10 29" fill="none" stroke="#4a3418"
-        stroke-width="1.8" stroke-linecap="round"/>
+  <!-- tapered snout: dark under-shape then lighter inner fill -->
+  <path d="M28 42 L11 46 L14 44 Z" fill="#4a3418" stroke="none"/>
+  <path d="M28 42 L13 45 L13 44 Z" fill="#a8794a" stroke="none"/>
+  <!-- tip dot -->
+  <circle cx="11" cy="46" r="1.6" fill="#26201c"/>
+  <!-- small antenna along snout -->
+  <path d="M20 43 C19 41 17 40 16 41" fill="none" stroke="#4a3418" stroke-width="1.6" stroke-linecap="round"/>
+  <circle cx="16.2" cy="41.1" r="0.9" fill="#26201c"/>
 </svg>
