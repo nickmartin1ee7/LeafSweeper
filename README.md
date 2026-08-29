@@ -17,7 +17,7 @@ Built with **Godot 4.7 (C# / .NET 8)** for Android phones (FHD+ portrait,
 3. Spot the hidden bug and **tap** it — a petal celebration and a friendly
    comment about your solve ("Just 18 swipes to find the bug!") appear.
 4. Tap **Next** to keep going. Difficulty rises *very* gently: by level 200
-   the litter thickens from ~341 to ~531 pieces, the bug is slightly smaller
+   the litter thickens from ~1365 to ~2123 pieces, the bug is slightly smaller
    and may blend in a little — that's all.
 
 Eight bug types hide in the leaves: ladybug, butterfly, centipede, moth,
@@ -74,6 +74,8 @@ development.
   regenerate assets (with the original reference sheet:
   [`docs/art-reference.jpg`](docs/art-reference.jpg)).
 - [`docs/testing.md`](docs/testing.md) — validation workflow and device checklist.
+- [`docs/agentic-development.md`](docs/agentic-development.md) — how this
+  project is built with an AI coding agent: workflow, patterns, practices.
 
 ## Project layout
 

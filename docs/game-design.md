@@ -14,7 +14,8 @@ Title menu → Play → Round (sweep debris, find bug) → Tap bug
      └────── Menu button ← Win overlay (comment + stats) ──┘
 ```
 
-1. A round scatters **340–530 debris items** (weighted mix) on a jittered
+1. A round scatters **~1365 debris items** (weighted mix, growing to ~2123
+   by level 200) on a jittered
    grid, guaranteeing the entire floor is covered — the forest floor is never
    visible until swept — and hides **one random bug** from the catalog
    underneath the litter.
@@ -41,7 +42,7 @@ Implemented in `scripts/RoundConfig.cs`, all curves saturate at level 200:
 
 | Parameter        | Level 1 | Level 200 | Curve                                  |
 |------------------|---------|-----------|----------------------------------------|
-| Debris coverage  | ~341    | ~531      | smoothstep growth (floor-area × density) |
+| Debris coverage  | ~1365   | ~2123     | smoothstep growth (floor-area × density) |
 | Bug scale        | 1.00    | 0.75      | linear ease                             |
 | Camouflage blend | 0       | 0.25 max  | 0 until ~level 60, then gentle ramp     |
 
