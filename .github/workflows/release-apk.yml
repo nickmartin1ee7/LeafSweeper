@@ -159,6 +159,7 @@ jobs:
           # Import assets first (fresh checkout has no .godot cache), then export.
           # --install-android-build-template fetches the gradle template, which is
           # gitignored in this repo; the keystore env vars make Godot sign the APK.
+          mkdir -p build
           godot --headless --path . --import
           GODOT_ANDROID_KEYSTORE_RELEASE_PATH="$RUNNER_TEMP/release.keystore" \
           GODOT_ANDROID_KEYSTORE_RELEASE_USER="$ANDROID_KEYSTORE_ALIAS" \
