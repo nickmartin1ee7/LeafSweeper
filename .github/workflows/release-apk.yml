@@ -1,0 +1,199 @@
+name: Release APK
+
+# Builds the signed Android APK and attaches it to a GitHub Release.
+#
+# - Push a tag like v0.2.0 → release "0.2.0" with versionCode 0*1000000 + 2*1000 + 0.
+# - Run manually from the Actions tab for a test build (artifact upload only;
+#   only tag builds ever publish a Release).
+#
+# Required secrets:
+#   ANDROID_KEYSTORE_BASE64   — base64 of the release .keystore file
+#   ANDROID_KEYSTORE_PASSWORD — keystore password (KS_PASS in keystore.env)
+#   ANDROID_KEYSTORE_ALIAS    — keystore alias (KS_USER in keystore.env)
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build, e.g. 0.2.0 or 0.2.0-rc1 (v prefix optional). Defaults to the latest v* tag.'
+        required: false
+        default: ''
+      dry_run:
+        description: 'Test build only (upload as workflow artifact, never publish)'
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+env:
+  GODOT_VERSION: '4.7.1'
+  GODOT_RELEASE: '4.7.1-stable'
+
+jobs:
+  apk:
+    name: Build signed APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Resolve version
+        id: version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          NAME=""
+          if [ "$GITHUB_REF_TYPE" = tag ]; then
+            NAME="$GITHUB_REF_NAME"
+          elif [ -n "$INPUT_VERSION" ]; then
+            NAME="$INPUT_VERSION"
+          else
+            NAME="$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || true)"
+          fi
+          NAME="${NAME#v}"
+          if [[ "$NAME" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)(-.*)?$ ]]; then
+            CODE=$(( BASH_REMATCH[1] * 1000000 + BASH_REMATCH[2] * 1000 + BASH_REMATCH[3] ))
+          else
+            NAME="${NAME:-untagged}"
+            CODE="$GITHUB_RUN_NUMBER"
+          fi
+          {
+            echo "name=$NAME"
+            echo "code=$CODE"
+          } >> "$GITHUB_OUTPUT"
+          echo "Building LeafSweeper $NAME (versionCode $CODE)"
+
+      - name: Configure Godot editor settings (Android SDK / JDK paths)
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.config/godot
+          cat > ~/.config/godot/editor_settings-${GODOT_VERSION}.tres <<EOF
+          config_version=5
+
+          [export]
+
+          android/android_sdk_path="$ANDROID_HOME"
+          android/java_sdk_path="$JAVA_HOME"
+          android/shutdown_adb_on_exit=false
+          EOF
+
+      - name: Restore Godot export templates cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/godot/export_templates
+          key: godot-${{ env.GODOT_VERSION }}-mono-templates
+
+      - name: Install Godot mono editor and export templates
+        run: |
+          set -euo pipefail
+          cd /tmp
+          curl -fsSLo godot.zip \
+            "https://github.com/godotengine/godot-builds/releases/download/${GODOT_RELEASE}/Godot_v${GODOT_RELEASE}_mono_linux_x86_64.zip"
+          unzip -q godot.zip
+          sudo mv Godot_v${GODOT_RELEASE}_mono_linux_x86_64 /opt/godot
+          sudo ln -sf /opt/godot/Godot_v${GODOT_RELEASE}_mono_linux_x86_64 /usr/local/bin/godot
+          if [ ! -d ~/.local/share/godot/export_templates/${GODOT_VERSION}.stable.mono ]; then
+            curl -fsSLo templates.tpz \
+              "https://github.com/godotengine/godot-builds/releases/download/${GODOT_RELEASE}/Godot_v${GODOT_RELEASE}_mono_export_templates.tpz"
+            mkdir -p ~/.local/share/godot/export_templates
+            cd ~/.local/share/godot/export_templates
+            unzip -q /tmp/templates.tpz
+            mv templates ${GODOT_VERSION}.stable.mono
+          fi
+          godot --version
+
+      - name: Cache gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-godot-apk-v1
+          restore-keys: gradle-godot-apk-v1
+
+      - name: Stamp version into export presets
+        env:
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+          VERSION_CODE: ${{ steps.version.outputs.code }}
+        run: |
+          set -euo pipefail
+          sed -i "s/^version\/code=.*/version\/code=$VERSION_CODE/" export_presets.cfg
+          sed -i "s/^version\/name=.*/version\/name=\"$VERSION_NAME\"/" export_presets.cfg
+          grep -E '^version\/' export_presets.cfg
+
+      - name: Restore release keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          set -euo pipefail
+          [ -n "$ANDROID_KEYSTORE_BASE64" ] || { echo "Secret ANDROID_KEYSTORE_BASE64 is not set" >&2; exit 1; }
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+
+      - name: Export signed APK
+        env:
+          ANDROID_KEYSTORE_ALIAS: ${{ secrets.ANDROID_KEYSTORE_ALIAS }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          [ -n "$ANDROID_KEYSTORE_ALIAS" ] || { echo "Secret ANDROID_KEYSTORE_ALIAS is not set" >&2; exit 1; }
+          [ -n "$ANDROID_KEYSTORE_PASSWORD" ] || { echo "Secret ANDROID_KEYSTORE_PASSWORD is not set" >&2; exit 1; }
+          # Import assets first (fresh checkout has no .godot cache), then export.
+          # --install-android-build-template fetches the gradle template, which is
+          # gitignored in this repo; the keystore env vars make Godot sign the APK.
+          godot --headless --path . --import
+          GODOT_ANDROID_KEYSTORE_RELEASE_PATH="$RUNNER_TEMP/release.keystore" \
+          GODOT_ANDROID_KEYSTORE_RELEASE_USER="$ANDROID_KEYSTORE_ALIAS" \
+          GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD="$ANDROID_KEYSTORE_PASSWORD" \
+            godot --headless --path . --install-android-build-template --export-release Android build/LeafSweeper.apk
+          test -f build/LeafSweeper.apk
+
+      - name: Verify APK signature
+        run: |
+          set -euo pipefail
+          APKSIGNER="$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)"
+          "$APKSIGNER" verify --print-certs build/LeafSweeper.apk
+
+      - name: Rename APK and compute checksum
+        env:
+          VERSION_NAME: ${{ steps.version.outputs.name }}
+        run: |
+          set -euo pipefail
+          mv build/LeafSweeper.apk "build/LeafSweeper-$VERSION_NAME.apk"
+          sha256sum "build/LeafSweeper-$VERSION_NAME.apk" > build/SHA256SUMS.txt
+          cat build/SHA256SUMS.txt
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LeafSweeper-${{ steps.version.outputs.name }}
+          path: |
+            build/*.apk
+            build/SHA256SUMS.txt
+          if-no-files-found: error
+
+      - name: Publish GitHub Release
+        if: github.ref_type == 'tag' && inputs.dry_run != true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh release create "$GITHUB_REF_NAME" \
+            --title "LeafSweeper ${GITHUB_REF_NAME#v}" \
+            --generate-notes \
+            build/LeafSweeper-*.apk build/SHA256SUMS.txt
