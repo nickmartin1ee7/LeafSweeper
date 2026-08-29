@@ -1,0 +1,110 @@
+# LeafSweeper — Game Design
+
+## One-line pitch
+
+Tidy up a patch of forest floor by sweeping away leaves, petals and sticks
+until you uncover the small creature hiding beneath — then tap it. Cozy,
+endless, unhurried.
+
+## Core loop
+
+```
+Title menu → Play → Round (sweep debris, find bug) → Tap bug
+     ↑                                                    ↓
+     └────── Menu button ← Win overlay (comment + stats) ──┘
+```
+
+1. A round scatters **40–90 debris items** (weighted mix) over the ground and
+   hides **one random bug** from the catalog underneath, always peeking out at
+   least slightly.
+2. The player **drags a finger** to sweep. Debris inside the sweep radius is
+   flung with velocity + spin, slides with friction, fades and is removed.
+   Weight matters: rocks/sticks/moss resist; leaves and petals fly easily.
+3. Finding the bug and **tapping it** wins the round: petal sparkles, a
+   celebration pulse, and the win overlay with a friendly comment and the
+   round's stats (time, swipes).
+4. **Next** starts the following level. **Menu** returns to the title screen.
+
+## Design values
+
+- **No pressure.** No countdown timers, no fail state, no move limits. The
+  bug never flees or animates away — it waits.
+- **Cozy tone.** All UI copy is warm and unhurried; the win comment is the
+  game's "voice" (see Comments below).
+- **Casual-tuned difficulty.** By level 200 the game is only moderately
+  harder than level 1. Nothing ever spikes.
+
+## Difficulty curve
+
+Implemented in `scripts/RoundConfig.cs`, all curves saturate at level 200:
+
+| Parameter        | Level 1 | Level 200 | Curve                                  |
+|------------------|---------|-----------|----------------------------------------|
+| Debris count     | ~40     | ~90       | smoothstep growth                       |
+| Bug scale        | 1.00    | 0.75      | linear ease                             |
+| Camouflage blend | 0       | 0.25 max  | 0 until ~level 60, then gentle ramp     |
+
+Camouflage tints the bug slightly toward the leaf palette — a whisper of
+extra challenge in late levels, never a color hunt.
+
+## Bug catalog
+
+Each round picks a random bug type (`scripts/BugTypes.cs`). Types differ in
+texture, relative size (0.85–1.15×) and tap radius so players learn
+**silhouettes**:
+
+Ladybug · Butterfly · Centipede · Moth · Grasshopper · Dragonfly · Beetle · Snail
+
+## Debris taxonomy
+
+| Kind            | Variants                          | Weight  |
+|-----------------|-----------------------------------|---------|
+| Leaves          | red maple, red simple, yellow oak, green | Light |
+| Flower petals   | pink, white, purple               | Light   |
+| Moss clusters   | —                                 | Medium  |
+| Sticks          | —                                 | Heavy   |
+| Rocks           | round, grey                       | Heavy   |
+
+Roughly 60% leaves + petals, rest mixed; ~30% of debris spawns **above** the
+bug layer so it always peeks through.
+
+## Scoring & statistics
+
+No score — only **friendly numbers**:
+
+- Swipes used this round.
+- Time since round start (m:ss).
+- Lifetime aggregates and per-bug find counts, kept in the save file.
+
+## Between-round comments
+
+`scripts/LevelStats.cs` picks a comment from template tiers by comparing the
+round against history:
+
+- **Praise** — few swipes ("Just 18 swipes to find the bug!").
+- **Cozy reassurance** — many swipes ("The leaves were feeling stubborn
+  today.").
+- **Best-yet nod** — new personal best for the bug type.
+- **Time remark** — mention of the duration, phrased warmly.
+- **Cozy color** — an unhurried line indexed by (level + swipes), so rounds
+  rarely repeat the same flavor.
+
+## Storage
+
+Everything persists locally in `user://save.json` (Godot `user://` is
+app-private storage on Android — no Android permissions needed):
+
+- `currentLevel` — next level to play (Play resumes here).
+- `levelsCleared`, `totalSwipes`, `totalSeconds` — lifetime aggregates.
+- `bugFindCounts` — finds per bug type (drives "favorite critter").
+- `history` — last 50 cleared levels `{level, swipes, seconds, bugType,
+  clearedAt}`.
+
+Saves are written **atomically** (write temp file, rename over the real one)
+after every clear; a missing or corrupt file silently starts a fresh save.
+
+## Out of scope (current MVP)
+
+- Sound effects and music.
+- Cloud sync, achievements, monetization.
+- Bug movement/animation (bugs are serene statues by design).
