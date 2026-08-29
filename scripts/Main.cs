@@ -47,6 +47,7 @@ public partial class Main : Node2D
     /// <summary>Headless self-test: plays a level end-to-end and verifies the save round-trip.</summary>
     private void RunHeadlessAutoplay()
     {
+        _save.Reset(); // deterministic: the test assumes a fresh save file
         StartLevel(3);
         for (int i = 0; i < 7; i++)
         {
