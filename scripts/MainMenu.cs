@@ -44,21 +44,22 @@ public partial class MainMenu : CanvasLayer
         _newGameButton = Hud.MakeButton("New game", new Color("a08a68"));
         _newGameButton.Pressed += () => NewGamePressed?.Invoke();
 
-        var spacer = new Control { CustomMinimumSize = new Vector2(0, 10) };
-
         box.AddChild(title);
         box.AddChild(subtitle);
-        box.AddChild(spacer);
+        box.AddChild(Spacer());
         box.AddChild(_progressLabel);
-        box.AddChild(spacer);
+        box.AddChild(Spacer());
         box.AddChild(_playButton);
-        box.AddChild(spacer);
+        box.AddChild(Spacer());
         box.AddChild(_newGameButton);
 
         center.AddChild(box);
         dim.AddChild(center);
         AddChild(dim);
     }
+
+    private static Control Spacer() =>
+        new() { CustomMinimumSize = new Vector2(0, 10) };
 
     /// <summary>Refreshes the progress line from the save file.</summary>
     public void Refresh(SaveData save)

@@ -38,6 +38,35 @@ public partial class Main : Node2D
 
         _menu.Refresh(_save);
         SetState(GameState.Menu);
+
+        if (OS.GetEnvironment("LEAF_AUTOPLAY") == "1")
+            RunHeadlessAutoplay();
+    }
+
+    /// <summary>Headless self-test: plays a level end-to-end and verifies the save round-trip.</summary>
+    private void RunHeadlessAutoplay()
+    {
+        StartLevel(3);
+        for (int i = 0; i < 7; i++)
+        {
+            _stats.Tick(1.0);
+            _stats.CountSwipe();
+        }
+        WinLevel();
+
+        var reloaded = SaveData.Load();
+        bool ok = reloaded.CurrentLevel == 4
+            && reloaded.LevelsCleared == 1
+            && reloaded.TotalSwipes == 7
+            && reloaded.BugFindCounts.Count == 1
+            && reloaded.History.Count == 1
+            && reloaded.History[0].Level == 3;
+
+        GD.Print($"AUTOPLAY save: level={_save.CurrentLevel} cleared={_save.LevelsCleared} " +
+                 $"swipes={_save.TotalSwipes} bugs={_save.BugFindCounts.Count} hist={_save.History.Count}");
+        GD.Print($"AUTOPLAY reload: level={reloaded.CurrentLevel} cleared={reloaded.LevelsCleared} " +
+                 $"swipes={reloaded.TotalSwipes} ok={ok}");
+        GetTree().Quit(ok ? 0 : 1);
     }
 
     public override void _Process(double delta) => _stats.Tick(delta);
