@@ -35,10 +35,10 @@ Main (Node2D, scripts/Main.cs)
 
 | Script | Responsibility |
 |--------|----------------|
-| `scripts/Main.cs` | Controller: builds tree, state machine, level setup/teardown, input routing, win flow, debris spawn layout (inside the playable rect above the HUD dock), wind gust (clears ~10% of remaining debris with streak effects; gust uses counted per round), restart handling, petal sparkle. Also hosts the `LEAF_AUTOPLAY=1` headless self-test. |
+| `scripts/Main.cs` | Controller: builds tree, state machine, level setup/teardown, input routing (a tap only wins when the bug is uncovered — `BugIsCovered` checks unswept debris overlap against the bug's tap area; a covered tap starts sweeping instead), win flow, debris spawn layout (inside the playable rect above the HUD dock), wind gust (clears ~10% of remaining debris with streak effects; gust uses counted per round), restart handling, petal sparkle. Also hosts the `LEAF_AUTOPLAY=1` headless self-test. |
 | `scripts/Sweeper.cs` | Input-to-interaction: converts touch stream into flings. Uses a **segment-vs-circle sweep test** (sweep radius 55 + 30 margin) between successive touch positions so fast swipes can't tunnel over debris, and enforces a **per-swipe cap** of 12 cleared debris (`MaxDebrisPerSwipe`). Emits `onSwipeCompleted` per finished touch. |
-| `scripts/Debris.cs` | One debris item: weight class (Light/Medium/Heavy → fling factor 0.65/0.5/0.35, friction 3.4/2.3/1.5, fade-delay scale 1.0/1.35/1.7 — heavier pieces launch slower but glide farther and linger before fading), `Fling(velocity, rng)`, per-frame slide+spin+fade, `QueueFree` when faded. Unclamped — swept pieces may drift over the dock while fading; only *spawning* is excluded from it. |
-| `scripts/Bug.cs` | Bug display: `Setup(type, scale, camouflage)` tints toward leaf color, `ContainsPoint(world)` uses the type's tap radius × scale, `Celebrate(centerTarget)` plays the golden discovery moment — the bug rises to `ZIndex` 100 above all debris, a shining outline (via `assets/shaders/gold_outline.gdshader`) fades in while it swells to 1.45×, then it flies to the screen center — and emits `CelebrationFinished` when the win overlay may seat it. |
+| `scripts/Debris.cs` | One debris item: weight class (Light/Medium/Heavy → fling factor 0.65/0.5/0.35, friction 3.4/2.3/1.5, fade-delay scale 1.0/1.35/1.7 — heavier pieces launch slower but glide farther and linger before fading), `Fling(velocity, rng)`, `CoverRadius` (circle approximation of the piece's footprint, used by the covered-bug rule), per-frame slide+spin+fade, `QueueFree` when faded. Unclamped — swept pieces may drift over the dock while fading; only *spawning* is excluded from it. |
+| `scripts/Bug.cs` | Bug display: `Setup(type, scale, camouflage)` tints toward leaf color, `TapRadius` (type radius × scale) with `ContainsPoint(world)`, `Celebrate(centerTarget)` plays the golden discovery moment — the bug rises to `ZIndex` 100 above all debris, a shining outline (via `assets/shaders/gold_outline.gdshader`) fades in while it swells to 1.45×, then it flies to the screen center — and emits `CelebrationFinished` when the win overlay may seat it. |
 | `scripts/BugTypes.cs` | Static catalog of 8 bug types (texture path, display name, relative size, tap radius) with `Random()`/`ById()`. |
 | `scripts/RoundConfig.cs` | Difficulty curves saturating at level 200: `Coverage` (debris density as floor-area fraction), `BugScale`, `Camouflage`. Pure functions — easy to tune. |
 | `scripts/LevelStats.cs` | Round statistics: tick, swipe count, gust power uses, formatted time, and `Comment(save, bug)` template picker (praise / cozy / best-yet / time / color lines). |
@@ -50,7 +50,8 @@ Main (Node2D, scripts/Main.cs)
 
 ```
 touch events → Main._UnhandledInput ─┬→ Sweeper (flings debris) → onSwipeCompleted → LevelStats.CountSwipe
-                                     └→ Bug.ContainsPoint → WinLevel
+                                     ├→ Bug.ContainsPoint + no debris overlapping (BugIsCovered) → WinLevel
+                                     └→ Bug.ContainsPoint while covered, or elsewhere → Sweeper.Begin
 HUD wind button → Main.OnWindPressed → LevelStats.CountGust
 WinLevel → LevelStats.Stop → SaveData.RecordClear → Bug.Celebrate → CelebrationFinished → Hud.ShowWin(comment, stats)
 ```

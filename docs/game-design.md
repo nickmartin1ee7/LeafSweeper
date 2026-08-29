@@ -34,7 +34,10 @@ Title menu → Play → Round (sweep debris, find bug) → Tap bug
    swipe count. The dock is the game's only chrome — the **Level label sits
    at the top-middle** of the screen, and **nothing ever spawns under the
    dock**; swept debris may drift over it while fading away.
-4. Finding the bug and **tapping it** wins the round: the bug rises **above
+4. Finding the bug and **tapping it** wins the round — but the bug hides
+   **below every debris piece**, so it only becomes selectable once
+   **no unswept debris overlaps it**; tapping a covered bug just starts
+   sweeping from that spot. On a winning tap the bug rises **above
    all debris**, bathes in a **golden shining outline** and **grows**, then
    **flies to the center of the screen** and seats itself on the win card —
    below the "Bug found!" title, above the stats — as the overlay fades in
