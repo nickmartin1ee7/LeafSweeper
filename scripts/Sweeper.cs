@@ -74,6 +74,8 @@ public sealed class Sweeper
 
     public void Begin(Vector2 worldPos, ulong ticks)
     {
+        if (_dragging)
+            return; // a second simultaneous touch must not reset the in-flight gesture
         _dragging = true;
         _lastPos = worldPos;
         _lastTicks = ticks;
@@ -85,7 +87,10 @@ public sealed class Sweeper
         if (!_dragging)
             return;
         _dragging = false;
-        _onSwipeCompleted();
+        // A touch-down to lift only counts as a swipe when it actually
+        // swept debris — bare taps (and fruitless drags) stay free.
+        if (_clearedThisSwipe > 0)
+            _onSwipeCompleted();
     }
 
     public void Cancel() => _dragging = false;

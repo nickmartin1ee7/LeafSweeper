@@ -13,8 +13,10 @@ Built with **Godot 4.7 (C# / .NET 8)** for Android phones (FHD+ portrait,
 
 1. **Play** from the title menu (continues at your current level).
 2. **Drag** your finger across the screen to sweep debris away — each swipe
-   clears at most 4 pieces, so tidy up a little at a time. Heavy things
-   (rocks, sticks, moss) need more effort than light petals.
+   clears at most 12 pieces, so tidy up a little at a time. Heavy things
+   (rocks, sticks, moss) need more effort than light petals. Only gestures
+   that actually sweep debris count toward the swipe counter — bare taps
+   are free.
 3. Spot the hidden bug and **tap** it — a petal celebration and a friendly
    comment about your solve ("Just 18 swipes to find the bug!") appear.
 4. Tap **Next** to keep going. Difficulty rises *very* gently: by level 200

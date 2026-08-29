@@ -22,7 +22,8 @@ Title menu → Play → Round (sweep debris, find bug) → Tap bug
 2. The player **drags a finger** to sweep. Debris inside the sweep radius is
    flung with velocity + spin, slides with friction, fades and is removed.
    A single swipe clears **at most 12 pieces of debris** — sweeps stay
-   deliberate rather than screen-wiping.
+   deliberate rather than screen-wiping. Only gestures that sweep at least
+   one piece count toward the swipe counter — bare taps are free.
    Weight matters: rocks/sticks/moss resist; leaves and petals fly easily —
    but heavier pieces glide farther and fade later, so their long slide
    reads as weight rather than the debris dying where it was swept.
