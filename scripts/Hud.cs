@@ -21,6 +21,7 @@ public partial class Hud : CanvasLayer
     private Control _dock = null!;
     private Label _levelLabel = null!;
     private Label _swipeLabel = null!;
+    private Label _swipesWordLabel = null!;
     private Button _windButton = null!;
     private Button _restartButton = null!;
 
@@ -56,7 +57,7 @@ public partial class Hud : CanvasLayer
     /// <summary>Level indicator at the top-middle, over the forest floor.</summary>
     private Label BuildLevelLabel()
     {
-        var label = MakeLabel(52, true);
+        var label = MakeLabel(60, true);
         label.HorizontalAlignment = HorizontalAlignment.Center;
         // Explicit anchors: full width, pinned to the top. (Anchor presets
         // leave offsets untouched, which silently produced zero-height
@@ -74,8 +75,11 @@ public partial class Hud : CanvasLayer
 
     private Control BuildDock()
     {
-        _swipeLabel = MakeLabel(52, true);
-        _swipeLabel.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+        _swipeLabel = MakeLabel(64, true);
+        _swipeLabel.HorizontalAlignment = HorizontalAlignment.Center;
+        _swipesWordLabel = MakeLabel(36, true);
+        _swipesWordLabel.HorizontalAlignment = HorizontalAlignment.Center;
+        _swipesWordLabel.Text = "Swipes";
 
         _windButton = MakeCoinButton("res://assets/icons/wind.svg");
         _windButton.TooltipText = "Gust: blow away some debris";
@@ -124,10 +128,16 @@ public partial class Hud : CanvasLayer
         row.AnchorRight = 1f;
         row.AnchorBottom = 1f;
 
+        var swipeBox = new VBoxContainer();
+        swipeBox.AddThemeConstantOverride("separation", 0);
+        swipeBox.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+        swipeBox.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        swipeBox.AddChild(_swipeLabel);
+        swipeBox.AddChild(_swipesWordLabel);
+
         var box = new HBoxContainer();
         box.AddThemeConstantOverride("separation", 28);
-        _swipeLabel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        box.AddChild(_swipeLabel);
+        box.AddChild(swipeBox);
         box.AddChild(_windButton);
         var rightSlot = new HBoxContainer
         {
@@ -215,7 +225,7 @@ public partial class Hud : CanvasLayer
 
     public void ShowLevel(int level) => _levelLabel.Text = $"Level {level}";
 
-    public void ShowSwipes(int swipes) => _swipeLabel.Text = $"{swipes} swipes";
+    public void ShowSwipes(int swipes) => _swipeLabel.Text = swipes.ToString();
 
     public void ShowWin(string comment, string statsLine, Node2D? bug = null)
     {
