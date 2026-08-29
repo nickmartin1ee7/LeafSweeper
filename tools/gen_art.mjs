@@ -502,7 +502,178 @@ function caterpillar() {
   write(join(BUGS, "caterpillar.svg"), svg);
 }
 
-// ---------------------------------------------------------------- ground ---
+function mantis() {
+  // Triangular head with big eyes + folded forelegs carry the silhouette.
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="m" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#8fbf4d"/>
+      <stop offset="1" stop-color="#5c8a30"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="52" cy="86" rx="26" ry="4.5" fill="#000" opacity="0.12"/>
+  <g stroke="#3e6323" stroke-width="2.6" fill="none" stroke-linecap="round"
+     stroke-linejoin="round">
+    <path d="M44 52 L34 66 L40 70"/>
+    <path d="M54 60 L46 76 L52 80"/>
+    <path d="M66 64 L62 78 L68 82"/>
+  </g>
+  <g stroke="#3e6323" stroke-width="3.4" fill="none" stroke-linecap="round"
+     stroke-linejoin="round">
+    <path d="M38 32 L29 43 L39 49"/>
+    <path d="M45 34 L36 47 L46 52"/>
+  </g>
+  <g transform="rotate(38 58 62)">
+    <ellipse cx="58" cy="62" rx="24" ry="9" fill="url(#m)"
+             stroke="#3e6323" stroke-width="3"/>
+    <ellipse cx="60" cy="59.5" rx="15" ry="4" fill="#a8d06e" opacity="0.8"/>
+  </g>
+  <path d="M34 26 L46 48" stroke="#3e6323" stroke-width="6" stroke-linecap="round"/>
+  <path d="M34 26 L46 48" stroke="#7fae4e" stroke-width="3" stroke-linecap="round"/>
+  <path d="M26 20 C33 16 40 18 40 25 C40 32 33 34 26 30 C22 27 22 23 26 20 Z"
+        fill="#7fae4e" stroke="#3e6323" stroke-width="2.6" stroke-linejoin="round"/>
+  <circle cx="27" cy="25" r="3" fill="#26201c"/>
+  <circle cx="36" cy="24" r="3" fill="#26201c"/>
+  <path d="M32 18 C30 12 27 8 23 6 M38 17 C38 11 37 7 35 4"
+        fill="none" stroke="#3e6323" stroke-width="2" stroke-linecap="round"/>
+</svg>`;
+  write(join(BUGS, "mantis.svg"), svg);
+}
+
+function stickInsect() {
+  // A long thin stick: dark under-stroke + light over-stroke fake an outline.
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <ellipse cx="48" cy="88" rx="30" ry="3.6" fill="#000" opacity="0.1"/>
+  <g stroke="#55603a" stroke-width="2.4" fill="none" stroke-linecap="round"
+     stroke-linejoin="round">
+    <path d="M64 46 L56 60 L62 72"/>
+    <path d="M52 54 L44 66 L50 78"/>
+    <path d="M40 62 L32 74 L38 84"/>
+  </g>
+  <path d="M16 86 L78 30" stroke="#55603a" stroke-width="9" stroke-linecap="round"/>
+  <path d="M16 86 L78 30" stroke="#8a9455" stroke-width="5.4" stroke-linecap="round"/>
+  <g stroke="#55603a" stroke-width="1.4" opacity="0.7">
+    <path d="M30 74 L36 80 M42 64 L48 70 M54 54 L60 60 M66 44 L72 50"/>
+  </g>
+  <circle cx="82" cy="27" r="6" fill="#8a9455" stroke="#55603a" stroke-width="2.4"/>
+  <circle cx="84" cy="26" r="1.8" fill="#26201c"/>
+  <path d="M86 22 C90 16 94 12 97 10 M84 20 C86 14 88 9 92 6"
+        fill="none" stroke="#55603a" stroke-width="2" stroke-linecap="round"/>
+</svg>`;
+  write(join(BUGS, "stick_insect.svg"), svg);
+}
+
+function weevil() {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <radialGradient id="w" cx="0.35" cy="0.3" r="0.95">
+      <stop offset="0" stop-color="#a8794a"/>
+      <stop offset="1" stop-color="#7a5426"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="52" cy="80" rx="26" ry="4.5" fill="#000" opacity="0.12"/>
+  <g stroke="#4a3418" stroke-width="2.8" fill="none" stroke-linecap="round">
+    <path d="M40 62 L28 72 M44 68 L36 79 M58 68 L60 80 M66 60 L74 70"/>
+  </g>
+  <ellipse cx="58" cy="56" rx="22" ry="19" fill="url(#w)"
+           stroke="#4a3418" stroke-width="3.2"/>
+  <path d="M58 38 L58 74" stroke="#4a3418" stroke-width="2.2"/>
+  <g fill="#c49a63" opacity="0.9">
+    <circle cx="50" cy="48" r="2.2"/><circle cx="66" cy="52" r="2.2"/>
+    <circle cx="56" cy="64" r="2.2"/>
+  </g>
+  <circle cx="32" cy="44" r="7" fill="#8a6538" stroke="#4a3418" stroke-width="2.8"/>
+  <path d="M28 42 C22 40 16 40 12 42" stroke="#4a3418" stroke-width="6.5"
+        fill="none" stroke-linecap="round"/>
+  <path d="M28 42 C22 40 16 40 12 42" stroke="#a8794a" stroke-width="3"
+        fill="none" stroke-linecap="round"/>
+  <circle cx="10.5" cy="42" r="1.6" fill="#26201c"/>
+  <circle cx="31" cy="41" r="1.9" fill="#26201c"/>
+  <path d="M17 39 C15 34 13 31 10 29" fill="none" stroke="#4a3418"
+        stroke-width="1.8" stroke-linecap="round"/>
+</svg>`;
+  write(join(BUGS, "weevil.svg"), svg);
+}
+
+function pillbug() {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <radialGradient id="p" cx="0.4" cy="0.3" r="0.95">
+      <stop offset="0" stop-color="#8a93a3"/>
+      <stop offset="1" stop-color="#57606d"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="50" cy="84" rx="26" ry="4.5" fill="#000" opacity="0.12"/>
+  <g stroke="#3c424c" stroke-width="2.4" stroke-linecap="round">
+    <path d="M36 74 L32 82 M46 76 L44 84 M56 76 L56 84 M66 74 L70 82"/>
+  </g>
+  <path d="M24 76 C18 56 32 40 52 40 C72 40 84 56 78 76 C74 80 28 80 24 76 Z"
+        fill="url(#p)" stroke="#3c424c" stroke-width="3.2" stroke-linejoin="round"/>
+  <g fill="none" stroke="#3c424c" stroke-width="2.2" stroke-linecap="round" opacity="0.85">
+    <path d="M36 44 C32 56 32 66 36 76"/>
+    <path d="M46 41 C43 54 43 66 46 78"/>
+    <path d="M56 40 C54 54 54 66 56 78"/>
+    <path d="M66 42 C65 54 65 66 66 77"/>
+    <path d="M74 48 C75 58 75 66 73 75"/>
+  </g>
+  <ellipse cx="44" cy="52" rx="10" ry="5" fill="#9aa3b2" opacity="0.6"
+           transform="rotate(-16 44 52)"/>
+  <circle cx="26" cy="60" r="7" fill="#57606d" stroke="#3c424c" stroke-width="2.6"/>
+  <circle cx="23" cy="58" r="1.8" fill="#26201c"/>
+  <path d="M21 54 C18 49 15 46 11 44 M24 53 C23 48 21 44 18 41"
+        fill="none" stroke="#3c424c" stroke-width="2" stroke-linecap="round"/>
+</svg>`;
+  write(join(BUGS, "pillbug.svg"), svg);
+}
+
+function ant() {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <ellipse cx="50" cy="80" rx="24" ry="4" fill="#000" opacity="0.12"/>
+  <g stroke="#26201c" stroke-width="2.4" fill="none" stroke-linecap="round"
+     stroke-linejoin="round">
+    <path d="M38 58 L28 68 L30 74 M42 60 L38 72 L42 78 M48 60 L52 72 L58 76"/>
+  </g>
+  <ellipse cx="68" cy="58" rx="15" ry="12" fill="#3a2c1c" stroke="#1c150f"
+           stroke-width="2.8" transform="rotate(-18 68 58)"/>
+  <circle cx="57" cy="55" r="3.6" fill="#3a2c1c" stroke="#1c150f" stroke-width="2"/>
+  <ellipse cx="45" cy="53" rx="9" ry="7" fill="#3a2c1c" stroke="#1c150f"
+           stroke-width="2.6"/>
+  <circle cx="29" cy="47" r="8" fill="#3a2c1c" stroke="#1c150f" stroke-width="2.6"/>
+  <circle cx="26" cy="45" r="1.8" fill="#f5e8cd"/>
+  <path d="M27 40 L22 32 L26 26 M33 40 L33 31 L38 25"
+        stroke="#1c150f" stroke-width="2.2" fill="none" stroke-linecap="round"
+        stroke-linejoin="round"/>
+</svg>`;
+  write(join(BUGS, "ant.svg"), svg);
+}
+
+function fly() {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <radialGradient id="f" cx="0.35" cy="0.3" r="0.95">
+      <stop offset="0" stop-color="#99a3b2"/>
+      <stop offset="1" stop-color="#6a7380"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="50" cy="82" rx="22" ry="4" fill="#000" opacity="0.12"/>
+  <ellipse cx="66" cy="44" rx="15" ry="5.5" fill="#dfeaf2" fill-opacity="0.8"
+           stroke="#8fb6cd" stroke-width="2" transform="rotate(-18 66 44)"/>
+  <ellipse cx="64" cy="54" rx="13" ry="4.8" fill="#dfeaf2" fill-opacity="0.8"
+           stroke="#8fb6cd" stroke-width="2" transform="rotate(10 64 54)"/>
+  <g stroke="#3c424c" stroke-width="2.2" fill="none" stroke-linecap="round">
+    <path d="M40 58 L32 70 M46 60 L42 74 M56 60 L60 74"/>
+  </g>
+  <ellipse cx="60" cy="62" rx="13" ry="10.5" fill="url(#f)" stroke="#3c424c"
+           stroke-width="2.8" transform="rotate(28 60 62)"/>
+  <ellipse cx="46" cy="50" rx="12" ry="10" fill="#7a8391" stroke="#3c424c"
+           stroke-width="2.8"/>
+  <circle cx="39" cy="38" r="5.4" fill="#a8442e" stroke="#6e2417" stroke-width="2.2"/>
+  <circle cx="51" cy="37" r="5.4" fill="#a8442e" stroke="#6e2417" stroke-width="2.2"/>
+  <circle cx="37.5" cy="36.5" r="1.5" fill="#e8d9c0"/>
+  <circle cx="49.5" cy="35.5" r="1.5" fill="#e8d9c0"/>
+</svg>`;
+  write(join(BUGS, "fly.svg"), svg);
+}
 
 function ground() {
   // Deterministic PRNG (mulberry32) so output is stable across runs.
@@ -575,3 +746,9 @@ snail();
 firefly();
 bumblebee();
 caterpillar();
+mantis();
+stickInsect();
+weevil();
+pillbug();
+ant();
+fly();
