@@ -44,10 +44,17 @@ public static class BugTypes
         new("beetle", "Beetle", "res://assets/textures/bugs/beetle.svg", 0.9f, 70f);
     public static readonly BugType Snail =
         new("snail", "Snail", "res://assets/textures/bugs/snail.svg", 0.95f, 74f);
+    public static readonly BugType Firefly =
+        new("firefly", "Firefly", "res://assets/textures/bugs/firefly.svg", 0.8f, 60f);
+    public static readonly BugType Bumblebee =
+        new("bumblebee", "Bumblebee", "res://assets/textures/bugs/bumblebee.svg", 0.85f, 64f);
+    public static readonly BugType Caterpillar =
+        new("caterpillar", "Caterpillar", "res://assets/textures/bugs/caterpillar.svg", 1.0f, 76f);
 
     public static readonly BugType[] All =
     {
         Ladybug, Butterfly, Centipede, Moth, Grasshopper, Dragonfly, Beetle, Snail,
+        Firefly, Bumblebee, Caterpillar,
     };
 
     private static readonly RandomNumberGenerator Rng = new();
