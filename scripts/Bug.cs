@@ -16,6 +16,10 @@ public partial class Bug : Node2D
     public void Setup(BugType type, float scale, float camouflage)
     {
         _type = type;
+        // A bug node is reused across levels; drop the old sprite first or
+        // they stack up on top of each other.
+        foreach (Node child in GetChildren())
+            child.QueueFree();
         _sprite = new Sprite2D { Texture = GD.Load<Texture2D>(type.TexturePath) };
         AddChild(_sprite);
 
