@@ -101,7 +101,7 @@ they produce, so a playtest finding maps to one named knob:
 |------------------|------|
 | "Floor is visible / bug is findable too fast" | `RoundConfig.CoverageStart/End` |
 | "Bug shows stacked sprites" | node lifecycle in `Bug.Setup` |
-| "Sweeps clear too much / too little" | `Sweeper.SweepRadius`, `Debris.FlingFactor`, `Debris.Friction` |
+| "Sweeps clear too much / too little" | `Sweeper.SweepRadius`, `Sweeper.MaxDebrisPerSwipe`, `Debris.FlingFactor`, `Debris.Friction` |
 | "Menu looks wrong at odd aspects" | fit-on-startup (`Main.FitGround`) |
 
 **Docs live with code.** Behavior changes update `README.md` and

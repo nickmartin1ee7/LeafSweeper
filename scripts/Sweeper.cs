@@ -7,11 +7,16 @@ namespace LeafSweeper;
 /// <summary>
 /// Turns drag input into sweep flings. Debris near the pointer (or near the
 /// segment between the last and current pointer position, so fast swipes
-/// don't tunnel through) is flung along the pointer's velocity.
+/// don't tunnel through) is flung along the pointer's velocity. A single
+/// swipe (touch-down to lift) clears at most <see cref="MaxDebrisPerSwipe"/>
+/// pieces of debris.
 /// </summary>
 public sealed class Sweeper
 {
     private const float SweepRadius = 55f;
+
+    /// <summary>Max debris one swipe gesture may clear.</summary>
+    public const int MaxDebrisPerSwipe = 4;
 
     private readonly Func<IEnumerable<Debris>> _debris;
     private readonly RandomNumberGenerator _rng;
@@ -20,6 +25,7 @@ public sealed class Sweeper
     private bool _dragging;
     private Vector2 _lastPos;
     private ulong _lastTicks;
+    private int _clearedThisSwipe;
 
     public Sweeper(Func<IEnumerable<Debris>> debris,
         RandomNumberGenerator rng, Action onSwipeCompleted)
@@ -47,12 +53,19 @@ public sealed class Sweeper
         Vector2 velocity = delta / dt;
         Vector2 from = _lastPos;
 
+        // A swipe is only strong enough to clear MaxDebrisPerSwipe items;
+        // once spent, further dragging moves the finger but flings nothing.
         foreach (var d in _debris())
         {
+            if (_clearedThisSwipe >= MaxDebrisPerSwipe)
+                break;
             if (!GodotObject.IsInstanceValid(d) || d.Swept)
                 continue;
             if (SegmentCircleHit(from, worldPos, d.Position, SweepRadius + 30f))
+            {
                 d.Fling(velocity, _rng);
+                _clearedThisSwipe++;
+            }
         }
 
         _lastPos = worldPos;
@@ -64,6 +77,7 @@ public sealed class Sweeper
         _dragging = true;
         _lastPos = worldPos;
         _lastTicks = ticks;
+        _clearedThisSwipe = 0;
     }
 
     public void End()
