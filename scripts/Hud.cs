@@ -4,11 +4,21 @@ using Godot;
 namespace LeafSweeper;
 
 /// <summary>
-/// In-level HUD (level number, swipe counter) plus the win overlay with the
-/// between-round stats comment and Next/Menu buttons.
+/// In-game HUD: a permanent bottom dock (level/swipes labels + wind/restart
+/// controls) plus the win overlay with the between-round stats comment and
+/// Next/Menu buttons. The dock's fixed height also defines the playable
+/// area — the floor never extends underneath it.
 /// </summary>
 public partial class Hud : CanvasLayer
 {
+    /// <summary>
+    /// Dock height in design pixels. Main subtracts this from the viewport
+    /// to get the playable rect, so debris, the bug and the ground clamp all
+    /// stay mutually exclusive with the dock.
+    /// </summary>
+    public const float DockHeight = 300f;
+
+    private Control _dock = null!;
     private Label _levelLabel = null!;
     private Label _swipeLabel = null!;
     private Button _windButton = null!;
@@ -26,7 +36,9 @@ public partial class Hud : CanvasLayer
 
     public override void _Ready()
     {
-        AddChild(BuildTopBar());
+        _dock = BuildDock();
+        _dock.Visible = false;
+        AddChild(_dock);
 
         _winOverlay = BuildWinOverlay();
         _winOverlay.Visible = false;
@@ -37,10 +49,10 @@ public partial class Hud : CanvasLayer
         AddChild(_restartDialog);
     }
 
-    private Control BuildTopBar()
+    private Control BuildDock()
     {
-        _levelLabel = MakeLabel(42, true);
-        _swipeLabel = MakeLabel(42, true);
+        _levelLabel = MakeLabel(52, true, new Color("3f5228"), outlineSize: 0);
+        _swipeLabel = MakeLabel(52, true, new Color("6b5233"), outlineSize: 0);
         _swipeLabel.HorizontalAlignment = HorizontalAlignment.Right;
 
         _windButton = MakeIconButton("res://assets/icons/wind.svg", new Color("6f9a44"));
@@ -51,22 +63,37 @@ public partial class Hud : CanvasLayer
         _restartButton.TooltipText = "Restart this level";
         _restartButton.Pressed += ShowRestartDialog;
 
+        var panel = new PanelContainer();
+        var style = new StyleBoxFlat
+        {
+            BgColor = new Color("f7f0e1"),
+            BorderWidthTop = 6,
+            BorderColor = new Color("c9a06a"),
+        };
+        panel.AddThemeStyleboxOverride("panel", style);
+        // Swallows touches so sweeping can never act through the dock.
+        panel.MouseFilter = Control.MouseFilterEnum.Stop;
+
         var row = new MarginContainer();
-        row.SetAnchorsPreset(Control.LayoutPreset.TopWide);
         row.AddThemeConstantOverride("margin_left", 36);
         row.AddThemeConstantOverride("margin_right", 36);
-        row.AddThemeConstantOverride("margin_top", 28);
 
         var box = new HBoxContainer();
-        box.AddThemeConstantOverride("separation", 18);
+        box.AddThemeConstantOverride("separation", 28);
         _levelLabel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        _levelLabel.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
         _swipeLabel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        _swipeLabel.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
         box.AddChild(_levelLabel);
         box.AddChild(_swipeLabel);
         box.AddChild(_windButton);
         box.AddChild(_restartButton);
         row.AddChild(box);
-        return row;
+        panel.AddChild(row);
+
+        panel.CustomMinimumSize = new Vector2(0, DockHeight);
+        panel.SetAnchorsPreset(Control.LayoutPreset.BottomWide);
+        return panel;
     }
 
     private Control BuildWinOverlay()
@@ -177,18 +204,8 @@ public partial class Hud : CanvasLayer
 
     public void HideWin() => _winOverlay.Visible = false;
 
-    public void SetInLevelVisible(bool visible)
-    {
-        _levelLabel.Visible = visible;
-        _swipeLabel.Visible = visible;
-    }
-
-    /// <summary>Wind + restart icons are only usable while playing.</summary>
-    public void SetControlsVisible(bool visible)
-    {
-        _windButton.Visible = visible;
-        _restartButton.Visible = visible;
-    }
+    /// <summary>The dock lives on the play screen; the menu hides it.</summary>
+    public void SetDockVisible(bool visible) => _dock.Visible = visible;
 
     public void ShowRestartDialog()
     {
@@ -272,19 +289,19 @@ public partial class Hud : CanvasLayer
         var normal = new StyleBoxFlat
         {
             BgColor = new Color(1f, 1f, 1f, 0.75f),
-            CornerRadiusBottomLeft = 18,
-            CornerRadiusBottomRight = 18,
-            CornerRadiusTopLeft = 18,
-            CornerRadiusTopRight = 18,
-            BorderWidthBottom = 4,
-            BorderWidthTop = 4,
-            BorderWidthLeft = 4,
-            BorderWidthRight = 4,
+            CornerRadiusBottomLeft = 28,
+            CornerRadiusBottomRight = 28,
+            CornerRadiusTopLeft = 28,
+            CornerRadiusTopRight = 28,
+            BorderWidthBottom = 6,
+            BorderWidthTop = 6,
+            BorderWidthLeft = 6,
+            BorderWidthRight = 6,
             BorderColor = accent,
-            ContentMarginLeft = 14,
-            ContentMarginRight = 14,
-            ContentMarginTop = 14,
-            ContentMarginBottom = 14,
+            ContentMarginLeft = 20,
+            ContentMarginRight = 20,
+            ContentMarginTop = 20,
+            ContentMarginBottom = 20,
         };
         var pressed = (StyleBoxFlat)normal.Duplicate();
         pressed.BgColor = accent;
@@ -293,7 +310,7 @@ public partial class Hud : CanvasLayer
 
         var button = new Button
         {
-            CustomMinimumSize = new Vector2(84, 84),
+            CustomMinimumSize = new Vector2(252, 252),
             Icon = GD.Load<Texture2D>(iconPath),
             IconAlignment = HorizontalAlignment.Center,
             ExpandIcon = true,
@@ -307,7 +324,8 @@ public partial class Hud : CanvasLayer
         return button;
     }
 
-    internal static Label MakeLabel(int size, bool bold, Color? color = null)
+    internal static Label MakeLabel(int size, bool bold, Color? color = null,
+        int outlineSize = -1)
     {
         return new Label
         {
@@ -315,7 +333,7 @@ public partial class Hud : CanvasLayer
             {
                 FontSize = size,
                 FontColor = color ?? new Color("fff8ec"),
-                OutlineSize = Math.Max(6, size / 5),
+                OutlineSize = outlineSize >= 0 ? outlineSize : Math.Max(6, size / 5),
                 OutlineColor = new Color(0.22f, 0.16f, 0.09f, 0.9f),
             },
         };

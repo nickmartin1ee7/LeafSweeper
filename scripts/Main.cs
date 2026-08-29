@@ -186,19 +186,29 @@ public partial class Main : Node2D
         if (_state == GameState.Menu)
             return;
 
-        // Stretch the live round's layout from the old rect onto the new
-        // one so the floor never shows bare background mid-level.
-        if (oldSize.X <= 0f || oldSize.Y <= 0f)
+        // Stretch the live round's layout from the old playable rect onto
+        // the new one so the floor never shows bare background mid-level.
+        // The dock has a fixed height, so only the free space above it
+        // scales vertically.
+        if (oldSize.X <= 0f || oldSize.Y <= Hud.DockHeight)
             return;
-        Vector2 ratio = new(newSize.X / oldSize.X, newSize.Y / oldSize.Y);
+        Vector2 floorRatio = new(
+            newSize.X / oldSize.X,
+            (newSize.Y - Hud.DockHeight) / (oldSize.Y - Hud.DockHeight));
+        Rect2 floor = PlayableArea();
         // While the bug is seated on the win card it lives in the HUD and the
         // containers position it — only stretch it while it's in the world.
         bool bugInWorld = IsInstanceValid(_bug) && _bug.Visible && _bug.GetParent() == this;
         if (bugInWorld)
-            _bug.Position *= ratio;
+            _bug.Position *= floorRatio;
         foreach (var d in _debris)
-            if (IsInstanceValid(d) && !d.Swept)
-                d.Position *= ratio;
+        {
+            if (!IsInstanceValid(d))
+                continue;
+            if (!d.Swept)
+                d.Position *= floorRatio;
+            d.Bounds = floor;
+        }
     }
 
     private void ClearLevel()
@@ -220,27 +230,36 @@ public partial class Main : Node2D
         if (_bug.GetParent() != this)
             _bug.Reparent(this);
 
-        Rect2 view = GetViewportRect();
+        // The floor is everything above the HUD dock — the dock is never
+        // covered by debris or the bug.
+        Rect2 floor = PlayableArea();
 
         var bugType = BugTypes.Random();
         float bugScale = RoundConfig.BugScale(level);
         _bug.Setup(bugType, bugScale, RoundConfig.Camouflage(level));
         _bug.Position = new Vector2(
-            _rng.RandfRange(180f, view.Size.X - 180f),
-            _rng.RandfRange(320f, view.Size.Y - 200f));
+            _rng.RandfRange(180f, floor.Size.X - 180f),
+            _rng.RandfRange(320f, floor.Size.Y - 200f));
         _bug.Visible = true;
 
-        SpawnDebris(level, view);
+        SpawnDebris(level, floor);
 
         _stats.Start(level);
         _hud.ShowLevel(level);
         _hud.ShowSwipes(0);
         _hud.HideWin();
-        _hud.SetInLevelVisible(true);
         SetState(GameState.Playing);
     }
 
-    private void SpawnDebris(int level, Rect2 view)
+    /// <summary>
+    /// The interactive region: the full viewport minus the bottom HUD dock.
+    /// Debris, the bug and the ground clamp all live inside it.
+    /// </summary>
+    private Rect2 PlayableArea() => new(
+        Vector2.Zero,
+        new Vector2(_viewSize.X, Mathf.Max(1f, _viewSize.Y - Hud.DockHeight)));
+
+    private void SpawnDebris(int level, Rect2 floor)
     {
         // Distinct textures with a cozy mix; leaves dominate, heavier stuff sparser.
         (string path, DebrisWeight weight, int freq)[] palette =
@@ -265,23 +284,28 @@ public partial class Main : Node2D
         // Jittered-grid placement: one slot per cell guarantees the whole floor
         // is covered evenly (no bare patches, no visible bug), while the jitter
         // keeps it from looking like a lattice. Count = floor area × coverage.
-        int count = (int)(view.Size.X * view.Size.Y * RoundConfig.Coverage(level));
-        float cell = Mathf.Sqrt(view.Size.X * view.Size.Y / Mathf.Max(count, 1));
+        int count = (int)(floor.Size.X * floor.Size.Y * RoundConfig.Coverage(level));
+        float cell = Mathf.Sqrt(floor.Size.X * floor.Size.Y / Mathf.Max(count, 1));
         int topCount = count * 35 / 100; // 35% drawn above the rest for depth
 
         int placed = 0;
-        for (float y = cell * 0.5f; y < view.Size.Y && placed < count; y += cell)
+        for (float y = cell * 0.5f; y < floor.Size.Y && placed < count; y += cell)
         {
-            for (float x = cell * 0.5f; x < view.Size.X && placed < count; x += cell)
+            for (float x = cell * 0.5f; x < floor.Size.X && placed < count; x += cell)
             {
                 Vector2 pos = new(
-                    Mathf.Clamp(x + _rng.RandfRange(-0.45f, 0.45f) * cell, 14f, view.Size.X - 14f),
-                    Mathf.Clamp(y + _rng.RandfRange(-0.45f, 0.45f) * cell, 14f, view.Size.Y - 14f));
+                    Mathf.Clamp(x + _rng.RandfRange(-0.45f, 0.45f) * cell, 14f, floor.Size.X - 14f),
+                    Mathf.Clamp(y + _rng.RandfRange(-0.45f, 0.45f) * cell, 14f, floor.Size.Y - 14f));
 
                 int roll = _rng.RandiRange(1, total);
                 (string path, DebrisWeight weight, _) = Pick(palette, roll);
 
-                var debris = new Debris();
+                var debris = new Debris
+                {
+                    // Flung pieces bounce off the dock edge instead of
+                    // sliding underneath it.
+                    Bounds = new Rect2(Vector2.Zero, floor.Size),
+                };
                 debris.Setup(
                     path,
                     pos,
@@ -431,8 +455,7 @@ public partial class Main : Node2D
     {
         _state = state;
         _menu.Visible = state == GameState.Menu;
-        _hud.SetInLevelVisible(state != GameState.Menu);
-        _hud.SetControlsVisible(state == GameState.Playing);
+        _hud.SetDockVisible(state != GameState.Menu);
         if (state == GameState.Menu)
         {
             ClearLevel();

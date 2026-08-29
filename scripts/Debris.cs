@@ -35,6 +35,12 @@ public partial class Debris : Node2D
     public bool Swept { get; private set; }
     public DebrisWeight Weight { get; private set; }
 
+    /// <summary>
+    /// The playable rect debris may occupy. Flung pieces clamp against its
+    /// edge with a soft bounce — nothing slides underneath the HUD dock.
+    /// </summary>
+    public Rect2 Bounds { get; set; } = new(-100000f, -100000f, 200000f, 200000f);
+
     public void Setup(string texturePath, Vector2 pos, float rotDeg,
         float scale, DebrisWeight weight, RandomNumberGenerator rng)
     {
@@ -77,6 +83,15 @@ public partial class Debris : Node2D
         float dt = (float)delta;
         Position += _velocity * dt;
         Rotation += _angularVel * dt;
+
+        // Keep flung debris out of the dock: clamp and bounce softly.
+        const float edge = 30f;
+        Vector2 min = Bounds.Position + new Vector2(edge, edge);
+        Vector2 max = Bounds.End - new Vector2(edge, edge);
+        if (Position.X < min.X) { Position = new Vector2(min.X, Position.Y); _velocity.X = Mathf.Abs(_velocity.X) * 0.35f; }
+        else if (Position.X > max.X) { Position = new Vector2(max.X, Position.Y); _velocity.X = -Mathf.Abs(_velocity.X) * 0.35f; }
+        if (Position.Y < min.Y) { Position = new Vector2(Position.X, min.Y); _velocity.Y = Mathf.Abs(_velocity.Y) * 0.35f; }
+        else if (Position.Y > max.Y) { Position = new Vector2(Position.X, max.Y); _velocity.Y = -Mathf.Abs(_velocity.Y) * 0.35f; }
 
         float dampen = Mathf.Exp(-Friction[(int)Weight] * dt);
         _velocity *= dampen;

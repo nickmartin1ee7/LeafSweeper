@@ -26,11 +26,13 @@ Title menu → Play → Round (sweep debris, find bug) → Tap bug
    Weight matters: rocks/sticks/moss resist; leaves and petals fly easily —
    but heavier pieces glide farther and fade later, so their long slide
    reads as weight rather than the debris dying where it was swept.
-3. Two helpers live in the top bar while playing:
+3. Two helpers live in a **bottom dock** while playing, below the floor:
    **Gust** (wind icon) blows a gust across the floor, sweeping away about
    **10% of the remaining debris** in one shared direction; and
    **Restart** (circular arrow) opens a confirmation dialog before
-   re-scattering the same level with a fresh swipe count.
+   re-scattering the same level with a fresh swipe count. The dock is the
+   game's only chrome — debris, the bug and all sweeping stay strictly
+   above it; flung pieces bounce off its edge instead of sliding under.
 4. Finding the bug and **tapping it** wins the round: the bug rises **above
    all debris**, bathes in a **golden shining outline** and **grows**, then
    **flies to the center of the screen** and seats itself on the win card —
