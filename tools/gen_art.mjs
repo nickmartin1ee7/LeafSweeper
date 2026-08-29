@@ -222,25 +222,36 @@ function butterfly() {
 }
 
 function centipede() {
+  // Clear segmented chain: head left, tapering body curving to the tail,
+  // many legs underneath. Stroke pass then fill pass hides inner outlines.
+  const segs = [
+    [28, 48, 7.5], [40, 46, 7.5], [52, 48, 7.5],
+    [64, 52, 7.0], [75, 56, 6.2], [84, 60, 5.2],
+  ];
+  const legs = [
+    [28, 48], [40, 46], [52, 48], [64, 52], [75, 56], [84, 60],
+  ]
+    .map(([x, y]) => `<path d="M${x - 3} ${y + 4} L${x - 8} ${y + 14} M${x + 3} ${y + 4} L${x + 8} ${y + 14}"/>`)
+    .join(" ");
+  const spots = segs
+    .filter((_, i) => i % 2 === 0)
+    .map(([x, y]) => `<circle cx="${x}" cy="${y - 2.5}" r="2.1" fill="#f0bd7e"/>`)
+    .join("");
+  const circles = segs
+    .map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}"/>`)
+    .join(" ");
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <ellipse cx="50" cy="82" rx="32" ry="5" fill="#000" opacity="0.13"/>
-  <g stroke="#b5762e" stroke-width="2.6" stroke-linecap="round" fill="none">
-    <path d="M24 44 L15 38 M22 54 L11 52 M24 64 L14 68 M30 72 L24 81 M40 77 L38 87
-             M52 78 L54 88 M64 74 L70 82 M74 64 L84 68 M78 52 L89 52 M76 42 L86 36"/>
-  </g>
-  <g stroke="#8a5318" stroke-width="11" stroke-linecap="round" fill="none">
-    <path d="M30 42 A24 24 0 1 1 26 58 A16 16 0 1 0 54 64 A10 10 0 1 1 44 50"/>
-  </g>
-  <g stroke="#d99a4e" stroke-width="5.4" stroke-linecap="round" fill="none">
-    <path d="M30 42 A24 24 0 1 1 26 58 A16 16 0 1 0 54 64 A10 10 0 1 1 44 50"/>
-  </g>
-  <g stroke="#8a5318" stroke-width="1.8" opacity="0.75">
-    <path d="M18 34 L28 40 M12 46 L24 48 M13 58 L25 58 M19 69 L30 65"/>
-  </g>
-  <circle cx="30" cy="42" r="9" fill="#d99a4e" stroke="#8a5318" stroke-width="3"/>
-  <circle cx="27" cy="40" r="2" fill="#26201c"/>
-  <path d="M24 34 C20 28 16 26 12 26 M30 33 C30 27 28 23 24 20"
-        fill="none" stroke="#8a5318" stroke-width="2.2" stroke-linecap="round"/>
+  <ellipse cx="52" cy="80" rx="36" ry="5" fill="#000" opacity="0.13"/>
+  <g stroke="#8a5318" stroke-width="2.6" stroke-linecap="round" fill="none">${legs}</g>
+  <g fill="#d99a4e" stroke="#8a5318" stroke-width="3">${circles}</g>
+  <g fill="#d99a4e">${circles}</g>
+  ${spots}
+  <circle cx="16" cy="50" r="9.5" fill="#d99a4e" stroke="#8a5318" stroke-width="3"/>
+  <circle cx="13" cy="48" r="2.2" fill="#26201c"/>
+  <path d="M13 42 C10 35 6 31 3 29 M19 41 C19 34 17 28 14 24"
+        fill="none" stroke="#8a5318" stroke-width="2.4" stroke-linecap="round"/>
+  <path d="M10 55 C12 57 15 57 17 55" fill="none" stroke="#8a5318"
+        stroke-width="1.6" stroke-linecap="round"/>
 </svg>`;
   write(join(BUGS, "centipede.svg"), svg);
 }
@@ -283,6 +294,8 @@ function moth() {
 }
 
 function grasshopper() {
+  // Side-profile hopper: head left, body angled up to the right, folded
+  // hind leg (thick femur arc, thin tibia) clear of the body.
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <defs>
     <linearGradient id="b" x1="0" y1="0" x2="0.4" y2="1">
@@ -291,19 +304,23 @@ function grasshopper() {
     </linearGradient>
   </defs>
   <ellipse cx="50" cy="80" rx="30" ry="5" fill="#000" opacity="0.13"/>
-  <g transform="rotate(38 50 50)">
-    <ellipse cx="50" cy="52" rx="27" ry="11" fill="url(#b)"
+  <path d="M60 58 C72 54 80 44 79 34" fill="none" stroke="#3f6420"
+        stroke-width="6.5" stroke-linecap="round"/>
+  <path d="M79 34 C82 48 78 64 70 76" fill="none" stroke="#3f6420"
+        stroke-width="3.6" stroke-linecap="round"/>
+  <g transform="rotate(-22 57 55)">
+    <ellipse cx="57" cy="55" rx="24" ry="10" fill="url(#b)"
              stroke="#3f6420" stroke-width="3"/>
-    <ellipse cx="52" cy="49" rx="20" ry="5.6" fill="#a8d06e" opacity="0.85"/>
+    <ellipse cx="59" cy="52" rx="15" ry="4.5" fill="#a8d06e" opacity="0.85"/>
   </g>
-  <path d="M62 52 C74 46 80 36 78 28 M78 28 C76 40 72 58 66 72"
-        fill="none" stroke="#3f6420" stroke-width="5" stroke-linecap="round"/>
-  <path d="M40 58 L34 68 M48 60 L46 70 M32 52 L22 58" fill="none"
-        stroke="#3f6420" stroke-width="3.4" stroke-linecap="round"/>
-  <circle cx="33" cy="38" r="10" fill="url(#b)" stroke="#3f6420" stroke-width="3"/>
-  <circle cx="30" cy="36" r="2.6" fill="#26201c"/>
-  <path d="M28 30 C22 20 16 16 8 16 M36 28 C36 18 34 12 30 6"
+  <path d="M42 64 L36 76 M50 66 L47 78" fill="none" stroke="#3f6420"
+        stroke-width="3.2" stroke-linecap="round"/>
+  <circle cx="31" cy="57" r="9.5" fill="url(#b)" stroke="#3f6420" stroke-width="3"/>
+  <circle cx="28" cy="55" r="2.4" fill="#26201c"/>
+  <path d="M27 50 C22 42 16 38 10 37 M34 48 C32 40 30 34 26 29"
         fill="none" stroke="#3f6420" stroke-width="2.4" stroke-linecap="round"/>
+  <path d="M24 62 C26 64 29 64 31 62" fill="none" stroke="#3f6420"
+        stroke-width="1.6" stroke-linecap="round"/>
 </svg>`;
   write(join(BUGS, "grasshopper.svg"), svg);
 }
@@ -360,6 +377,7 @@ function beetle() {
 }
 
 function snail() {
+  // Shell sits clear of the head so the neck, eyestalks and eyes read.
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <defs>
     <radialGradient id="s" cx="0.4" cy="0.35" r="0.9">
@@ -368,19 +386,120 @@ function snail() {
     </radialGradient>
   </defs>
   <ellipse cx="52" cy="84" rx="34" ry="5" fill="#000" opacity="0.13"/>
-  <path d="M22 76 C26 64 42 60 58 64 C74 62 84 70 80 78 C68 86 34 86 22 76 Z"
-        fill="#c9a06a" stroke="#8a6538" stroke-width="3"/>
-  <path d="M80 74 C84 66 82 58 76 54" fill="none" stroke="#8a6538"
-        stroke-width="3" stroke-linecap="round"/>
-  <circle cx="76" cy="50" r="2.6" fill="#26201c"/>
-  <circle cx="84" cy="56" r="2.6" fill="#26201c"/>
-  <circle cx="54" cy="46" r="25" fill="url(#s)" stroke="#5c3a1c" stroke-width="3.4"/>
-  <path d="M54 46 m0 -16 a16 16 0 1 1 -13 25 a10 10 0 1 0 8 -15"
-        fill="none" stroke="#5c3a1c" stroke-width="4" stroke-linecap="round"/>
-  <ellipse cx="44" cy="36" rx="9" ry="6" fill="#d9a86a" opacity="0.55"
-           transform="rotate(-30 44 36)"/>
+  <path d="M18 76 C24 64 40 60 56 62 C68 63 76 68 80 76 C80 79 76 80 70 80
+           L28 80 C21 80 16 79 18 76 Z"
+        fill="#c9a06a" stroke="#8a6538" stroke-width="3" stroke-linejoin="round"/>
+  <path d="M70 73 C74 66 76 60 82 56 C88 52 94 57 93 63 C92 69 86 74 78 75
+           C75 75.4 72 74.6 70 73 Z"
+        fill="#c9a06a" stroke="#8a6538" stroke-width="3" stroke-linejoin="round"/>
+  <g fill="none" stroke="#8a6538" stroke-width="2.6" stroke-linecap="round">
+    <path d="M89 54 C91 47 92 42 92 38"/>
+    <path d="M80 53 C79 46 77 41 74 37"/>
+  </g>
+  <circle cx="92.5" cy="36" r="2.7" fill="#26201c"/>
+  <circle cx="73.5" cy="35" r="2.7" fill="#26201c"/>
+  <circle cx="44" cy="44" r="22" fill="url(#s)" stroke="#5c3a1c" stroke-width="3.4"/>
+  <path d="M44 44 m0 -13 a13 13 0 1 1 -11 20 a8 8 0 1 0 7 -12"
+        fill="none" stroke="#5c3a1c" stroke-width="3.6" stroke-linecap="round"/>
+  <ellipse cx="36" cy="36" rx="8" ry="5" fill="#d9a86a" opacity="0.55"
+           transform="rotate(-30 36 36)"/>
 </svg>`;
   write(join(BUGS, "snail.svg"), svg);
+}
+
+function firefly() {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#fff6c8" stop-opacity="0.85"/>
+      <stop offset="0.55" stop-color="#f7e28a" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#f7e28a" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="lamp" cx="0.4" cy="0.35" r="0.9">
+      <stop offset="0" stop-color="#fff3b0"/>
+      <stop offset="1" stop-color="#f2c94c"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="50" cy="88" rx="18" ry="3.6" fill="#000" opacity="0.12"/>
+  <circle cx="50" cy="62" r="30" fill="url(#glow)"/>
+  <ellipse cx="36" cy="46" rx="9" ry="15" fill="#cfe3ef" fill-opacity="0.75"
+           stroke="#7ba3bd" stroke-width="2" transform="rotate(-30 36 46)"/>
+  <ellipse cx="64" cy="46" rx="9" ry="15" fill="#cfe3ef" fill-opacity="0.75"
+           stroke="#7ba3bd" stroke-width="2" transform="rotate(30 64 46)"/>
+  <path d="M41 45 L33 51 M41 50 L33 57 M59 45 L67 51 M59 50 L67 57"
+        fill="none" stroke="#2e241a" stroke-width="2.2" stroke-linecap="round"/>
+  <ellipse cx="50" cy="62" rx="13" ry="16" fill="url(#lamp)"
+           stroke="#a3771c" stroke-width="3"/>
+  <ellipse cx="50" cy="42" rx="10" ry="9" fill="#4a3b2a" stroke="#2e241a"
+           stroke-width="2.8"/>
+  <circle cx="50" cy="30" r="7" fill="#2e241a" stroke="#1c150f" stroke-width="2.2"/>
+  <circle cx="47.4" cy="28.4" r="1.7" fill="#f5e8cd"/>
+  <circle cx="52.6" cy="28.4" r="1.7" fill="#f5e8cd"/>
+  <path d="M47 24 C44 18 40 15 36 14 M53 24 C56 18 60 15 64 14"
+        fill="none" stroke="#2e241a" stroke-width="2" stroke-linecap="round"/>
+</svg>`;
+  write(join(BUGS, "firefly.svg"), svg);
+}
+
+function bumblebee() {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <radialGradient id="b" cx="0.35" cy="0.3" r="0.95">
+      <stop offset="0" stop-color="#f6c04e"/>
+      <stop offset="1" stop-color="#d9942e"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="50" cy="88" rx="22" ry="4" fill="#000" opacity="0.13"/>
+  <ellipse cx="35" cy="36" rx="13" ry="7.5" fill="#dfeaf2" fill-opacity="0.85"
+           stroke="#8fb6cd" stroke-width="2.2" transform="rotate(-32 35 36)"/>
+  <ellipse cx="65" cy="36" rx="13" ry="7.5" fill="#dfeaf2" fill-opacity="0.85"
+           stroke="#8fb6cd" stroke-width="2.2" transform="rotate(32 65 36)"/>
+  <ellipse cx="50" cy="60" rx="20" ry="24" fill="url(#b)"
+           stroke="#8a5b14" stroke-width="3.4"/>
+  <ellipse cx="50" cy="52" rx="18.5" ry="5.2" fill="#26201c"/>
+  <ellipse cx="50" cy="66" rx="17" ry="5" fill="#26201c"/>
+  <path d="M50 90 L45.5 80 L54.5 80 Z" fill="#26201c" stroke="#26201c"
+        stroke-width="1.5" stroke-linejoin="round"/>
+  <circle cx="50" cy="28" r="8.5" fill="#26201c" stroke="#141210" stroke-width="2.2"/>
+  <circle cx="46.8" cy="26.5" r="2" fill="#f5e8cd"/>
+  <circle cx="53.2" cy="26.5" r="2" fill="#f5e8cd"/>
+  <path d="M46 21 C43 15 39 12 34 11 M54 21 C57 15 61 12 66 11"
+        fill="none" stroke="#26201c" stroke-width="2.2" stroke-linecap="round"/>
+  <circle cx="33" cy="10.5" r="1.8" fill="#26201c"/>
+  <circle cx="67" cy="10.5" r="1.8" fill="#26201c"/>
+  <path d="M38 74 L32 82 M62 74 L68 82" fill="none" stroke="#26201c"
+        stroke-width="2.6" stroke-linecap="round"/>
+</svg>`;
+  write(join(BUGS, "bumblebee.svg"), svg);
+}
+
+function caterpillar() {
+  // Arched green segments, stub legs, friendly face — clearly softer than
+  // the long-legged centipede.
+  const segs = [
+    [36, 56, 7.5], [48, 52, 7.5], [60, 56, 7.5], [71, 61, 7.0], [80, 67, 5.5],
+  ];
+  const circles = segs
+    .map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}"/>`)
+    .join(" ");
+  const stubs = segs
+    .map(([x, y]) => `<path d="M${x - 2} ${y + 5} L${x - 4} ${y + 13}"/>`)
+    .join(" ");
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <ellipse cx="50" cy="84" rx="34" ry="5" fill="#000" opacity="0.13"/>
+  <g stroke="#3e6323" stroke-width="2.4" stroke-linecap="round" fill="none">${stubs}</g>
+  <g fill="#7fae4e" stroke="#3e6323" stroke-width="3">${circles}</g>
+  <g fill="#7fae4e">${circles}</g>
+  <circle cx="48" cy="50" r="2.1" fill="#a8d06e"/>
+  <circle cx="60" cy="54" r="2.1" fill="#a8d06e"/>
+  <circle cx="22" cy="60" r="9.5" fill="#8fbf4e" stroke="#3e6323" stroke-width="3"/>
+  <circle cx="19" cy="58" r="2.2" fill="#26201c"/>
+  <path d="M15 64 C17 66 20 66 22 64" fill="none" stroke="#3e6323"
+        stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M17 52 C14 46 10 43 6 42 M23 51 C22 44 20 39 16 35"
+        fill="none" stroke="#3e6323" stroke-width="2.2" stroke-linecap="round"/>
+</svg>`;
+  write(join(BUGS, "caterpillar.svg"), svg);
 }
 
 // ---------------------------------------------------------------- ground ---
@@ -453,3 +572,6 @@ grasshopper();
 dragonfly();
 beetle();
 snail();
+firefly();
+bumblebee();
+caterpillar();
