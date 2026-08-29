@@ -85,7 +85,10 @@ public sealed class Sweeper
         if (!_dragging)
             return;
         _dragging = false;
-        _onSwipeCompleted();
+        // A touch-down to lift only counts as a swipe when it actually
+        // swept debris — bare taps (and fruitless drags) stay free.
+        if (_clearedThisSwipe > 0)
+            _onSwipeCompleted();
     }
 
     public void Cancel() => _dragging = false;
