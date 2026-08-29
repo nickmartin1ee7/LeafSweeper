@@ -38,7 +38,7 @@ Title menu → Play → Round (sweep debris, find bug) → Tap bug
    all debris**, bathes in a **golden shining outline** and **grows**, then
    **flies to the center of the screen** and seats itself on the win card —
    below the "Bug found!" title, above the stats — as the overlay fades in
-   with a friendly comment and the round's numbers (time, swipes).
+   with a friendly comment and the round's numbers (time, swipes, gusts).
 5. **Next** starts the following level. **Menu** returns to the title screen.
 
 ## Design values
@@ -90,8 +90,10 @@ corner of it always peeks through no matter where it spawns.
 No score — only **friendly numbers**:
 
 - Swipes used this round.
+- Gust powers blown this round (shown on the win card only when used).
 - Time since round start (m:ss).
-- Lifetime aggregates and per-bug find counts, kept in the save file.
+- Lifetime aggregates (levels cleared, swipes, gusts, time) and per-bug find
+  counts, kept in the save file.
 
 ## Between-round comments
 
@@ -112,9 +114,10 @@ Everything persists locally in `user://save.json` (Godot `user://` is
 app-private storage on Android — no Android permissions needed):
 
 - `currentLevel` — next level to play (Play resumes here).
-- `levelsCleared`, `totalSwipes`, `totalSeconds` — lifetime aggregates.
+- `levelsCleared`, `totalSwipes`, `totalGusts`, `totalSeconds` — lifetime
+  aggregates.
 - `bugFindCounts` — finds per bug type (drives "favorite critter").
-- `history` — last 50 cleared levels `{level, swipes, seconds, bugType,
+- `history` — last 50 cleared levels `{level, swipes, gusts, seconds, bugType,
   clearedAt}`.
 
 Saves are written **atomically** (write temp file, rename over the real one)

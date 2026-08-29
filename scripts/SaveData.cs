@@ -9,6 +9,7 @@ public sealed class LevelResult
 {
     public int Level { get; set; }
     public int Swipes { get; set; }
+    public int Gusts { get; set; }
     public int Seconds { get; set; }
     public string BugType { get; set; } = "";
     public string ClearedAt { get; set; } = "";
@@ -29,6 +30,7 @@ public sealed class SaveData
     public int CurrentLevel { get; set; } = 1;
     public int LevelsCleared { get; set; }
     public int TotalSwipes { get; set; }
+    public int TotalGusts { get; set; }
     public int TotalSeconds { get; set; }
     public Dictionary<string, int> BugFindCounts { get; } = new();
     public List<LevelResult> History { get; } = new();
@@ -54,6 +56,7 @@ public sealed class SaveData
             data.CurrentLevel = Get(root, "currentLevel", 1).AsInt32();
             data.LevelsCleared = Get(root, "levelsCleared", 0).AsInt32();
             data.TotalSwipes = Get(root, "totalSwipes", 0).AsInt32();
+            data.TotalGusts = Get(root, "totalGusts", 0).AsInt32();
             data.TotalSeconds = Get(root, "totalSeconds", 0).AsInt32();
 
             if (Get(root, "bugFindCounts", default).AsGodotDictionary() is { } finds)
@@ -68,6 +71,7 @@ public sealed class SaveData
                     {
                         Level = Get(d, "level", 0).AsInt32(),
                         Swipes = Get(d, "swipes", 0).AsInt32(),
+                        Gusts = Get(d, "gusts", 0).AsInt32(),
                         Seconds = Get(d, "seconds", 0).AsInt32(),
                         BugType = Get(d, "bugType", "").AsString(),
                         ClearedAt = Get(d, "clearedAt", "").AsString(),
@@ -101,6 +105,7 @@ public sealed class SaveData
             {
                 ["level"] = r.Level,
                 ["swipes"] = r.Swipes,
+                ["gusts"] = r.Gusts,
                 ["seconds"] = r.Seconds,
                 ["bugType"] = r.BugType,
                 ["clearedAt"] = r.ClearedAt,
@@ -113,6 +118,7 @@ public sealed class SaveData
             ["currentLevel"] = CurrentLevel,
             ["levelsCleared"] = LevelsCleared,
             ["totalSwipes"] = TotalSwipes,
+            ["totalGusts"] = TotalGusts,
             ["totalSeconds"] = TotalSeconds,
             ["bugFindCounts"] = finds,
             ["history"] = history,
@@ -134,10 +140,11 @@ public sealed class SaveData
     }
 
     /// <summary>Records a cleared level, updates aggregates, and saves.</summary>
-    public void RecordClear(int level, int swipes, int seconds, string bugType)
+    public void RecordClear(int level, int swipes, int seconds, string bugType, int gusts)
     {
         LevelsCleared++;
         TotalSwipes += swipes;
+        TotalGusts += gusts;
         TotalSeconds += seconds;
         BugFindCounts.TryGetValue(bugType, out var count);
         BugFindCounts[bugType] = count + 1;
@@ -146,6 +153,7 @@ public sealed class SaveData
         {
             Level = level,
             Swipes = swipes,
+            Gusts = gusts,
             Seconds = seconds,
             BugType = bugType,
             ClearedAt = Time.GetDatetimeStringFromSystem(),
@@ -164,6 +172,7 @@ public sealed class SaveData
         CurrentLevel = 1;
         LevelsCleared = 0;
         TotalSwipes = 0;
+        TotalGusts = 0;
         TotalSeconds = 0;
         BugFindCounts.Clear();
         History.Clear();

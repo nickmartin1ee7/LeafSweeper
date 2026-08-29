@@ -73,6 +73,8 @@ public partial class MainMenu : CanvasLayer
             ? "A fresh patch of forest awaits."
             : $"{save.LevelsCleared} bug{(save.LevelsCleared == 1 ? "" : "s")} found · " +
               $"{LevelStats.FormatTime(save.TotalSeconds)} of sweeping";
+        if (save.TotalGusts > 0)
+            lifetime += $" · {save.TotalGusts} gust{(save.TotalGusts == 1 ? "" : "s")} blown";
 
         string favorite = FavoriteBug(save);
         _progressLabel.Text = favorite == null ? lifetime : $"{lifetime}\nFavorite critter: {favorite}";

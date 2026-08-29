@@ -61,20 +61,24 @@ public partial class Main : Node2D
             _stats.Tick(1.0);
             _stats.CountSwipe();
         }
+        OnWindPressed(); // one gust power use should be counted and persisted
         WinLevel();
 
         var reloaded = SaveData.Load();
         bool ok = reloaded.CurrentLevel == 4
             && reloaded.LevelsCleared == 1
             && reloaded.TotalSwipes == 7
+            && reloaded.TotalGusts == 1
             && reloaded.BugFindCounts.Count == 1
             && reloaded.History.Count == 1
-            && reloaded.History[0].Level == 3;
+            && reloaded.History[0].Level == 3
+            && reloaded.History[0].Gusts == 1;
 
         GD.Print($"AUTOPLAY save: level={_save.CurrentLevel} cleared={_save.LevelsCleared} " +
-                 $"swipes={_save.TotalSwipes} bugs={_save.BugFindCounts.Count} hist={_save.History.Count}");
+                 $"swipes={_save.TotalSwipes} gusts={_save.TotalGusts} " +
+                 $"bugs={_save.BugFindCounts.Count} hist={_save.History.Count}");
         GD.Print($"AUTOPLAY reload: level={reloaded.CurrentLevel} cleared={reloaded.LevelsCleared} " +
-                 $"swipes={reloaded.TotalSwipes} ok={ok}");
+                 $"swipes={reloaded.TotalSwipes} gusts={reloaded.TotalGusts} ok={ok}");
         GetTree().Quit(ok ? 0 : 1);
     }
 
@@ -339,7 +343,9 @@ public partial class Main : Node2D
         // Comment uses pre-save history so "best" refers to earlier rounds.
         string comment = _stats.Comment(_save, _bug.Type);
         string statsLine = $"{LevelStats.FormatTime(_stats.Elapsed)} · {_stats.Swipes} swipes";
-        _save.RecordClear(_stats.Level, _stats.Swipes, (int)_stats.Elapsed, _bug.Type.Id);
+        if (_stats.Gusts > 0)
+            statsLine += $" · {_stats.Gusts} gust{(_stats.Gusts == 1 ? "" : "s")}";
+        _save.RecordClear(_stats.Level, _stats.Swipes, (int)_stats.Elapsed, _bug.Type.Id, _stats.Gusts);
 
         // The bug pops above the debris, grows, then flies to the screen
         // center; the win card seats it below the title when it arrives.
@@ -368,6 +374,9 @@ public partial class Main : Node2D
                 alive.Add(d);
         if (alive.Count == 0)
             return;
+
+        // A gust is only spent once it actually blows anything away.
+        _stats.CountGust();
 
         // Shuffle a copy so the ~10% sample is scattered across the floor,
         // not clustered in one grid region.

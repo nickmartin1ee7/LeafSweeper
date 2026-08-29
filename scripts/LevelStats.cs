@@ -5,8 +5,8 @@ using Godot;
 namespace LeafSweeper;
 
 /// <summary>
-/// Per-level play tracking (elapsed time, swipe gestures) plus the friendly
-/// between-round comments shown on the win overlay.
+/// Per-level play tracking (elapsed time, swipe gestures, gust powers used)
+/// plus the friendly between-round comments shown on the win overlay.
 /// </summary>
 public sealed class LevelStats
 {
@@ -21,6 +21,7 @@ public sealed class LevelStats
 
     public int Level { get; private set; }
     public int Swipes { get; private set; }
+    public int Gusts { get; private set; }
     public float Elapsed { get; private set; }
     public bool Running { get; private set; }
 
@@ -28,6 +29,7 @@ public sealed class LevelStats
     {
         Level = level;
         Swipes = 0;
+        Gusts = 0;
         Elapsed = 0f;
         Running = true;
     }
@@ -41,6 +43,9 @@ public sealed class LevelStats
     }
 
     public void CountSwipe() => Swipes++;
+
+    /// <summary>Counts one gust power use for the current round.</summary>
+    public void CountGust() => Gusts++;
 
     public static string FormatTime(float seconds)
     {
