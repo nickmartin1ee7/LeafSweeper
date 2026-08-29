@@ -26,6 +26,7 @@ public partial class Hud : CanvasLayer
     private Button _restartButton = null!;
     private Panel _gustBadge = null!;
     private Label _gustBadgeLabel = null!;
+    private StyleBoxFlat _gustBadgeStyle = null!;
 
     private Control _winOverlay = null!;
     private Control _bugSlot = null!;
@@ -246,6 +247,82 @@ public partial class Hud : CanvasLayer
     /// <summary>Gust button center in screen coordinates, the coin flight's target.</summary>
     public Vector2 WindButtonCenter => _windButton.GetGlobalRect().GetCenter();
 
+    /// <summary>
+    /// Dramatic arrival beat as a gust coin's power lands: the badge pops
+    /// with a golden flash while the counter ticks up, a gold ring and
+    /// sparks burst out of the button and the button itself glitters.
+    /// </summary>
+    public void PulseGustPower()
+    {
+        _gustBadge.PivotOffset = _gustBadge.Size / 2f;
+        var pop = CreateTween();
+        pop.TweenProperty(_gustBadge, "scale", Vector2.One * 1.55f, 0.15f)
+            .SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.Out);
+        pop.TweenProperty(_gustBadge, "scale", Vector2.One, 0.35f)
+            .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
+
+        var goldFlash = new Color(1f, 0.88f, 0.4f);
+        var flash = CreateTween();
+        flash.TweenProperty(_gustBadgeStyle, "bg_color", goldFlash, 0.15f);
+        flash.Parallel().TweenProperty(_gustBadgeStyle, "border_color", goldFlash.Darkened(0.3f), 0.15f);
+        flash.TweenProperty(_gustBadgeStyle, "bg_color", new Color("8a5c17"), 0.4f);
+        flash.Parallel().TweenProperty(_gustBadgeStyle, "border_color", new Color("5f3f0e"), 0.4f);
+
+        GoldBurst(WindButtonCenter);
+
+        var glitter = CreateTween();
+        glitter.TweenProperty(_windButton, "modulate", new Color(1.45f, 1.25f, 0.75f), 0.12f);
+        glitter.TweenProperty(_windButton, "modulate", Colors.White, 0.4f);
+    }
+
+    /// <summary>Expanding gold ring plus flying sparks bursting from the button.</summary>
+    private void GoldBurst(Vector2 center)
+    {
+        var ring = new Line2D
+        {
+            Width = 7f,
+            DefaultColor = new Color(1f, 0.85f, 0.3f, 0.95f),
+            Position = center,
+            ZIndex = 60,
+            BeginCapMode = Line2D.LineCapMode.Round,
+            EndCapMode = Line2D.LineCapMode.Round,
+        };
+        const int segments = 28;
+        var points = new Vector2[segments + 1];
+        for (int i = 0; i <= segments; i++)
+            points[i] = Vector2.Right.Rotated(i * Mathf.Tau / segments) * 46f;
+        ring.Points = points;
+        AddChild(ring);
+
+        var tween = CreateTween().SetParallel();
+        tween.TweenProperty(ring, "scale", Vector2.One * 3.4f, 0.5f)
+            .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+        tween.TweenProperty(ring, "modulate:a", 0f, 0.5f)
+            .SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.In);
+        tween.Chain().TweenCallback(Callable.From(ring.QueueFree));
+
+        var sparkTex = GD.Load<Texture2D>("res://assets/icons/coin.svg");
+        for (int i = 0; i < 6; i++)
+        {
+            var spark = new Sprite2D
+            {
+                Texture = sparkTex,
+                Position = center,
+                Scale = Vector2.One * 0.18f,
+                ZIndex = 60,
+            };
+            AddChild(spark);
+            Vector2 dir = Vector2.Right.Rotated(Mathf.Tau * (i + GD.Randf() * 0.6f) / 6f);
+            var sparkTween = CreateTween().SetParallel();
+            sparkTween.TweenProperty(spark, "position", center + dir * (float)GD.RandRange(120.0, 210.0), 0.45f)
+                .SetTrans(Tween.TransitionType.Quart).SetEase(Tween.EaseType.Out);
+            sparkTween.TweenProperty(spark, "scale", Vector2.One * 0.02f, 0.45f)
+                .SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.In);
+            sparkTween.TweenProperty(spark, "modulate:a", 0f, 0.45f);
+            sparkTween.Chain().TweenCallback(Callable.From(spark.QueueFree));
+        }
+    }
+
     public void ShowWin(string comment, string statsLine, Node2D? bug = null)
     {
         if (bug != null)
@@ -381,6 +458,7 @@ public partial class Hud : CanvasLayer
             BorderColor = new Color("5f3f0e"),
         };
         badge.AddThemeStyleboxOverride("panel", style);
+        _gustBadgeStyle = style;
         // Anchored inside the button's top-right corner; buttons don't clip
         // children, so the badge can overhang the coin's edge.
         badge.AnchorLeft = 1f;

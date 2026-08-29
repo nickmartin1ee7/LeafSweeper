@@ -56,7 +56,7 @@ public partial class Main : Node2D
     }
 
     /// <summary>Headless self-test: plays a level end-to-end and verifies the save round-trip.</summary>
-    private void RunHeadlessAutoplay()
+    private async void RunHeadlessAutoplay()
     {
         _save.Reset(); // deterministic: the test assumes a fresh save file
         StartLevel(3);
@@ -86,6 +86,8 @@ public partial class Main : Node2D
         if (coin != null)
         {
             CollectCoin(coin);
+            // The power is banked only when the coin reaches the dock button.
+            await ToSignal(coin, GustCoin.SignalName.CollectionFlightFinished);
             coinBanked = _save.GustPower == SaveData.StartingGustPower + 1;
         }
         GD.Print($"AUTOPLAY coins: spawned={_coins.Count} banked={coinBanked} " +
@@ -219,16 +221,28 @@ public partial class Main : Node2D
     }
 
     /// <summary>
-    /// An uncovered gust coin was tapped: bank the power right away (and
-    /// persist it), then let the coin fly its golden spiral into the dock's
-    /// gust button.
+    /// An uncovered gust coin was tapped: lift it onto the HUD's canvas layer
+    /// so the flight passes above everything — debris and the dock itself —
+    /// then let it spiral into the gust button.
     /// </summary>
     private void CollectCoin(GustCoin coin)
+    {
+        Vector2 screenPos = GetCanvasTransform() * coin.Position;
+        coin.Reparent(_hud);
+        coin.Position = screenPos;
+        coin.Collect(_hud.WindButtonCenter);
+    }
+
+    /// <summary>
+    /// A coin reached the gust button: bank the power, persist it, and make
+    /// the counter burst as it ticks up.
+    /// </summary>
+    private void OnCoinCollectionFinished()
     {
         _save.GustPower++;
         _save.Save();
         _hud.ShowGustPower(_save.GustPower);
-        coin.Collect(ToWorld(_hud.WindButtonCenter));
+        _hud.PulseGustPower();
     }
 
     // ------------------------------------------------------------- setup --
@@ -440,8 +454,9 @@ public partial class Main : Node2D
             var coin = new GustCoin { Name = $"GustCoin{i}" };
             coin.Setup(_rng.RandfRange(84f, 100f), _rng);
             coin.Position = CoinSpot(floor);
-            // The coin frees itself once its spiral flight finishes.
-            coin.CollectionFlightFinished += coin.QueueFree;
+            // The coin banks its power when the spiral flight ends, then
+            // frees itself.
+            coin.CollectionFlightFinished += OnCoinCollectionFinished;
             AddChild(coin);
             _coins.Add(coin);
         }
