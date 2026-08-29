@@ -9,8 +9,11 @@ public static class RoundConfig
 {
     public const int SaturateLevel = 200;
 
-    public const int MinDebris = 40;
-    public const int MaxDebris = 90;
+    // Fraction of the floor's area that should be occupied by debris sprites.
+    // ~0.00013 ≈ 1.6× pixel coverage (fully hidden floor) at 1080×2340;
+    // saturates around 2.5× for a thick late-game litter.
+    public const float CoverageStart = 0.000135f;
+    public const float CoverageEnd = 0.00021f;
 
     public const float StartBugScale = 1.0f;
     public const float MinBugScale = 0.75f;
@@ -29,8 +32,8 @@ public static class RoundConfig
         return t * t * (3f - 2f * t); // smoothstep: gentle start and end
     }
 
-    public static int DebrisCount(int level) =>
-        (int)(MinDebris + (MaxDebris - MinDebris) * Progress(level));
+    public static float Coverage(int level) =>
+        CoverageStart + (CoverageEnd - CoverageStart) * Progress(level);
 
     public static float BugScale(int level) =>
         StartBugScale - (StartBugScale - MinBugScale) * Progress(level);

@@ -32,6 +32,7 @@ public partial class Main : Node2D
         _rng.Randomize();
 
         BuildTree();
+        FitGround();
 
         _save = SaveData.Load();
         _sweeper = new Sweeper(() => _debris, _rng, OnSwipeCompleted);
@@ -124,11 +125,11 @@ public partial class Main : Node2D
         _ground.AddChild(groundSprite);
         AddChild(_ground);
 
-        _debrisBottom = new Node2D { Name = "DebrisBottom" };
-        AddChild(_debrisBottom);
-
         _bug = new Bug { Name = "Bug" };
         AddChild(_bug);
+
+        _debrisBottom = new Node2D { Name = "DebrisBottom" };
+        AddChild(_debrisBottom);
 
         _debrisTop = new Node2D { Name = "DebrisTop" };
         AddChild(_debrisTop);
@@ -179,7 +180,7 @@ public partial class Main : Node2D
             _rng.RandfRange(320f, view.Size.Y - 200f));
         _bug.Visible = true;
 
-        SpawnDebris(level, view, bugType.TapRadius * bugScale);
+        SpawnDebris(level, view);
 
         _stats.Start(level);
         _hud.ShowLevel(level);
@@ -189,7 +190,7 @@ public partial class Main : Node2D
         SetState(GameState.Playing);
     }
 
-    private void SpawnDebris(int level, Rect2 view, float bugRadius)
+    private void SpawnDebris(int level, Rect2 view)
     {
         // Distinct textures with a cozy mix; leaves dominate, heavier stuff sparser.
         (string path, DebrisWeight weight, int freq)[] palette =
@@ -211,29 +212,38 @@ public partial class Main : Node2D
         foreach (var entry in palette)
             total += entry.freq;
 
-        int count = RoundConfig.DebrisCount(level);
-        int topCount = count * 30 / 100; // 30% drawn above the bug
-        var placed = new List<Vector2>(count);
+        // Jittered-grid placement: one slot per cell guarantees the whole floor
+        // is covered evenly (no bare patches, no visible bug), while the jitter
+        // keeps it from looking like a lattice. Count = floor area × coverage.
+        int count = (int)(view.Size.X * view.Size.Y * RoundConfig.Coverage(level));
+        float cell = Mathf.Sqrt(view.Size.X * view.Size.Y / Mathf.Max(count, 1));
+        int topCount = count * 35 / 100; // 35% drawn above the rest for depth
 
-        for (int i = 0; i < count; i++)
+        int placed = 0;
+        for (float y = cell * 0.5f; y < view.Size.Y && placed < count; y += cell)
         {
-            Vector2 pos = FindSpot(view, placed, bugRadius, i >= topCount);
-            placed.Add(pos);
+            for (float x = cell * 0.5f; x < view.Size.X && placed < count; x += cell)
+            {
+                Vector2 pos = new(
+                    Mathf.Clamp(x + _rng.RandfRange(-0.45f, 0.45f) * cell, 14f, view.Size.X - 14f),
+                    Mathf.Clamp(y + _rng.RandfRange(-0.45f, 0.45f) * cell, 14f, view.Size.Y - 14f));
 
-            int roll = _rng.RandiRange(1, total);
-            (string path, DebrisWeight weight, _) = Pick(palette, roll);
+                int roll = _rng.RandiRange(1, total);
+                (string path, DebrisWeight weight, _) = Pick(palette, roll);
 
-            var debris = new Debris();
-            debris.Setup(
-                path,
-                pos,
-                _rng.RandfRange(0f, 360f),
-                _rng.RandfRange(0.9f, 1.5f),
-                weight,
-                _rng);
+                var debris = new Debris();
+                debris.Setup(
+                    path,
+                    pos,
+                    _rng.RandfRange(0f, 360f),
+                    _rng.RandfRange(1.25f, 1.9f),
+                    weight,
+                    _rng);
 
-            _debris.Add(debris);
-            (i < topCount ? _debrisTop : _debrisBottom).AddChild(debris);
+                _debris.Add(debris);
+                (placed < topCount ? _debrisTop : _debrisBottom).AddChild(debris);
+                placed++;
+            }
         }
     }
 
@@ -247,41 +257,6 @@ public partial class Main : Node2D
                 return entry;
         }
         return palette[0];
-    }
-
-    /// <summary>
-    /// Finds a spawn spot: inside the play area, not clumping with existing
-    /// debris, and (for debris drawn above the bug) never covering the bug's
-    /// core so it always peeks out.
-    /// </summary>
-    private Vector2 FindSpot(Rect2 view, List<Vector2> placed,
-        float bugRadius, bool avoidBugCore)
-    {
-        Vector2 margin = new(70f, 150f);
-        for (int attempt = 0; attempt < 24; attempt++)
-        {
-            Vector2 p = new(
-                _rng.RandfRange(margin.X, view.Size.X - margin.X),
-                _rng.RandfRange(margin.Y, view.Size.Y - margin.Y));
-
-            if (avoidBugCore && p.DistanceTo(_bug.Position) < bugRadius * 0.65f)
-                continue;
-
-            bool tooClose = false;
-            foreach (Vector2 other in placed)
-            {
-                if (p.DistanceTo(other) < 26f)
-                {
-                    tooClose = true;
-                    break;
-                }
-            }
-            if (!tooClose)
-                return p;
-        }
-        return new Vector2(
-            _rng.RandfRange(margin.X, view.Size.X - margin.X),
-            _rng.RandfRange(margin.Y, view.Size.Y - margin.Y));
     }
 
     // -------------------------------------------------------- game flow ---
