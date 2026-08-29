@@ -35,6 +35,8 @@ public partial class Bug : Node2D
         ((ShaderMaterial)_sprite.Material).SetShaderParameter("intensity", 0.0f);
         AddChild(_sprite);
 
+        // Celebration raises ZIndex above the debris; reset for the new round.
+        ZIndex = 0;
         Scale = new Vector2(scale, scale);
         // Camouflage blends the bug toward dusty leaf colors; 0 = fully normal.
         Color leaf = new(0.62f, 0.60f, 0.38f);
@@ -46,24 +48,23 @@ public partial class Bug : Node2D
 
     /// <summary>
     /// Golden discovery moment: the outline shines in while the bug grows,
-    /// holds a beat, then settles. Emits <see cref="CelebrationFinished"/>
-    /// when the round-end UI may appear.
+    /// holds a beat, then flies to the screen center to await its place on
+    /// the win card. Emits <see cref="CelebrationFinished"/> when done.
     /// </summary>
-    public void Celebrate()
+    public void Celebrate(Vector2 centerTarget)
     {
+        // Pop above every debris layer — the bug is the center of attention.
+        ZIndex = 100;
         var mat = (ShaderMaterial)_sprite.Material;
-        float baseScale = Scale.X;
 
         var tween = CreateTween();
-        tween.TweenProperty(this, "scale", Vector2.One * (baseScale * 1.45f), 0.25f)
+        tween.TweenProperty(this, "scale", Scale * 1.45f, 0.25f)
             .SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.Out);
         tween.Parallel().TweenMethod(
             Callable.From<float>(v => mat.SetShaderParameter("intensity", v)), 0.0f, 1.0f, 0.25f);
-        tween.TweenInterval(0.45f);
-        tween.TweenProperty(this, "scale", Vector2.One * baseScale, 0.3f)
+        tween.TweenInterval(0.35f);
+        tween.TweenProperty(this, "position", centerTarget, 0.55f)
             .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.InOut);
-        tween.Parallel().TweenMethod(
-            Callable.From<float>(v => mat.SetShaderParameter("intensity", v)), 1.0f, 0.0f, 0.3f);
         tween.TweenCallback(Callable.From(() => EmitSignal(SignalName.CelebrationFinished)));
     }
 }

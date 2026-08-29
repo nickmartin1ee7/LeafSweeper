@@ -21,16 +21,22 @@ Title menu → Play → Round (sweep debris, find bug) → Tap bug
    underneath the litter.
 2. The player **drags a finger** to sweep. Debris inside the sweep radius is
    flung with velocity + spin, slides with friction, fades and is removed.
-   A single swipe clears **at most 4 pieces of debris** — sweeps stay
+   A single swipe clears **at most 12 pieces of debris** — sweeps stay
    deliberate rather than screen-wiping.
    Weight matters: rocks/sticks/moss resist; leaves and petals fly easily —
    but heavier pieces glide farther and fade later, so their long slide
    reads as weight rather than the debris dying where it was swept.
-3. Finding the bug and **tapping it** wins the round: the bug is bathed in a
-   **golden shining outline** and **grows for a moment** before settling —
-   then petal sparkles burst and the win overlay appears with a friendly
-   comment and the round's stats (time, swipes).
-4. **Next** starts the following level. **Menu** returns to the title screen.
+3. Two helpers live in the top bar while playing:
+   **Gust** (wind icon) blows a gust across the floor, sweeping away about
+   **10% of the remaining debris** in one shared direction; and
+   **Restart** (circular arrow) opens a confirmation dialog before
+   re-scattering the same level with a fresh swipe count.
+4. Finding the bug and **tapping it** wins the round: the bug rises **above
+   all debris**, bathes in a **golden shining outline** and **grows**, then
+   **flies to the center of the screen** and seats itself on the win card —
+   below the "Bug found!" title, above the stats — as the overlay fades in
+   with a friendly comment and the round's numbers (time, swipes).
+5. **Next** starts the following level. **Menu** returns to the title screen.
 
 ## Design values
 

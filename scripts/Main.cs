@@ -148,6 +148,8 @@ public partial class Main : Node2D
         _hud = new Hud { Name = "Hud" };
         _hud.NextPressed += OnNextPressed;
         _hud.MenuPressed += OnMenuPressed;
+        _hud.WindPressed += OnWindPressed;
+        _hud.RestartConfirmed += OnRestartConfirmed;
         AddChild(_hud);
 
         _menu = new MainMenu { Name = "Menu" };
@@ -189,7 +191,10 @@ public partial class Main : Node2D
         if (oldSize.X <= 0f || oldSize.Y <= 0f)
             return;
         Vector2 ratio = new(newSize.X / oldSize.X, newSize.Y / oldSize.Y);
-        if (IsInstanceValid(_bug) && _bug.Visible)
+        // While the bug is seated on the win card it lives in the HUD and the
+        // containers position it — only stretch it while it's in the world.
+        bool bugInWorld = IsInstanceValid(_bug) && _bug.Visible && _bug.GetParent() == this;
+        if (bugInWorld)
             _bug.Position *= ratio;
         foreach (var d in _debris)
             if (IsInstanceValid(d) && !d.Swept)
@@ -209,6 +214,11 @@ public partial class Main : Node2D
     {
         ClearLevel();
         FitGround();
+
+        // The bug may still be seated on the win card from the last round;
+        // take it back into the world before setting it up again.
+        if (_bug.GetParent() != this)
+            _bug.Reparent(this);
 
         Rect2 view = GetViewportRect();
 
@@ -314,9 +324,11 @@ public partial class Main : Node2D
         string statsLine = $"{LevelStats.FormatTime(_stats.Elapsed)} · {_stats.Swipes} swipes";
         _save.RecordClear(_stats.Level, _stats.Swipes, (int)_stats.Elapsed, _bug.Type.Id);
 
-        _bug.Celebrate();
+        // The bug pops above the debris, grows, then flies to the screen
+        // center; the win card seats it below the title when it arrives.
+        _bug.Celebrate(_viewSize / 2f);
         PetalSparkle();
-        // The win overlay waits for the bug's golden grow-and-shine moment.
+        // The win overlay waits for the bug's golden moment.
         _pendingWinComment = comment;
         _pendingWinStats = statsLine;
     }
@@ -324,7 +336,74 @@ public partial class Main : Node2D
     private void OnBugCelebrationFinished()
     {
         if (_state == GameState.Won)
-            _hud.ShowWin(_pendingWinComment, _pendingWinStats);
+            _hud.ShowWin(_pendingWinComment, _pendingWinStats, _bug);
+    }
+
+    /// <summary>Blows away 10% of the remaining debris with a gusty fling.</summary>
+    private void OnWindPressed()
+    {
+        if (_state != GameState.Playing)
+            return;
+
+        var alive = new List<Debris>();
+        foreach (var d in _debris)
+            if (IsInstanceValid(d) && !d.Swept)
+                alive.Add(d);
+        if (alive.Count == 0)
+            return;
+
+        // Shuffle a copy so the ~10% sample is scattered across the floor,
+        // not clustered in one grid region.
+        for (int i = alive.Count - 1; i > 0; i--)
+        {
+            int j = _rng.RandiRange(0, i);
+            (alive[i], alive[j]) = (alive[j], alive[i]);
+        }
+
+        int count = Mathf.Max(1, alive.Count / 10);
+        Vector2 dir = Vector2.Right.Rotated(_rng.RandfRange(0f, Mathf.Tau));
+        for (int i = 0; i < count; i++)
+            alive[i].Fling(dir * _rng.RandfRange(1500f, 2200f), _rng);
+
+        WindGust(dir);
+    }
+
+    /// <summary>White streaks sweeping across the floor sell the gust.</summary>
+    private void WindGust(Vector2 dir)
+    {
+        Rect2 view = GetViewportRect();
+        Vector2 perp = dir.Orthogonal();
+        float reach = view.Size.Length() * 0.5f + 240f;
+
+        for (int i = 0; i < 8; i++)
+        {
+            Vector2 start = view.GetCenter() - dir * reach
+                + perp * _rng.RandfRange(-0.6f, 0.6f) * view.Size.Y;
+            var streak = new Line2D
+            {
+                Width = _rng.RandfRange(3f, 8f),
+                DefaultColor = new Color(1f, 1f, 1f, 0.55f),
+                Position = start,
+                Rotation = dir.Angle(),
+                Points = new[] { Vector2.Zero, Vector2.Right * _rng.RandfRange(140f, 320f) },
+                BeginCapMode = Line2D.LineCapMode.Round,
+                EndCapMode = Line2D.LineCapMode.Round,
+            };
+            AddChild(streak);
+
+            var tween = CreateTween().SetParallel();
+            tween.TweenProperty(streak, "position", start + dir * reach * 2.2f, 0.55f)
+                .SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.Out);
+            tween.TweenProperty(streak, "modulate:a", 0f, 0.55f);
+            tween.Chain().TweenCallback(Callable.From(streak.QueueFree));
+        }
+    }
+
+    private void OnRestartConfirmed()
+    {
+        if (_state != GameState.Playing)
+            return;
+        StartLevel(_save.CurrentLevel);
     }
 
     private void PetalSparkle()
@@ -353,6 +432,7 @@ public partial class Main : Node2D
         _state = state;
         _menu.Visible = state == GameState.Menu;
         _hud.SetInLevelVisible(state != GameState.Menu);
+        _hud.SetControlsVisible(state == GameState.Playing);
         if (state == GameState.Menu)
         {
             ClearLevel();
