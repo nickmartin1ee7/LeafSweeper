@@ -179,7 +179,7 @@ jobs:
         run: |
           set -euo pipefail
           mv build/LeafSweeper.apk "build/LeafSweeper-$VERSION_NAME.apk"
-          sha256sum "build/LeafSweeper-$VERSION_NAME.apk" > build/SHA256SUMS.txt
+          (cd build && sha256sum "LeafSweeper-$VERSION_NAME.apk" > SHA256SUMS.txt)
           cat build/SHA256SUMS.txt
 
       - name: Upload build artifact
