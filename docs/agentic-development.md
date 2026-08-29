@@ -60,6 +60,7 @@ Cheapest check first; escalate only when needed:
 | 3 | `godot --headless --quit-after 180` | boot-time script crashes |
 | 4 | `LEAF_AUTOPLAY=1 godot --headless --quit-after 300` | gameplay logic + persistence |
 | 5 | windowed run + screenshot hook (visual slices) | rendered pixels: layout, layering, fonts |
+| 6 | render generated SVGs + visual checklist (art slices) | silhouette errors: detached/overlapping appendages, legs through the body |
 
 `LEAF_AUTOPLAY` is an env-gated self-test in `scripts/Main.cs`: it resets
 the save (deterministic), plays a level end-to-end (ticks, swipes, win),
@@ -106,6 +107,39 @@ off, using the same env-gated-hook pattern:
 2. `LEAF_SHOT=/tmp/shot.png godot --path .` — **windowed**, not headless:
    headless mode has no framebuffer to capture.
 3. Inspect the PNG, iterate, then **remove the hook** before committing.
+
+**Level 6 exists because generators emit plausible-but-broken art.** Every
+rung above was green while the bug catalog shipped with wings attached to
+the wrong body part, legs stroked *across* the body fill, and fanned wings
+floating free of the trunk — valid SVGs, clean build, autoplay passing.
+Generated art is judged by looking at it, in a loop:
+
+1. Render each asset at 400 px over the ground color:
+   `rsvg-convert -w 400 -h 400 -b "#6a5c43" assets/textures/bugs/<bug>.svg -o out.png`
+2. View it against the checklist in [`art-style.md`](art-style.md)
+   (appendages attach and reach the body, nothing crosses the fill,
+   silhouette reads at a glance).
+3. Fix the generator function, regenerate, re-render. Repeat until every
+   asset passes; record per-asset verdicts so the loop terminates.
+
+When eyeballing disagrees with itself, **measure**: extract the generated
+coordinates and compare them against the body geometry. The dragonfly's
+detached wings looked fine in isolation but failed arithmetic — a rotated
+wing's inner tip must land within the body's stroke (center ± rx·cosθ).
+Two SVG rules cover most failures: appendages tucked under a body must be
+drawn *before* the body shapes, and anchored appendages must have their
+attachment point computed, not eyeballed.
+
+**Parallel subagents for independent asset fixes.** When a review yields
+N independent failures (one bug = one generator function = one region of
+`gen_art.mjs`), spawn one agent per item instead of serially editing:
+each gets narrow constraints (edit only your function, regenerate, render
+and self-verify, no git commands) and works in its own context. Keep the
+agents alive after their first result — sending a follow-up with concrete
+corrective math beats relaunching, because they retain what they already
+tried. Two hygiene rules: sweep the worktree for stray preview PNGs
+agents leave behind before committing, and re-verify the union yourself —
+subagent self-reports are a filter, not a verdict.
 
 ## Patterns and practices
 
@@ -178,6 +212,14 @@ fast, so doc alignment is part of the slice, not a cleanup phase.
 
 ## Environment constraints discovered
 
+- **Running Godot dirties the tree.** Every `godot-mono --import` (or any
+  headless run) rewrites `LeafSweeper.csproj` — dropping an Android
+  TargetFramework line — and rewrites `scripts/SaveData.cs`/`Sweeper.cs`
+  with whitespace-only churn (spaces→tabs). After each Godot run:
+  `git checkout -- LeafSweeper.csproj; rm -f LeafSweeper.csproj.old`, and
+  before committing, confirm the churn is content-free (`git diff -w` is
+  empty) and discard it. The binary on this machine is `godot-mono`
+  (NixOS), not plain `godot`.
 - **.NET target pinned to net8.0.** The contributor's local SDK is 8.0.x
   (`NETSDK1045` on net9.0). Keep `LeafSweeper.csproj` at net8.0 unless the
   whole toolchain moves together. (net9.0 was tried once and reverted for

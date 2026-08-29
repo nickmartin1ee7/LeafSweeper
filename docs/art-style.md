@@ -46,7 +46,27 @@ node tools/gen_art.mjs
 - `assets/textures/bugs/*.svg` — the 17-bug catalog (100×100 viewBox).
 
 After regenerating, re-run `godot --headless --import` so Godot reimports
-the changed SVGs.
+the changed SVGs — but a green import does **not** mean the art is right.
+Render previews and look at every changed asset before trusting it:
+
+```sh
+rsvg-convert -w 400 -h 400 -b "#6a5c43" assets/textures/bugs/<bug>.svg -o /tmp/<bug>.png
+```
+
+(the `#6a5c43` backdrop mimics the in-game ground so silhouettes read).
+
+**Preview checklist** — each generated bug should pass all of these:
+
+- Silhouette reads at a glance at phone size; one recognizable insect.
+- Appendages attach where they anatomically should (wings on the body,
+  not the head; legs under the body, not stroked across it).
+- Appendages physically reach the body — rotated wings must have their
+  inner tip land inside the body's stroke, not float beside it.
+- No limb extends to the floor shadow; nothing pokes through the body fill.
+- No stray strokes, accidental "mouths", or asymmetric features.
+
+If a preview fails, fix the **generator function** in `tools/gen_art.mjs`
+and regenerate — never hand-edit an SVG, the next run overwrites it.
 
 ## Adding a new variant
 
