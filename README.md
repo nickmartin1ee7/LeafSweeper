@@ -62,16 +62,16 @@ templates, the Android build template (`android/build` in the project),
 an Android SDK + JDK configured in Editor Settings → Export → Android,
 and a release keystore.
 
-The keystore is supplied through environment variables (never committed):
+Build the shareable demo APK with one command:
 
 ```sh
-GODOT_ANDROID_KEYSTORE_RELEASE_PATH=/path/to/leafsweeper-release.keystore \
-GODOT_ANDROID_KEYSTORE_RELEASE_USER=leafsweeper \
-GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD=<pass> \
-godot --headless --path . --export-release Android build/LeafSweeper.apk
+./build-demo-apk.sh
 ```
 
-Then share or install it:
+One-time setup: copy `keystore.env.example` to `keystore.env` and fill in
+the release keystore password (the file is gitignored, never committed).
+The script finds Godot, exports `build/LeafSweeper.apk` and cleans up
+the csproj churn the exporter leaves behind. Then share or install it:
 
 ```sh
 adb install -r build/LeafSweeper.apk

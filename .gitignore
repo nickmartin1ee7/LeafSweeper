@@ -2,3 +2,6 @@
 .godot/
 /android/
 /build/
+
+# Release keystore password for build-demo-apk.sh (never commit)
+/keystore.env
