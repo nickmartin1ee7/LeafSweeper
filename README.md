@@ -21,9 +21,10 @@ Built with **Godot 4.7 (C# / .NET 8)** for Android phones (FHD+ portrait,
    the litter thickens from ~1365 to ~2123 pieces, the bug is slightly smaller
    and may blend in a little — that's all.
 
-Eight bug types hide in the leaves: ladybug, butterfly, centipede, moth,
-grasshopper, dragonfly, beetle and snail — each with its own size and
-silhouette, so you learn to spot shapes rather than colors.
+Eleven bug types hide in the leaves: ladybug, butterfly, centipede, moth,
+grasshopper, dragonfly, beetle, snail, firefly, bumblebee and caterpillar —
+each with its own size and silhouette, so you learn to spot shapes rather
+than colors.
 
 ## Features
 
