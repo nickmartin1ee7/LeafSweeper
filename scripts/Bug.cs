@@ -3,7 +3,7 @@ using Godot;
 namespace LeafSweeper;
 
 /// <summary>
-/// The hidden critter. Sits still under/above the debris layer, never flees.
+/// The hidden critter. Sits still below every debris layer.
 /// Supports a camouflage tint for late levels and a golden win celebration:
 /// a shining outline fades in while the bug swells up, holds a beat, then
 /// settles back down before the round ends.
@@ -35,7 +35,8 @@ public partial class Bug : Node2D
         ((ShaderMaterial)_sprite.Material).SetShaderParameter("intensity", 0.0f);
         AddChild(_sprite);
 
-        // Celebration raises ZIndex above the debris; reset for the new round.
+        // Z 0 keeps the bug below every debris layer (Z 1 and 2); Celebrate()
+        // raises it above everything for the round finale.
         ZIndex = 0;
         Scale = new Vector2(scale, scale);
         // Camouflage blends the bug toward dusty leaf colors; 0 = fully normal.

@@ -140,9 +140,13 @@ public partial class Main : Node2D
         AddChild(_bug);
 
         _debrisBottom = new Node2D { Name = "DebrisBottom" };
+        // Explicit Z layering: the bug (Z 0) is always below every debris
+        // piece until it's tapped and Celebrate() raises it above everything.
+        _debrisBottom.ZIndex = 1;
         AddChild(_debrisBottom);
 
         _debrisTop = new Node2D { Name = "DebrisTop" };
+        _debrisTop.ZIndex = 2;
         AddChild(_debrisTop);
 
         _hud = new Hud { Name = "Hud" };
@@ -195,20 +199,14 @@ public partial class Main : Node2D
         Vector2 floorRatio = new(
             newSize.X / oldSize.X,
             (newSize.Y - Hud.DockHeight) / (oldSize.Y - Hud.DockHeight));
-        Rect2 floor = PlayableArea();
         // While the bug is seated on the win card it lives in the HUD and the
         // containers position it — only stretch it while it's in the world.
         bool bugInWorld = IsInstanceValid(_bug) && _bug.Visible && _bug.GetParent() == this;
         if (bugInWorld)
             _bug.Position *= floorRatio;
         foreach (var d in _debris)
-        {
-            if (!IsInstanceValid(d))
-                continue;
-            if (!d.Swept)
+            if (IsInstanceValid(d) && !d.Swept)
                 d.Position *= floorRatio;
-            d.Bounds = floor;
-        }
     }
 
     private void ClearLevel()
@@ -300,12 +298,7 @@ public partial class Main : Node2D
                 int roll = _rng.RandiRange(1, total);
                 (string path, DebrisWeight weight, _) = Pick(palette, roll);
 
-                var debris = new Debris
-                {
-                    // Flung pieces bounce off the dock edge instead of
-                    // sliding underneath it.
-                    Bounds = new Rect2(Vector2.Zero, floor.Size),
-                };
+                var debris = new Debris();
                 debris.Setup(
                     path,
                     pos,
@@ -409,6 +402,8 @@ public partial class Main : Node2D
                 DefaultColor = new Color(1f, 1f, 1f, 0.55f),
                 Position = start,
                 Rotation = dir.Angle(),
+                // Ride above the debris layers (Z 1/2) while blowing.
+                ZIndex = 3,
                 Points = new[] { Vector2.Zero, Vector2.Right * _rng.RandfRange(140f, 320f) },
                 BeginCapMode = Line2D.LineCapMode.Round,
                 EndCapMode = Line2D.LineCapMode.Round,
@@ -435,7 +430,7 @@ public partial class Main : Node2D
         var petalTex = GD.Load<Texture2D>("res://assets/textures/petal_pink.svg");
         for (int i = 0; i < 10; i++)
         {
-            var sparkle = new Sprite2D { Texture = petalTex, Position = _bug.Position };
+            var sparkle = new Sprite2D { Texture = petalTex, Position = _bug.Position, ZIndex = 3 };
             sparkle.Scale = Vector2.One * _rng.RandfRange(0.35f, 0.6f);
             AddChild(sparkle);
 

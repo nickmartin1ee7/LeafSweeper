@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 300">
+  <defs>
+    <linearGradient id="bark" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#71552f"/>
+      <stop offset="1" stop-color="#563f22"/>
+    </linearGradient>
+  </defs>
+  <rect width="1080" height="300" fill="url(#bark)"/>
+  <g stroke="#4a3720" stroke-linecap="round" fill="none" opacity="0.45">
+    <path d="M60 0 C 50 80, 72 160, 58 300" stroke-width="6"/>
+    <path d="M150 0 C 160 90, 138 190, 152 300" stroke-width="4"/>
+    <path d="M240 0 C 230 70, 252 180, 236 300" stroke-width="7"/>
+    <path d="M330 0 C 342 100, 318 200, 334 300" stroke-width="4"/>
+    <path d="M430 0 C 420 80, 444 170, 428 300" stroke-width="6"/>
+    <path d="M520 0 C 532 90, 508 190, 524 300" stroke-width="4"/>
+    <path d="M610 0 C 600 70, 624 180, 606 300" stroke-width="7"/>
+    <path d="M710 0 C 722 100, 698 200, 714 300" stroke-width="4"/>
+    <path d="M800 0 C 790 80, 814 170, 798 300" stroke-width="6"/>
+    <path d="M890 0 C 902 90, 878 190, 894 300" stroke-width="4"/>
+    <path d="M980 0 C 970 70, 994 180, 976 300" stroke-width="7"/>
+    <path d="M1050 0 C 1060 100, 1036 200, 1052 300" stroke-width="4"/>
+  </g>
+  <g stroke="#8a6d45" stroke-linecap="round" fill="none" opacity="0.28">
+    <path d="M105 0 C 115 90, 95 200, 109 300" stroke-width="3"/>
+    <path d="M285 0 C 275 90, 297 200, 281 300" stroke-width="3"/>
+    <path d="M475 0 C 485 90, 465 200, 479 300" stroke-width="3"/>
+    <path d="M665 0 C 655 90, 677 200, 661 300" stroke-width="3"/>
+    <path d="M845 0 C 855 90, 835 200, 849 300" stroke-width="3"/>
+    <path d="M1020 0 C 1010 90, 1032 200, 1016 300" stroke-width="3"/>
+  </g>
+  <g fill="none" stroke="#453318" opacity="0.5">
+    <ellipse cx="380" cy="150" rx="34" ry="22" stroke-width="5"/>
+    <ellipse cx="380" cy="150" rx="20" ry="12" stroke-width="4"/>
+    <ellipse cx="380" cy="150" rx="9" ry="5" stroke-width="3" fill="#453318"/>
+    <ellipse cx="760" cy="240" rx="28" ry="18" stroke-width="5"/>
+    <ellipse cx="760" cy="240" rx="15" ry="9" stroke-width="4"/>
+    <ellipse cx="760" cy="240" rx="7" ry="4" stroke-width="3" fill="#453318"/>
+  </g>
+  <rect width="1080" height="14" fill="#8f7148" opacity="0.9"/>
+  <rect y="14" width="1080" height="8" fill="#3f2f1a" opacity="0.6"/>
+</svg>

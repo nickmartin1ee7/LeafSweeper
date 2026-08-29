@@ -4,17 +4,17 @@ using Godot;
 namespace LeafSweeper;
 
 /// <summary>
-/// In-game HUD: a permanent bottom dock (level/swipes labels + wind/restart
-/// controls) plus the win overlay with the between-round stats comment and
-/// Next/Menu buttons. The dock's fixed height also defines the playable
-/// area — the floor never extends underneath it.
+/// In-game HUD: a wood dock along the bottom (swipe counter + gust/restart
+/// coin buttons), the level label at the top-middle, and the win overlay
+/// with the between-round stats comment and Next/Menu buttons. The dock's
+/// fixed height also defines the playable area — nothing spawns underneath
+/// it, though swept debris may drift over it.
 /// </summary>
 public partial class Hud : CanvasLayer
 {
     /// <summary>
     /// Dock height in design pixels. Main subtracts this from the viewport
-    /// to get the playable rect, so debris, the bug and the ground clamp all
-    /// stay mutually exclusive with the dock.
+    /// to get the playable rect where debris and the bug may spawn.
     /// </summary>
     public const float DockHeight = 300f;
 
@@ -36,6 +36,10 @@ public partial class Hud : CanvasLayer
 
     public override void _Ready()
     {
+        _levelLabel = BuildLevelLabel();
+        _levelLabel.Visible = false;
+        AddChild(_levelLabel);
+
         _dock = BuildDock();
         _dock.Visible = false;
         AddChild(_dock);
@@ -49,51 +53,94 @@ public partial class Hud : CanvasLayer
         AddChild(_restartDialog);
     }
 
+    /// <summary>Level indicator at the top-middle, over the forest floor.</summary>
+    private Label BuildLevelLabel()
+    {
+        var label = MakeLabel(52, true);
+        label.HorizontalAlignment = HorizontalAlignment.Center;
+        // Explicit anchors: full width, pinned to the top. (Anchor presets
+        // leave offsets untouched, which silently produced zero-height
+        // rects before.)
+        label.AnchorLeft = 0f;
+        label.AnchorTop = 0f;
+        label.AnchorRight = 1f;
+        label.AnchorBottom = 0f;
+        label.OffsetLeft = 0f;
+        label.OffsetRight = 0f;
+        label.OffsetTop = 24f;
+        label.OffsetBottom = 130f;
+        return label;
+    }
+
     private Control BuildDock()
     {
-        _levelLabel = MakeLabel(52, true, new Color("3f5228"), outlineSize: 0);
-        _swipeLabel = MakeLabel(52, true, new Color("6b5233"), outlineSize: 0);
-        _swipeLabel.HorizontalAlignment = HorizontalAlignment.Right;
+        _swipeLabel = MakeLabel(52, true);
+        _swipeLabel.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
 
-        _windButton = MakeIconButton("res://assets/icons/wind.svg", new Color("6f9a44"));
+        _windButton = MakeCoinButton("res://assets/icons/wind.svg");
         _windButton.TooltipText = "Gust: blow away some debris";
         _windButton.Pressed += () => WindPressed?.Invoke();
 
-        _restartButton = MakeIconButton("res://assets/icons/restart.svg", new Color("a08a68"));
+        _restartButton = MakeCoinButton("res://assets/icons/restart.svg");
         _restartButton.TooltipText = "Restart this level";
         _restartButton.Pressed += ShowRestartDialog;
 
-        var panel = new PanelContainer();
-        var style = new StyleBoxFlat
-        {
-            BgColor = new Color("f7f0e1"),
-            BorderWidthTop = 6,
-            BorderColor = new Color("c9a06a"),
-        };
-        panel.AddThemeStyleboxOverride("panel", style);
+        var dock = new Control();
         // Swallows touches so sweeping can never act through the dock.
-        panel.MouseFilter = Control.MouseFilterEnum.Stop;
+        dock.MouseFilter = Control.MouseFilterEnum.Stop;
+        // Explicit anchors and offsets: a full-width tray of DockHeight
+        // pinned to the bottom edge of the screen.
+        dock.AnchorLeft = 0f;
+        dock.AnchorTop = 1f;
+        dock.AnchorRight = 1f;
+        dock.AnchorBottom = 1f;
+        dock.OffsetLeft = 0f;
+        dock.OffsetRight = 0f;
+        dock.OffsetTop = -DockHeight;
+        dock.OffsetBottom = 0f;
+        dock.GrowHorizontal = Control.GrowDirection.Both;
+        dock.GrowVertical = Control.GrowDirection.Begin;
+
+        var wood = new TextureRect
+        {
+            Texture = GD.Load<Texture2D>("res://assets/textures/wood.svg"),
+            ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+            StretchMode = TextureRect.StretchModeEnum.Scale,
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+        };
+        wood.AnchorLeft = 0f;
+        wood.AnchorTop = 0f;
+        wood.AnchorRight = 1f;
+        wood.AnchorBottom = 1f;
+        dock.AddChild(wood);
 
         var row = new MarginContainer();
-        row.AddThemeConstantOverride("margin_left", 36);
-        row.AddThemeConstantOverride("margin_right", 36);
+        row.AddThemeConstantOverride("margin_left", 48);
+        row.AddThemeConstantOverride("margin_right", 48);
+        row.AddThemeConstantOverride("margin_top", 24);
+        row.AddThemeConstantOverride("margin_bottom", 24);
+        row.AnchorLeft = 0f;
+        row.AnchorTop = 0f;
+        row.AnchorRight = 1f;
+        row.AnchorBottom = 1f;
 
         var box = new HBoxContainer();
         box.AddThemeConstantOverride("separation", 28);
-        _levelLabel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        _levelLabel.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
         _swipeLabel.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        _swipeLabel.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
-        box.AddChild(_levelLabel);
         box.AddChild(_swipeLabel);
         box.AddChild(_windButton);
-        box.AddChild(_restartButton);
+        var rightSlot = new HBoxContainer
+        {
+            Alignment = BoxContainer.AlignmentMode.End,
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+        };
+        rightSlot.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        rightSlot.AddChild(_restartButton);
+        box.AddChild(rightSlot);
         row.AddChild(box);
-        panel.AddChild(row);
+        dock.AddChild(row);
 
-        panel.CustomMinimumSize = new Vector2(0, DockHeight);
-        panel.SetAnchorsPreset(Control.LayoutPreset.BottomWide);
-        return panel;
+        return dock;
     }
 
     private Control BuildWinOverlay()
@@ -204,8 +251,12 @@ public partial class Hud : CanvasLayer
 
     public void HideWin() => _winOverlay.Visible = false;
 
-    /// <summary>The dock lives on the play screen; the menu hides it.</summary>
-    public void SetDockVisible(bool visible) => _dock.Visible = visible;
+    /// <summary>Dock + level label live on the play screen; the menu hides them.</summary>
+    public void SetDockVisible(bool visible)
+    {
+        _dock.Visible = visible;
+        _levelLabel.Visible = visible;
+    }
 
     public void ShowRestartDialog()
     {
@@ -283,30 +334,36 @@ public partial class Hud : CanvasLayer
     private static Control Spacer(float height) =>
         new() { CustomMinimumSize = new Vector2(0, height) };
 
-    /// <summary>Square icon button with a cozy panel behind the artwork.</summary>
-    private Button MakeIconButton(string iconPath, Color accent)
+    /// <summary>Circular dark-gold coin button with embossed shading.</summary>
+    private Button MakeCoinButton(string iconPath)
     {
-        var normal = new StyleBoxFlat
+        var coin = GD.Load<Texture2D>("res://assets/icons/coin.svg");
+        var normal = new StyleBoxTexture
         {
-            BgColor = new Color(1f, 1f, 1f, 0.75f),
-            CornerRadiusBottomLeft = 28,
-            CornerRadiusBottomRight = 28,
-            CornerRadiusTopLeft = 28,
-            CornerRadiusTopRight = 28,
-            BorderWidthBottom = 6,
-            BorderWidthTop = 6,
-            BorderWidthLeft = 6,
-            BorderWidthRight = 6,
-            BorderColor = accent,
-            ContentMarginLeft = 20,
-            ContentMarginRight = 20,
-            ContentMarginTop = 20,
-            ContentMarginBottom = 20,
+            Texture = coin,
+            ContentMarginLeft = 46,
+            ContentMarginRight = 46,
+            ContentMarginTop = 46,
+            ContentMarginBottom = 46,
         };
-        var pressed = (StyleBoxFlat)normal.Duplicate();
-        pressed.BgColor = accent;
-        var disabled = (StyleBoxFlat)normal.Duplicate();
-        disabled.BgColor = new Color(1f, 1f, 1f, 0.3f);
+        var hover = new StyleBoxTexture
+        {
+            Texture = coin,
+            ModulateColor = new Color(1.15f, 1.1f, 0.95f),
+            ContentMarginLeft = 46,
+            ContentMarginRight = 46,
+            ContentMarginTop = 46,
+            ContentMarginBottom = 46,
+        };
+        var pressed = new StyleBoxTexture
+        {
+            Texture = coin,
+            ModulateColor = new Color(0.78f, 0.72f, 0.58f),
+            ContentMarginLeft = 46,
+            ContentMarginRight = 46,
+            ContentMarginTop = 46,
+            ContentMarginBottom = 46,
+        };
 
         var button = new Button
         {
@@ -318,9 +375,9 @@ public partial class Hud : CanvasLayer
             FocusMode = Control.FocusModeEnum.None,
         };
         button.AddThemeStyleboxOverride("normal", normal);
-        button.AddThemeStyleboxOverride("hover", normal);
+        button.AddThemeStyleboxOverride("hover", hover);
         button.AddThemeStyleboxOverride("pressed", pressed);
-        button.AddThemeStyleboxOverride("disabled", disabled);
+        button.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
         return button;
     }
 

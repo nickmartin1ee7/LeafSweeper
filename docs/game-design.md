@@ -26,13 +26,14 @@ Title menu → Play → Round (sweep debris, find bug) → Tap bug
    Weight matters: rocks/sticks/moss resist; leaves and petals fly easily —
    but heavier pieces glide farther and fade later, so their long slide
    reads as weight rather than the debris dying where it was swept.
-3. Two helpers live in a **bottom dock** while playing, below the floor:
-   **Gust** (wind icon) blows a gust across the floor, sweeping away about
-   **10% of the remaining debris** in one shared direction; and
-   **Restart** (circular arrow) opens a confirmation dialog before
-   re-scattering the same level with a fresh swipe count. The dock is the
-   game's only chrome — debris, the bug and all sweeping stay strictly
-   above it; flung pieces bounce off its edge instead of sliding under.
+3. Two helpers live in a **wooden dock** along the bottom of the screen while
+   playing: **Gust** (wind icon on a dark-gold coin) blows a gust across the
+   floor, sweeping away about **10% of the remaining debris** in one shared
+   direction; and **Restart** (circular arrow on a dark-gold coin) opens a
+   confirmation dialog before re-scattering the same level with a fresh
+   swipe count. The dock is the game's only chrome — the **Level label sits
+   at the top-middle** of the screen, and **nothing ever spawns under the
+   dock**; swept debris may drift over it while fading away.
 4. Finding the bug and **tapping it** wins the round: the bug rises **above
    all debris**, bathes in a **golden shining outline** and **grows**, then
    **flies to the center of the screen** and seats itself on the win card —
@@ -43,7 +44,7 @@ Title menu → Play → Round (sweep debris, find bug) → Tap bug
 ## Design values
 
 - **No pressure.** No countdown timers, no fail state, no move limits. The
-  bug never flees or animates away — it waits.
+  bug waits patiently and never animates away.
 - **Cozy tone.** All UI copy is warm and unhurried; the win comment is the
   game's "voice" (see Comments below).
 - **Casual-tuned difficulty.** By level 200 the game is only moderately
@@ -80,8 +81,9 @@ Ladybug · Butterfly · Centipede · Moth · Grasshopper · Dragonfly · Beetle 
 | Sticks          | —                                 | Heavy   |
 | Rocks           | round, grey                       | Heavy   |
 
-Roughly 60% leaves + petals, rest mixed; ~30% of debris spawns **above** the
-bug layer so it always peeks through.
+Roughly 60% leaves + petals, rest mixed. Debris is split into two layers —
+both **render above the bug** (explicit `ZIndex` 1/2 vs the bug's 0), so a
+corner of it always peeks through no matter where it spawns.
 
 ## Scoring & statistics
 
