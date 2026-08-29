@@ -33,10 +33,14 @@ public partial class Hud : CanvasLayer
     private Label _winTitle = null!;
     private Label _winComment = null!;
     private Label _winStats = null!;
+    private HBoxContainer _statsRow = null!;
     private Button _nextButton = null!;
     private Button _menuButton = null!;
 
     private Control _restartDialog = null!;
+
+    /// <summary>One value + caption cell in the win card's stats row.</summary>
+    public readonly record struct WinStat(string Value, string Caption, bool Highlight);
 
     public override void _Ready()
     {
@@ -204,6 +208,10 @@ public partial class Hud : CanvasLayer
         _winStats = MakeLabel(34, true, new Color("6b5233"));
         _winStats.HorizontalAlignment = HorizontalAlignment.Center;
 
+        // Lifetime summary row: three value/caption cells filled in by ShowWin.
+        _statsRow = new HBoxContainer();
+        _statsRow.AddThemeConstantOverride("separation", 12);
+
         _nextButton = MakeButton("Next level", new Color("6f9a44"));
         _nextButton.Pressed += () => NextPressed?.Invoke();
 
@@ -214,6 +222,7 @@ public partial class Hud : CanvasLayer
         box.AddChild(_bugSlot);
         box.AddChild(_winComment);
         box.AddChild(_winStats);
+        box.AddChild(_statsRow);
         box.AddChild(Spacer(8));
         box.AddChild(_nextButton);
         box.AddChild(Spacer(2));
@@ -323,16 +332,47 @@ public partial class Hud : CanvasLayer
         }
     }
 
-    public void ShowWin(string comment, string statsLine, Node2D? bug = null)
+    public void ShowWin(string comment, string statsLine, WinStat[] stats,
+        Node2D? bug = null)
     {
         if (bug != null)
             SeatBug(bug);
         _winComment.Text = comment;
         _winStats.Text = statsLine;
+        FillStatsRow(stats);
         _winOverlay.Visible = true;
         _winOverlay.Modulate = new Color(1, 1, 1, 0);
         var tween = CreateTween();
         tween.TweenProperty(_winOverlay, "modulate:a", 1f, 0.35f);
+    }
+
+    /// <summary>Rebuilds the lifetime stats row from the given cells.</summary>
+    private void FillStatsRow(WinStat[] stats)
+    {
+        foreach (Node child in _statsRow.GetChildren())
+            child.QueueFree();
+        foreach (var stat in stats)
+            _statsRow.AddChild(BuildStatCell(stat));
+    }
+
+    private static Control BuildStatCell(WinStat stat)
+    {
+        var cell = new VBoxContainer();
+        cell.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+
+        var value = MakeLabel(46, true,
+            stat.Highlight ? new Color("8a5c17") : new Color("3f5228"));
+        value.Text = stat.Value;
+        value.HorizontalAlignment = HorizontalAlignment.Center;
+
+        var caption = MakeLabel(26, true, new Color("6b5233"));
+        caption.Text = stat.Caption;
+        caption.HorizontalAlignment = HorizontalAlignment.Center;
+        caption.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+
+        cell.AddChild(value);
+        cell.AddChild(caption);
+        return cell;
     }
 
     /// <summary>

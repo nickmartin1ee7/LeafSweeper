@@ -10,13 +10,49 @@ namespace LeafSweeper;
 /// </summary>
 public sealed class LevelStats
 {
+    private static readonly RandomNumberGenerator Rng = new();
+
+    // Swipe-efficiency remarks, from quickest to coziest.
+    private static readonly string[] SwiftRemarks =
+    {
+        "Quick as a whisker!",
+        "Barely a rustle — lovely!",
+        "A lightning tidy-up!",
+    };
+
+    private static readonly string[] KeenRemarks =
+    {
+        "Sharp eyes, gentle sweeping.",
+        "Swept like the autumn wind.",
+        "Straight to the point!",
+    };
+
+    private static readonly string[] SteadyRemarks =
+    {
+        "A patient, pleasant search.",
+        "Every leaf turned with care.",
+        "A nice, unhurried stroll.",
+    };
+
     private static readonly string[] CozyRemarks =
     {
         "Cozy is cozy.",
         "No rush — the bug waited happily.",
-        "A lovely tidy-up.",
         "The forest floor thanks you.",
-        "Another critter found!",
+    };
+
+    private static readonly string[] BestRemarks =
+    {
+        "That's your tidiest find yet!",
+        "A brand-new tidiest find!",
+        "Your neatest sweep ever!",
+    };
+
+    private static readonly string[] StrollRemarks =
+    {
+        "today was a leisurely stroll.",
+        "a lazy wander through the leaves.",
+        "the bug enjoyed the extra company.",
     };
 
     public int Level { get; private set; }
@@ -54,30 +90,29 @@ public sealed class LevelStats
     }
 
     /// <summary>
-    /// Builds the win-overlay comment: praise for efficient finds, cozy
-    /// reassurance for slow ones, and a lifetime-best nod when relevant.
+    /// Builds the win-overlay comment: a variant of the found bug's own
+    /// celebration line, plus a swipe-efficiency remark with a lifetime-best
+    /// nod when relevant. Round numbers live in the stats row instead, so
+    /// the comment stays pure flavor.
     /// </summary>
     public string Comment(SaveData save, BugType bug)
     {
-        var comments = new List<string>();
+        var lines = new List<string> { BugFlavor.Pick(bug) };
 
         int best = save.BestSwipes();
-        if (Swipes <= 5)
-            comments.Add($"Just {Swipes} swipes to find the {bug.DisplayName.ToLower()}!");
-        else if (Swipes <= 12)
-            comments.Add($"Only {Swipes} swipes — sharp eyes!");
-        else if (Swipes <= 25)
-            comments.Add($"{Swipes} swipes to find the {bug.DisplayName.ToLower()}.");
-
-        comments.Add($"Found in {FormatTime(Elapsed)}");
-
         if (best > 0 && Swipes <= best)
-            comments.Add("That's your tidiest find yet!");
+            lines.Add(Pick(BestRemarks));
         else if (save.LevelsCleared > 3 && Swipes > best * 2)
-            comments.Add($"Your best is {best} swipes — today was a leisurely stroll.");
+            lines.Add($"Your best is {best} swipes — {Pick(StrollRemarks)}");
+        else
+            lines.Add(Pick(Swipes <= 5 ? SwiftRemarks
+                : Swipes <= 12 ? KeenRemarks
+                : Swipes <= 25 ? SteadyRemarks
+                : CozyRemarks));
 
-        comments.Add(CozyRemarks[(Level + Swipes) % CozyRemarks.Length]);
-
-        return string.Join("\n", comments);
+        return string.Join("\n", lines);
     }
+
+    private static string Pick(string[] pool) =>
+        pool[Rng.RandiRange(0, pool.Length - 1)];
 }
