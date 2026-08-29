@@ -28,7 +28,7 @@ Title menu → Play → Round (sweep debris, find bug) → Tap bug
    reads as weight rather than the debris dying where it was swept.
 3. Two helpers live in a **wooden dock** along the bottom of the screen while
    playing: **Gust** (wind icon on a dark-gold coin) blows a gust across the
-   floor, sweeping away about **10% of the remaining debris** in one shared
+   floor, sweeping away about **25% of the remaining debris** in one shared
    direction — each gust **spends one gust power** from the player's balance,
    and a small **counter circle on the coin's top-right** shows how many are
    left (the button greys out at ×0); and **Restart** (circular arrow on a

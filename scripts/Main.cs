@@ -530,7 +530,7 @@ public partial class Main : Node2D
             _hud.ShowWin(_pendingWinComment, _pendingWinStats, _bug);
     }
 
-    /// <summary>Blows away 10% of the remaining debris with a gusty fling.</summary>
+    /// <summary>Blows away 25% of the remaining debris with a gusty fling.</summary>
     private void OnWindPressed()
     {
         if (_state != GameState.Playing)
@@ -554,7 +554,7 @@ public partial class Main : Node2D
         // A gust is only spent once it actually blows anything away.
         _stats.CountGust();
 
-        // Shuffle a copy so the ~10% sample is scattered across the floor,
+        // Shuffle a copy so the ~25% sample is scattered across the floor,
         // not clustered in one grid region.
         for (int i = alive.Count - 1; i > 0; i--)
         {
@@ -562,7 +562,7 @@ public partial class Main : Node2D
             (alive[i], alive[j]) = (alive[j], alive[i]);
         }
 
-        int count = Mathf.Max(1, alive.Count / 10);
+        int count = Mathf.Max(1, alive.Count / 4);
         Vector2 dir = Vector2.Right.Rotated(_rng.RandfRange(0f, Mathf.Tau));
         for (int i = 0; i < count; i++)
             alive[i].Fling(dir * _rng.RandfRange(1500f, 2200f), _rng);
