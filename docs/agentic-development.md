@@ -54,6 +54,7 @@ Cheapest check first; escalate only when needed:
 | 2 | `godot --headless --import` | bad scenes/textures/import errors |
 | 3 | `godot --headless --quit-after 180` | boot-time script crashes |
 | 4 | `LEAF_AUTOPLAY=1 godot --headless --quit-after 300` | gameplay logic + persistence |
+| 5 | windowed run + screenshot hook (visual slices) | rendered pixels: layout, layering, fonts |
 
 `LEAF_AUTOPLAY` is an env-gated self-test in `scripts/Main.cs`: it resets
 the save (deterministic), plays a level end-to-end (ticks, swipes, win),
@@ -65,6 +66,19 @@ pass, `1` on failure, so it can gate commits or CI. Lessons baked in:
   resets first.
 - **Env-gated hooks beat test frameworks** for this scale — no extra
   dependencies, runs with the same binary the player runs.
+
+**Level 5 exists because headless tests are blind.** During the wood-dock
+slice every rung above was green while the entire dock was invisible on
+screen — logic and pixels are different failure surfaces. When a slice
+touches layout, layering or rendering, capture real pixels before handing
+off, using the same env-gated-hook pattern:
+
+1. Temporarily add a hook in `Main._Ready`: on `LEAF_SHOT=<path>`, start a
+   level, await ~30 `ProcessFrame`s, save
+   `GetViewport().GetTexture().GetImage()` to the path, then quit.
+2. `LEAF_SHOT=/tmp/shot.png godot --path .` — **windowed**, not headless:
+   headless mode has no framebuffer to capture.
+3. Inspect the PNG, iterate, then **remove the hook** before committing.
 
 ## Patterns and practices
 
@@ -88,10 +102,16 @@ adding new ones. A real bug: `Bug.Setup` added a sprite each level, so
 level 8 drew eight bugs stacked. Rule of thumb: `Setup()` = teardown +
 build, never build-only.
 
-**Layering encodes visibility.** The bug renders *under* both debris
-layers; anything the player shouldn't see yet goes below everything the
-player interacts with. Z-order is a gameplay statement, not a styling
-detail.
+**Layering encodes visibility.** Z-order is a gameplay statement, not a
+styling detail. Keep it an explicit ladder (declared in `Main.BuildTree`),
+never tree-order luck — `ZIndex` beats tree order anyway:
+
+| Layer | Z | Note |
+|-------|---|------|
+| Ground, bug | 0 | bug stays below *every* debris piece until tapped |
+| DebrisBottom / DebrisTop | 1 / 2 | both render over the bug by design |
+| Gust streaks, petal sparkles | 3 | effects ride above all debris |
+| Celebrated bug | 100 | discovery pop — still below the HUD CanvasLayer |
 
 **Tunables as named constants.** Sweep radius, fling factors, friction and
 coverage are `const`s in small files with comments explaining the feel
@@ -103,6 +123,8 @@ they produce, so a playtest finding maps to one named knob:
 | "Bug shows stacked sprites" | node lifecycle in `Bug.Setup` |
 | "Sweeps clear too much / too little" | `Sweeper.SweepRadius`, `Sweeper.MaxDebrisPerSwipe`, `Debris.FlingFactor`, `Debris.Friction`, `Debris.FadeDelayScale` |
 | "Menu looks wrong at odd aspects" | fit-on-resize (`Main.FitGround` + `Main.OnViewportResized`) |
+| "A Control (dock/HUD) is invisible despite being added" | `SetAnchorsPreset` sets anchors but **not offsets** — a zero-height rect pinned to the screen edge; set anchors *and* offsets explicitly (`Hud.BuildDock`) |
+| "Sweeps act through the dock/HUD" | GUI input dies there: dock uses `MouseFilter.Stop`, sweeping is `_UnhandledInput` |
 
 **Docs live with code.** Behavior changes update `README.md` and
 `docs/*` in the same session — numbers in prose (counts, radii) drift

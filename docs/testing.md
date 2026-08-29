@@ -13,6 +13,22 @@
 win → save → reload) and verifies `currentLevel`, `levelsCleared`,
 `totalSwipes`, bug find counts and history round-trip correctly.
 
+## Visual smoke (windowed)
+
+Headless checks can't see pixels. When a change touches layout, layering or
+rendering, capture a real screenshot before handing off:
+
+1. Temporarily add an env-gated hook in `Main._Ready` (same pattern as
+   `LEAF_AUTOPLAY`): on `LEAF_SHOT=<path>`, start a level, await ~30
+   `ProcessFrame`s, save the viewport image, quit.
+2. `LEAF_SHOT=/tmp/shot.png godot --path .` — must be **windowed**; headless
+   mode has no framebuffer to capture.
+3. Inspect the PNG, iterate, remove the hook before committing.
+
+Real catch: the bottom dock was completely invisible (a zero-height rect
+caused by setting anchors without offsets) while every headless check was
+green.
+
 ## Device testing
 
 Tested on a physical device over adb (device id `1C281FDF6002H0`). Only
@@ -36,11 +52,15 @@ adb logcat | grep -iE "LeafSweeper|godot|mono|FATAL|AndroidRuntime"
    sticks resist more; fast swipes don't miss debris (no tunneling).
 4. **Find & tap bug** — petal sparkles, celebration pulse, win overlay with
    comment + stats (time · swipes).
-5. **Next** — starts next level; level counter increments.
-6. **Persistence** — force-stop the app, relaunch: Play resumes at the
+5. **Dock** — wood tray pinned to the bottom; gust coin centered, restart
+   coin rightmost, swipe counter left, level label top-middle; sweeping
+   can't act through it; debris never *spawns* under it but may drift over
+   it while fading.
+6. **Next** — starts next level; level counter increments.
+7. **Persistence** — force-stop the app, relaunch: Play resumes at the
    correct level; menu shows lifetime stats.
-7. **New game** — after ≥1 clear, New game resets progress to level 1.
-8. **Rotation/aspect sanity** — HUD stays pinned to edges (portrait lock is
+8. **New game** — after ≥1 clear, New game resets progress to level 1.
+9. **Rotation/aspect sanity** — HUD stays pinned to edges (portrait lock is
    the shipped orientation).
 
 Useful adb helpers while testing:
