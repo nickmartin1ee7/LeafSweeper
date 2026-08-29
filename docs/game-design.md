@@ -26,9 +26,10 @@ Title menu → Play → Round (sweep debris, find bug) → Tap bug
    Weight matters: rocks/sticks/moss resist; leaves and petals fly easily —
    but heavier pieces glide farther and fade later, so their long slide
    reads as weight rather than the debris dying where it was swept.
-3. Finding the bug and **tapping it** wins the round: petal sparkles, a
-   celebration pulse, and the win overlay with a friendly comment and the
-   round's stats (time, swipes).
+3. Finding the bug and **tapping it** wins the round: the bug is bathed in a
+   **golden shining outline** and **grows for a moment** before settling —
+   then petal sparkles burst and the win overlay appears with a friendly
+   comment and the round's stats (time, swipes).
 4. **Next** starts the following level. **Menu** returns to the title screen.
 
 ## Design values

@@ -21,6 +21,10 @@ public partial class Main : Node2D
     private Hud _hud = null!;
     private MainMenu _menu = null!;
 
+    // Win overlay copy, stashed until the bug's celebration finishes.
+    private string _pendingWinComment = "";
+    private string _pendingWinStats = "";
+
     private SaveData _save = null!;
     private LevelStats _stats = new();
     private Sweeper _sweeper = null!;
@@ -130,6 +134,9 @@ public partial class Main : Node2D
         AddChild(_ground);
 
         _bug = new Bug { Name = "Bug" };
+        // The bug node is reused across levels, so connect the celebration
+        // signal once here rather than on every win.
+        _bug.CelebrationFinished += OnBugCelebrationFinished;
         AddChild(_bug);
 
         _debrisBottom = new Node2D { Name = "DebrisBottom" };
@@ -309,7 +316,15 @@ public partial class Main : Node2D
 
         _bug.Celebrate();
         PetalSparkle();
-        _hud.ShowWin(comment, statsLine);
+        // The win overlay waits for the bug's golden grow-and-shine moment.
+        _pendingWinComment = comment;
+        _pendingWinStats = statsLine;
+    }
+
+    private void OnBugCelebrationFinished()
+    {
+        if (_state == GameState.Won)
+            _hud.ShowWin(_pendingWinComment, _pendingWinStats);
     }
 
     private void PetalSparkle()
