@@ -6,7 +6,7 @@ reveal the little creature hiding underneath — then tap it to win the round.
 No timers, no fail state; the bug never runs away. Just you, the leaves, and
 a patient ladybug.
 
-Built with **Godot 4.7 (C# / .NET 8)** for Android phones (FHD+ portrait,
+Built with **Godot 4.7 (C# / .NET 9)** for Android phones (FHD+ portrait,
 1080×2340 design resolution; the ground extends to fit any aspect).
 
 ## How to play

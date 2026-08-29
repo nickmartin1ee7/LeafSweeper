@@ -2,7 +2,7 @@
 
 ## Overview
 
-Godot 4.7 C# (.NET 8), **code-first scene construction**: `scenes/Main.tscn`
+Godot 4.7 C# (.NET 9), **code-first scene construction**: `scenes/Main.tscn`
 is a single `Node2D` with `scripts/Main.cs` attached; every other node is
 built and wired in C#. No physics engine — debris motion is a lightweight
 hand-rolled model (velocity, spin, friction) that is predictable and cheap on
