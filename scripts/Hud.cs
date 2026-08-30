@@ -300,9 +300,13 @@ public partial class Hud : CanvasLayer
 
         _winComment = MakeLabel(38, false, new Color("4a3a26"));
         _winComment.HorizontalAlignment = HorizontalAlignment.Center;
+        // Wrap long flavor lines instead of letting their minimum width
+        // stretch the card past the screen edge.
+        _winComment.AutowrapMode = TextServer.AutowrapMode.WordSmart;
 
         _winStats = MakeLabel(34, true, new Color("6b5233"));
         _winStats.HorizontalAlignment = HorizontalAlignment.Center;
+        _winStats.AutowrapMode = TextServer.AutowrapMode.WordSmart;
 
         // Lifetime summary row: three value/caption cells filled in by ShowWin.
         _statsRow = new HBoxContainer();
@@ -586,6 +590,7 @@ public partial class Hud : CanvasLayer
 
         var hint = MakeLabel(32, false, new Color("4a3a26"));
         hint.HorizontalAlignment = HorizontalAlignment.Center;
+        hint.AutowrapMode = TextServer.AutowrapMode.WordSmart;
         hint.Text = "The debris will be re-scattered and your\nsweep count for this round resets.";
 
         var restartButton = MakeButton("Restart", new Color("6f9a44"));
