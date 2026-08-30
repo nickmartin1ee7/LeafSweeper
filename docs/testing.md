@@ -73,8 +73,9 @@ adb logcat | grep -iE "LeafSweeper|godot|mono|FATAL|AndroidRuntime"
 4. **Find & tap bug** — petal sparkles, celebration pulse, win overlay with
    comment + stats (time · sweeps).
 5. **Gust coins** — three gold coins (wind icon on the face) hide under the
-   debris; uncover one and tap it: it shines golden, grows, spirals **above
-   the dock** into the gust button, fires a gold ring-and-spark burst, and
+   debris; uncover one and tap it: it shines golden, grows, spins up in a
+   rising counter-clockwise loop **above the dock**, snaps down into the
+   gust button, fires a gold ring-and-spark burst, and
    the ×N badge pulses as it ticks up; pressing Gust spends one (×0 leaves
    the button disabled).
 6. **Dock** — wood tray pinned to the bottom; gust coin centered, restart

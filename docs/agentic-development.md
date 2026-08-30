@@ -216,7 +216,7 @@ they produce, so a playtest finding maps to one named knob:
 | "A Control (dock/HUD) is invisible despite being added" | `SetAnchorsPreset` sets anchors but **not offsets** — a zero-height rect pinned to the screen edge; set anchors *and* offsets explicitly (`Hud.BuildDock`) |
 | "Sweeps act through the dock/HUD" | GUI input dies there: dock uses `MouseFilter.Stop`, sweeping is `_UnhandledInput` |
 | "Gust power feels stingy / generous" | `SaveData.StartingGustPower`, `Main.GustCoinsPerLevel` |
-| "Coin flight / arrival feel off" | `GustCoin.SpiralSeconds`, `GustCoin.SpiralTurns`, `GustCoin.WindIconRatio`, the pulse in `Hud.PulseGustPower` |
+| "Coin flight / arrival feel off" | `GustCoin.LoopSeconds`, `GustCoin.LoopTurns`, `GustCoin.DashSeconds`, `GustCoin.PathScreenMargin`, `GustCoin.WindIconRatio`, the pulse in `Hud.PulseGustPower` |
 | "Badge/popup scales from a corner" | Controls scale around `PivotOffset` — set it to the center before tweening `scale` (`Hud.PulseGustPower`) |
 
 **Slices happen in worktrees.** Each slice is implemented in a dedicated
