@@ -57,9 +57,6 @@ public partial class Main : Node2D
 	/// <summary>A cleared patch of floor and when its storm replacement comes due.</summary>
 	private readonly record struct StormSpot(Vector2 Pos, float DueAt);
 
-	/// <summary>Gold gust coins hidden below the debris each round.</summary>
-	private const int GustCoinsPerLevel = 3;
-
 	// Round-start settle pacing (see Debris.SettleIn): the diagonal sweep
 	// across the floor plus per-piece jitter caps the total at ~2.5s.
 	private const float SettleSweepSeconds = 1.4f;
@@ -317,10 +314,12 @@ public partial class Main : Node2D
 		}
 		GD.Print($"AUTOPLAY burst: found={burstAt != null} ok={burstOk}");
 
-		// Gust coins: three hide below the debris each round; collecting one
-		// banks +1 power, spending a gust takes −1.
+		// Gust coins: every round hides RoundConfig.GustCoinsForLevel coins
+		// under the debris — one on normal rounds, three on storm rounds
+		// (the flood keeps re-burying ground, so storms pay in gusts).
+		// Collecting one banks +1 power, spending a gust takes −1.
 		var coin = _coins.Find(c => IsInstanceValid(c) && !c.Collected);
-		bool coinSpawned = _coins.Count == GustCoinsPerLevel;
+		bool coinSpawned = _coins.Count == RoundConfig.GustCoinsForLevel(_activeLevel);
 		bool coinBanked = false;
 		if (coin != null)
 		{
@@ -505,6 +504,23 @@ public partial class Main : Node2D
 			&& catalogOk
 			&& bookBeforeOk
 			&& bookAfterOk;
+
+		// Storm round economy: a storm level hides StormGustCoins while the
+		// normal round above hid one. Spawn the first storm level fresh and
+		// count what actually landed under the litter. This must run after
+		// every check above: the probe is the Next-button path with a fresh
+		// round, whose settle re-rolls the bug variant the book/find checks
+		// read. The save is left alone (StartLevel doesn't persist) and the
+		// autoplay resets it on every run anyway.
+		StartLevel(RoundConfig.StormFirstLevel);
+		while (_awaitingSettle)
+			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+		int stormExpected = RoundConfig.GustCoinsForLevel(RoundConfig.StormFirstLevel);
+		bool stormCoinsOk = _coins.Count == stormExpected
+			&& stormExpected == RoundConfig.StormGustCoins;
+		GD.Print($"AUTOPLAY coins-storm: level={RoundConfig.StormFirstLevel} " +
+				 $"spawned={_coins.Count} expected={stormExpected} ok={stormCoinsOk}");
+		ok &= stormCoinsOk;
 
 		GD.Print($"AUTOPLAY save: level={_save.CurrentLevel} cleared={_save.LevelsCleared} " +
 				 $"sweeps={_save.TotalSweeps} gusts={_save.TotalGusts} " +
@@ -1277,7 +1293,7 @@ public partial class Main : Node2D
 
 	private void SpawnGustCoins(Rect2 floor)
 	{
-		for (int i = 0; i < GustCoinsPerLevel; i++)
+		for (int i = 0; i < RoundConfig.GustCoinsForLevel(_activeLevel); i++)
 		{
 			var coin = new GustCoin { Name = $"GustCoin{i}" };
 			coin.Setup(_rng.RandfRange(84f, 100f), _rng);

@@ -53,7 +53,9 @@ Title menu → Play → Round (sweep debris, find bug) → Tap bug
    below the "Bug found!" title, above the stats — as the overlay fades in
    with a friendly comment and the round's numbers (time, sweeps, gusts).
 5. **Gold gust coins** — marked with the gust icon — hide below the debris
-   too, **three per round**, and follow the same uncovering rule (debris is
+   too — **one per round on normal rounds, three on storm rounds** (the
+   storm flood keeps re-burying swept ground, so storms pay in gusts) —
+   and follow the same uncovering rule (debris is
    cleared from the coin's visible disk, not its tap area). Tapping an
    uncovered coin doesn't end the round: it shines golden and **grows, then
    winds up a rising counter-clockwise loop before snapping down onto the
@@ -184,7 +186,13 @@ no squinting at a two-page spread).
 - **Opening state**: the leather cover rises with the dim and holds —
   the player turns the page themselves to reach the stats.
 - **Paging**: dog-eared page corners — top-right (folded paper, drop
-  shadow, ▶) turns forward; bottom-right (same convention, ◀) turns back.
+  shadow, ▶) turns forward; bottom-right (same convention, ◀) turns back —
+  or swipe the page itself: flick left for forward, right for back. Both
+  feed the same turn. Going forward the page folds square into the spine
+  on its left edge (the next page already sits beneath it) and unfolds on
+  the far side through the 90° beat; going back the incoming sheet lays
+  down over the page from the spine outward — one even motion either way,
+  and the leather cover flips whole.
 - **Collection pages**: 3×5 grids (5×4 in landscape) of every variant.
   Found bugs show their art and a count ("Firefly (x3)"); unfound bugs are
   entirely black silhouettes wrapped in subtly drifting off-black mist,

@@ -92,6 +92,11 @@ pass, `1` on failure, so it can gate commits or CI. Lessons baked in:
   `await ToSignal(coin, GustCoin.SignalName.CollectionFlightFinished)`
   before asserting. `--quit-after 2000` must outlast the awaited animation
   (~1.6 s ≈ 100 frames).
+- **Probes that start a fresh round re-roll the round state.** A round
+  started inside the autoplay (e.g. `StartLevel` to probe another round
+  type) settles a *new* bug variant and new coins — run such probes after
+  the aggregate `ok` is computed (or capture the found variant id first),
+  or the run fails with every printed component `True`.
 - **Pixel-accurate logic needs independent ground truth.** When a hot
   path uses a cached or approximated structure (`Debris.Covers` scans a
   cached 4px alpha mask), verify it in the autoplay against a brute-force
@@ -223,7 +228,7 @@ they produce, so a playtest finding maps to one named knob:
 | "Menu looks wrong at odd aspects" | fit-on-resize (`Main.FitGround` + `Main.OnViewportResized`) |
 | "A Control (dock/HUD) is invisible despite being added" | `SetAnchorsPreset` sets anchors but **not offsets** — a zero-height rect pinned to the screen edge; set anchors *and* offsets explicitly (`Hud.BuildDock`) |
 | "Sweeps act through the dock/HUD" | GUI input dies there: dock uses `MouseFilter.Stop`, sweeping is `_UnhandledInput` |
-| "Gust power feels stingy / generous" | `SaveData.StartingGustPower`, `Main.GustCoinsPerLevel` |
+| "Gust power feels stingy / generous" | `SaveData.StartingGustPower`, `RoundConfig.NormalGustCoins` / `RoundConfig.StormGustCoins` (`GustCoinsForLevel`) |
 | "Coin flight / arrival feel off" | `GustCoin.LoopSeconds`, `GustCoin.LoopTurns`, `GustCoin.DashSeconds`, `GustCoin.PathScreenMargin`, `GustCoin.WindIconRatio`, the pulse in `Hud.PulseGustPower` |
 | "Badge/popup scales from a corner" | Controls scale around `PivotOffset` — set it to the center before tweening `scale` (`Hud.PulseGustPower`) |
 

@@ -8,10 +8,17 @@ namespace LeafSweeper;
 /// at a time so everything stays readable on a phone. It opens on the cover
 /// and paging uses dog-eared page corners
 /// (folded paper + drop shadow + arrow): top-right turns forward, bottom-right
-/// turns back. Tapping anywhere outside the page closes the book, and the dim
-/// swallows every tap while open so nothing underneath (dock buttons) reacts.
-/// Content comes straight from <see cref="BugBookModel"/>, so autoplay can
-/// assert the same numbers the player sees.
+/// turns back — or swipe the page horizontally, flick left for forward and
+/// right for back. Tapping anywhere outside the page closes the book, and the
+/// dim swallows every tap while open so nothing underneath (dock buttons)
+/// reacts. Forward turns fold the page square into the spine on its left
+/// edge — the next page already sits beneath it — and a mirrored sheet
+/// carries on through the 90° beat, unfolding on the spine's far side, so
+/// the page flips evenly over; back turns skip the fold and lay the
+/// incoming sheet down from the spine outward instead, so each direction
+/// reads as one motion. Content comes straight
+/// from <see cref="BugBookModel"/>, so autoplay can assert the same numbers
+/// the player sees.
 /// </summary>
 public partial class BugBook : CanvasLayer
 {
@@ -19,6 +26,15 @@ public partial class BugBook : CanvasLayer
 
     // Dog-ear triangle leg, in page pixels — big enough for a thumb on mobile.
     private const float FoldSize = 104f;
+
+    // Flip halves: forward, fold into the spine then unfold on the far
+    // side — the split at the 90° beat is what makes the sheet read as one
+    // even flip. Back turns only unfold from the spine (no fold first).
+    private const float FoldTime = 0.2f;
+    private const float UnfoldTime = 0.2f;
+
+    // Horizontal drag distance that counts as a page-turn swipe.
+    private const float SwipePixels = 120f;
 
     private static readonly Color Ink = new("4a3a26");
     private static readonly Color InkSoft = new("6b5233");
@@ -40,6 +56,7 @@ public partial class BugBook : CanvasLayer
     private Control _dogEarBack = null!;
     private StyleBoxFlat _paperStyle = null!;
     private StyleBoxFlat _coverStyle = null!;
+    private StyleBoxFlat _sheetStyle = null!;
 
     private BugBookModel _model = new(new SaveData());
     private int _page;             // 0 = cover, 1 = stats, 2+ = collection
@@ -51,6 +68,10 @@ public partial class BugBook : CanvasLayer
     private bool _open;
     private bool _turning;
     private Tween? _anim;
+    private bool _mouseDown;
+    private int _swipePointer = -1;
+    private Vector2 _pressPos;
+    private Tween? _flip;
 
     /// <summary>Total pages: cover + stats + collection pages.</summary>
     public int Pages => 2 + _collectionPages;
@@ -71,6 +92,7 @@ public partial class BugBook : CanvasLayer
     {
         if (_open)
             return;
+        AbortFlip();
         _model = new BugBookModel(save);
         ComputePageSize();
         _page = 0;
@@ -96,7 +118,7 @@ public partial class BugBook : CanvasLayer
         if (!_open)
             return;
         _open = false;
-        _turning = false;
+        AbortFlip();
         _anim?.Kill();
         _anim = CreateTween();
         _anim.TweenProperty(_root, "modulate:a", 0f, 0.22f);
@@ -177,7 +199,60 @@ public partial class BugBook : CanvasLayer
         _pagePanel.AddThemeStyleboxOverride("panel", _paperStyle);
         _bookBody.AddChild(_pagePanel);
 
-        var pageBox = new VBoxContainer();
+        // The exposed back of a page: the tone a sheet shows while it is
+        // mid-flip or lying flipped on the spine's far side.
+        _sheetStyle = new StyleBoxFlat
+        {
+            BgColor = PaperBack,
+            CornerRadiusBottomLeft = 20,
+            CornerRadiusBottomRight = 20,
+            CornerRadiusTopLeft = 20,
+            CornerRadiusTopRight = 20,
+            BorderColor = PageBorder,
+            BorderWidthBottom = 5,
+            BorderWidthTop = 5,
+            BorderWidthLeft = 5,
+            BorderWidthRight = 5,
+        };
+
+        // Swipe anywhere on the page to turn it: flick left for forward,
+        // right for back. Both raw touch and mouse events are tracked so
+        // this behaves the same on Android and on desktop. Everything the
+        // page displays is MouseFilter Ignore (set at each build step), so
+        // the panel itself receives the whole gesture instead of grid
+        // cells, sprites or dots swallowing it.
+        _pagePanel.GuiInput += e =>
+        {
+            switch (e)
+            {
+                case InputEventScreenTouch touch:
+                    if (touch.Pressed && _swipePointer == -1)
+                    {
+                        _swipePointer = touch.Index;
+                        _pressPos = touch.Position;
+                    }
+                    else if (!touch.Pressed && touch.Index == _swipePointer)
+                    {
+                        _swipePointer = -1;
+                        TrySwipe(touch.Position);
+                    }
+                    break;
+                case InputEventMouseButton { ButtonIndex: MouseButton.Left } click:
+                    if (click.Pressed)
+                    {
+                        _mouseDown = true;
+                        _pressPos = click.Position;
+                    }
+                    else if (_mouseDown)
+                    {
+                        _mouseDown = false;
+                        TrySwipe(click.Position);
+                    }
+                    break;
+            }
+        };
+
+        var pageBox = new VBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
         pageBox.AddThemeConstantOverride("separation", 10);
         _pagePanel.AddChild(pageBox);
 
@@ -189,10 +264,15 @@ public partial class BugBook : CanvasLayer
         {
             SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
             SizeFlagsVertical = Control.SizeFlags.ExpandFill,
+            MouseFilter = Control.MouseFilterEnum.Ignore,
         };
         pageBox.AddChild(_pageContent);
 
-        _dots = new HBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
+        _dots = new HBoxContainer
+        {
+            Alignment = BoxContainer.AlignmentMode.Center,
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+        };
         _dots.AddThemeConstantOverride("separation", 10);
         pageBox.AddChild(_dots);
 
@@ -302,6 +382,45 @@ public partial class BugBook : CanvasLayer
         return ear;
     }
 
+    private void TrySwipe(Vector2 releasePos)
+    {
+        Vector2 drag = releasePos - _pressPos;
+        if (Mathf.Abs(drag.X) < SwipePixels || Mathf.Abs(drag.X) < Mathf.Abs(drag.Y))
+            return;
+        // Flick left goes to the next page, right goes back — the same
+        // direction the page itself travels in the flip.
+        TurnPage(drag.X < 0f ? 1 : -1);
+    }
+
+    /// <summary>
+    /// Kills an in-flight page turn and frees its sheets, so closing the
+    /// book mid-flip never leaks an animation into the next open.
+    /// </summary>
+    private void AbortFlip()
+    {
+        _flip?.Kill();
+        _flip = null;
+        foreach (Node child in _bookBody.GetChildren())
+        {
+            if (child.Name.ToString().StartsWith("Flip", StringComparison.Ordinal))
+            {
+                _bookBody.RemoveChild(child);
+                child.QueueFree();
+            }
+        }
+        _turning = false;
+    }
+
+    /// <summary>
+    /// One even page flip about the spine on the page's left edge. Forward,
+    /// the page folds square into the spine — the next page already sits
+    /// beneath it — and a mirrored sheet carries on through the 90° beat,
+    /// unfolding on the spine's far side before it melts away, so the flip
+    /// reads as one even motion. Back, the current page never folds (that
+    /// would look like a forward flip first); instead the incoming sheet
+    /// rises from the spine and lays down over the page, its ink settling
+    /// in at the end. The leather cover flips whole in both directions.
+    /// </summary>
     private void TurnPage(int direction)
     {
         if (!_open || _turning)
@@ -310,44 +429,92 @@ public partial class BugBook : CanvasLayer
         if (next < 0 || next >= Pages)
             return;
         _turning = true;
+        bool forward = direction > 0;
+        _flip = CreateTween();
 
-        // A cream sheet the size of the page folds toward the spine on the
-        // left edge; the content swaps at the halfway beat.
-        var flip = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
-        var style = new StyleBoxFlat
+        if (forward)
         {
-            BgColor = PaperBack,
-            CornerRadiusBottomLeft = 20,
-            CornerRadiusBottomRight = 20,
-            CornerRadiusTopLeft = 20,
-            CornerRadiusTopRight = 20,
-            BorderColor = PageBorder,
-            BorderWidthBottom = 5,
-            BorderWidthTop = 5,
-            BorderWidthLeft = 5,
-            BorderWidthRight = 5,
-        };
-        flip.AddThemeStyleboxOverride("panel", style);
-        flip.Position = Vector2.Zero;
-        flip.CustomMinimumSize = _pageSize;
-        flip.Size = _pageSize;
-        flip.PivotOffset = new Vector2(0, _pageSize.Y / 2f); // spine edge
-        _bookBody.AddChild(flip);
+            // The page being left folds whole: the leather cover folds as
+            // leather, a paper page folds to its paper-back tone.
+            var leavingStyle = _page == 0 ? _coverStyle : _sheetStyle;
 
-        var tween = CreateTween();
-        tween.TweenProperty(flip, "scale:x", 0.04f, 0.32f)
-            .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.In);
-        tween.TweenCallback(Callable.From(() =>
-        {
+            var fold = MakeFlipSheet(leavingStyle);
+            fold.Name = "FlipFold";
+            fold.PivotOffset = new Vector2(0f, _pageSize.Y / 2f); // spine edge
+            _bookBody.AddChild(fold);
+
+            // The next page is already in place beneath the folding sheet,
+            // so the turn reveals it instead of swapping it.
             _page = next;
             RebuildPage();
-        }));
-        tween.TweenProperty(flip, "modulate:a", 0f, 0.1f);
-        tween.TweenCallback(Callable.From(() =>
+
+            // The turned page carries on past the beat and comes to rest
+            // on the spine's far side, then melts away as it settles.
+            var fall = MakeFlipSheet(leavingStyle);
+            fall.Name = "FlipFall";
+            fall.Position = new Vector2(-_pageSize.X, 0f);
+            fall.PivotOffset = new Vector2(_pageSize.X, _pageSize.Y / 2f);
+            fall.Scale = new Vector2(0.02f, 1f);
+            fall.Modulate = new Color(0.78f, 0.75f, 0.7f, 1f);
+            _bookBody.AddChild(fall);
+
+            _flip.TweenProperty(fold, "scale:x", 0.02f, FoldTime)
+                .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.In);
+            _flip.Parallel().TweenProperty(fold, "modulate",
+                new Color(0.78f, 0.75f, 0.7f, 1f), FoldTime);
+            _flip.TweenCallback(Callable.From(() => fold.QueueFree()));
+
+            _flip.TweenProperty(fall, "scale:x", 1f, UnfoldTime)
+                .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.Out);
+            _flip.Parallel().TweenProperty(fall, "modulate",
+                new Color(1f, 1f, 1f, 0f), UnfoldTime);
+            _flip.TweenCallback(Callable.From(() =>
+            {
+                fall.QueueFree();
+                _turning = false;
+            }));
+        }
+        else
         {
-            flip.QueueFree();
-            _turning = false;
-        }));
+            // Going back, the incoming page rises off the far side and
+            // lays down over the old one from the spine outward.
+            var fall = MakeFlipSheet(next == 0 ? _coverStyle : _sheetStyle);
+            fall.Name = "FlipFall";
+            fall.Position = Vector2.Zero;
+            fall.PivotOffset = new Vector2(0f, _pageSize.Y / 2f); // spine edge
+            fall.Scale = new Vector2(0.02f, 1f);
+            fall.Modulate = new Color(0.8f, 0.78f, 0.74f, 1f);
+            _bookBody.AddChild(fall);
+
+            _flip.TweenProperty(fall, "scale:x", 1f, UnfoldTime)
+                .SetTrans(Tween.TransitionType.Sine).SetEase(Tween.EaseType.Out);
+            _flip.Parallel().TweenProperty(fall, "modulate",
+                new Color(1f, 1f, 1f, 1f), UnfoldTime);
+
+            // Fully laid down: swap the page under the sheet, then fade the
+            // blank paper away so the ink reads as settling onto the page.
+            _flip.TweenCallback(Callable.From(() =>
+            {
+                _page = next;
+                RebuildPage();
+            }));
+            _flip.TweenProperty(fall, "modulate:a", 0f, 0.09f);
+            _flip.TweenCallback(Callable.From(() =>
+            {
+                fall.QueueFree();
+                _turning = false;
+            }));
+        }
+    }
+
+    private PanelContainer MakeFlipSheet(StyleBoxFlat style)
+    {
+        var sheet = new PanelContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
+        sheet.AddThemeStyleboxOverride("panel", style);
+        sheet.Position = Vector2.Zero;
+        sheet.CustomMinimumSize = _pageSize;
+        sheet.Size = _pageSize;
+        return sheet;
     }
 
     private void RebuildPage()
@@ -382,11 +549,15 @@ public partial class BugBook : CanvasLayer
 
     private void BuildCoverPage()
     {
-        var centerBox = new CenterContainer();
+        var centerBox = new CenterContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
         centerBox.SetAnchorsPreset(Control.LayoutPreset.FullRect);
         _pageContent.AddChild(centerBox);
 
-        var box = new VBoxContainer { Alignment = BoxContainer.AlignmentMode.Center };
+        var box = new VBoxContainer
+        {
+            Alignment = BoxContainer.AlignmentMode.Center,
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+        };
         box.AddThemeConstantOverride("separation", 36);
         centerBox.AddChild(box);
 
@@ -396,6 +567,7 @@ public partial class BugBook : CanvasLayer
             ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
             StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
             CustomMinimumSize = new Vector2(260, 260),
+            MouseFilter = Control.MouseFilterEnum.Ignore,
         };
         box.AddChild(emblem);
 
@@ -412,7 +584,7 @@ public partial class BugBook : CanvasLayer
 
     private void BuildStatsPage()
     {
-        var box = new VBoxContainer();
+        var box = new VBoxContainer { MouseFilter = Control.MouseFilterEnum.Ignore };
         box.SetAnchorsPreset(Control.LayoutPreset.FullRect);
         box.AddThemeConstantOverride("separation", 12);
         _pageContent.AddChild(box);
@@ -434,6 +606,7 @@ public partial class BugBook : CanvasLayer
         var row = new HBoxContainer
         {
             SizeFlagsVertical = Control.SizeFlags.ExpandFill,
+            MouseFilter = Control.MouseFilterEnum.Ignore,
         };
         row.AddThemeConstantOverride("separation", 16);
 
@@ -458,6 +631,7 @@ public partial class BugBook : CanvasLayer
         {
             Columns = _cols,
             SizeFlagsVertical = Control.SizeFlags.ExpandFill,
+            MouseFilter = Control.MouseFilterEnum.Ignore,
         };
         grid.SetAnchorsPreset(Control.LayoutPreset.FullRect);
         grid.AddThemeConstantOverride("h_separation", 8);
@@ -474,7 +648,11 @@ public partial class BugBook : CanvasLayer
             if (index < _model.Entries.Count)
                 grid.AddChild(MakeEntryCell(_model.Entries[index], cellW, cellH));
             else
-                grid.AddChild(new Control { CustomMinimumSize = new Vector2(cellW, cellH) });
+                grid.AddChild(new Control
+                {
+                    CustomMinimumSize = new Vector2(cellW, cellH),
+                    MouseFilter = Control.MouseFilterEnum.Ignore,
+                });
         }
     }
 
@@ -499,7 +677,11 @@ public partial class BugBook : CanvasLayer
         }
         for (int i = 0; i < Pages; i++)
         {
-            var dot = new ColorRect { CustomMinimumSize = new Vector2(14, 14) };
+            var dot = new ColorRect
+            {
+                CustomMinimumSize = new Vector2(14, 14),
+                MouseFilter = Control.MouseFilterEnum.Ignore,
+            };
             dot.Color = i == _page ? DeepInk : new Color("cbbfa4");
             _dots.AddChild(dot);
         }
@@ -512,6 +694,7 @@ public partial class BugBook : CanvasLayer
             CustomMinimumSize = new Vector2(cellW, cellH),
             SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
             SizeFlagsVertical = Control.SizeFlags.ExpandFill,
+            MouseFilter = Control.MouseFilterEnum.Ignore,
         };
         cell.AddThemeConstantOverride("separation", 4);
 
@@ -522,6 +705,7 @@ public partial class BugBook : CanvasLayer
             StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
             CustomMinimumSize = new Vector2(cellW, cellH * 0.72f),
             SizeFlagsVertical = Control.SizeFlags.ExpandFill,
+            MouseFilter = Control.MouseFilterEnum.Ignore,
         };
         if (!entry.Found)
         {

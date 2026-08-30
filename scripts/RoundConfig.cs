@@ -22,6 +22,17 @@ public static class RoundConfig
     public const int CamoStartLevel = 60;
     public const float MaxCamo = 0.25f;
 
+    // Gust coins hidden below the debris each round. Normal rounds keep
+    // the coin scarce — one gust, so spending it is a real decision. Storm
+    // rounds re-bury swept ground constantly, so the player gets a richer
+    // supply (StormGustCoins) to fight the flood.
+    public const int NormalGustCoins = 1;
+    public const int StormGustCoins = 3;
+
+    /// <summary>Gust coins hidden below the debris on this level's round.</summary>
+    public static int GustCoinsForLevel(int level) =>
+    	IsStormLevel(level) ? StormGustCoins : NormalGustCoins;
+
     /// <summary>0..1 ramp that saturates at <see cref="SaturateLevel"/>.</summary>
     public static float Progress(int level)
     {
