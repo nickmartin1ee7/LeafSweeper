@@ -18,8 +18,11 @@ LEAF_AUTOPLAY=1 godot --headless --quit-after 2000   # 4. gameplay self-test
 
 - The binary on this machine is `godot-mono` (NixOS wrapper), not plain `godot`.
 - A fresh worktree needs `--import` before level 4, and autoplay **silently
-  exits 0 with no output** without it — always grep for `AUTOPLAY` in the
-  output; never trust the exit code alone.
+  exits 0 with no output** without it — so does a `--quit-after` frame
+  budget that runs out before the ~2.5s settle finishes (autoplay prints
+  its first line only once the floor is dressed). Always grep for
+  `AUTOPLAY` in the output; never trust the exit code alone; on missing
+  lines rerun with a bigger budget — autoplay self-quits on pass or fail.
 - `LEAF_AUTOPLAY` resets the save and asserts a full round-trip; exit 0 on
   pass only after `AUTOPLAY` output is seen.
 - Visual slices: headless is blind. Temporarily add a `LEAF_SHOT=<path>` hook
