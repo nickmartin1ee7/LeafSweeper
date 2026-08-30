@@ -378,7 +378,10 @@ public partial class Debris : Node2D
             return cached;
 
         AlphaMask mask = null;
-        Image img = sprite.Texture.GetImage();
+        // GetImage returns a fresh native Image per call; dispose it once
+        // the mask is built so the wrapper can't outlive the run and read
+        // as a leak at engine exit.
+        using Image img = sprite.Texture.GetImage();
         if (img != null && (!img.IsCompressed() || img.Decompress() == Error.Ok))
         {
             int width = img.GetWidth();

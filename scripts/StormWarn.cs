@@ -107,7 +107,12 @@ public partial class StormWarn : CanvasLayer
         _fx.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         _panel.AddChild(_fx);
 
-        LayoutPanel();
+        // LayoutPanel is deferred to ShowWarning: it sets the SubViewport's
+        // nonzero Size — which is what actually allocates its render
+        // target — and fetching the texture pins that allocation for the
+        // session's lifetime. Doing this at boot leaked a texture RID in
+        // every session that never showed the sign (headless smoke tests,
+        // plain menu sessions).
     }
 
     // Offsets are pixels, so the fractional sign geometry is resolved
