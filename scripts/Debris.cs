@@ -15,6 +15,8 @@ public enum DebrisWeight
 /// slides with exponential friction, fades out and frees itself.
 /// Heavier pieces launch slower but glide farther and linger longer
 /// before fading, so their slide reads as weight.
+/// At round start pieces drop in with <see cref="SettleIn"/>; after a win
+/// the survivors ride the end-of-round gyre via <see cref="StartEndRoundWind"/>.
 /// Lightweight custom movement: no physics engine.
 /// </summary>
 public partial class Debris : Node2D
@@ -32,6 +34,56 @@ public partial class Debris : Node2D
     private float _angularVel;
     private float _fadeDelay = 0.55f;
     private float _age;
+
+    // End-of-round wind feel: once the round is won the leftover pieces
+    // get picked up by a slow clockwise gyre around the floor's center.
+    // Speeds are rad/s; per-piece jitter makes inner and outer pieces
+    // shear past each other instead of turning like a rigid carousel,
+    // a breathing lane radius keeps the ring loose and organic, and a
+    // gentle vertical bob reads as leaves rising and sinking in a draft.
+    private const float WindSpeedBase = 1.15f;    // rad/s mean orbit speed
+    private const float WindSpeedJitter = 0.5f;   // ± fraction of mean, per piece
+    private const float WindEaseSeconds = 1.8f;   // smoothstep ramp from rest to full gyre
+    private const float WindSpinBase = 1.2f;      // rad/s mean self-spin
+    private const float WindBreathAmp = 0.12f;    // lane radius breathing, fraction of radius
+    private const float WindBreathFreq = 0.9f;    // breathing cycles per second
+    private const float WindBobAmp = 14f;         // px of vertical draft bob
+    private const float WindBobFreq = 1.1f;       // bob cycles per second
+
+    // Round-start settle feel: pieces drop in from above and land softly
+    // on their spots, staggered along a diagonal so the litter arrives
+    // like a curtain swept across the floor rather than a single dump.
+    private const float SettleHeightMin = 260f;    // px above the final spot the fall starts from
+    private const float SettleHeightExtra = 220f;  // extra start-height jitter
+    private const float SettleSeconds = 0.85f;     // per-piece fall duration (±15% jitter)
+    private const float SettleSweepSeconds = 1.4f; // diagonal stagger across the whole floor
+    private const float SettleJitter = 0.25f;      // seconds of random stagger on top of the sweep
+    private const float SettleSpinTurns = 2.2f;    // max full turns while tumbling down
+
+    // End-of-round wind state: when active the piece orbits/rotates without
+    // fading. Initialized by StartEndRoundWind().
+    private bool _windActive;
+    private Vector2 _windCenter;
+    private float _windAge;
+    private float _windEase;
+    private float _windPhase;
+    private float _windRadius;
+    private float _windAngularSpeed;
+    private float _windSpin;
+    private float _windBreathOffset;
+    private float _windBreathFreq;
+    private float _windBobAmp;
+    private float _windBobFreq;
+    private float _windBobOffset;
+
+    // Round-start settle state: initialized by SettleIn().
+    private bool _settling;
+    private float _settleAge;
+    private float _settleSeconds;
+    private Vector2 _settleFrom;
+    private Vector2 _settleTarget;
+    private float _settleFromRot;
+    private float _settleTargetRot;
 
     // Alpha-mask resolution: one cache byte per 4px texture cell. Fine
     // enough to hug the drawn piece's shape, coarse enough that the mask
@@ -66,6 +118,112 @@ public partial class Debris : Node2D
 
     /// <summary>The piece's texture, exposed for the autoplay ground-truth check.</summary>
     public Texture2D Texture => _sprite.Texture;
+
+    /// <summary>True while the piece rides the end-of-round wind gyre.</summary>
+    public bool IsRidingWind => _windActive;
+
+    /// <summary>True while the piece is still falling into place at round start.</summary>
+    public bool IsSettling => _settling;
+
+    /// <summary>
+    /// Picks the piece up into the end-of-round wind: it orbits clockwise
+    /// around <paramref name="center"/> (its current spot becomes its lane
+    /// radius), tumbles gently, and never fades — the litter keeps circling
+    /// while the win card is up.
+    /// </summary>
+    public void StartEndRoundWind(Vector2 center, RandomNumberGenerator rng)
+    {
+        if (Swept || _windActive)
+            return;
+        _windActive = true;
+        _windCenter = center;
+        Vector2 offset = Position - center;
+        _windRadius = Mathf.Max(offset.Length(), 40f);
+        _windPhase = offset.Angle();
+        _windAge = 0f;
+        _windEase = 0f;
+        // Per-piece speed jitter shears the gyre; the self-spin echoes the
+        // orbit so the piece reads as tumbling along its lane.
+        _windAngularSpeed = WindSpeedBase * rng.RandfRange(1f - WindSpeedJitter, 1f + WindSpeedJitter);
+        _windSpin = rng.RandfRange(-1f, 1f) * WindSpinBase + _windAngularSpeed * 0.6f;
+        _windBreathFreq = WindBreathFreq * rng.RandfRange(0.7f, 1.3f);
+        _windBreathOffset = rng.RandfRange(0f, Mathf.Tau);
+        _windBobAmp = WindBobAmp * rng.RandfRange(0.5f, 1.5f);
+        _windBobFreq = WindBobFreq * rng.RandfRange(0.7f, 1.3f);
+        _windBobOffset = rng.RandfRange(0f, Mathf.Tau);
+    }
+
+    /// <summary>Keeps the gyre centered when the viewport resizes mid-wind.</summary>
+    public void SetWindCenter(Vector2 center) => _windCenter = center;
+
+    /// <summary>Rescales the fall path when the viewport resizes mid-settle.</summary>
+    public void ScaleSettle(Vector2 ratio)
+    {
+        if (!_settling)
+            return;
+        _settleFrom *= ratio;
+        _settleTarget *= ratio;
+    }
+
+    /// <summary>
+    /// Round-start entrance: lifts the piece above its already-assigned spot
+    /// and drops it in with a tumble and a soft landing. <paramref name="delay"/>
+    /// staggers pieces along the spawn order so the litter falls in like a
+    /// curtain instead of all at once.
+    /// </summary>
+    public void SettleIn(RandomNumberGenerator rng, float delay)
+    {
+        _settling = true;
+        _settleAge = -delay;
+        _settleSeconds = SettleSeconds * rng.RandfRange(0.85f, 1.15f);
+        _settleTarget = Position;
+        _settleTargetRot = RotationDegrees;
+        _settleFrom = Position + Vector2.Up * (SettleHeightMin + rng.RandfRange(0f, SettleHeightExtra));
+        // Raw-degree interpolation (not LerpAngle) so the ±turns offset
+        // unwinds as real full spins during the fall.
+        _settleFromRot = _settleTargetRot + rng.RandfRange(-1f, 1f) * SettleSpinTurns * 360f;
+        Position = _settleFrom;
+        RotationDegrees = _settleFromRot;
+        Modulate = new Color(1f, 1f, 1f, 0f);
+    }
+
+    private void UpdateEndRoundWind(float dt)
+    {
+        _windAge += dt;
+        _windEase = Mathf.Min(_windEase + dt / WindEaseSeconds, 1f);
+        float ease = Mathf.SmoothStep(0f, 1f, _windEase);
+
+        // Clockwise on screen: y points down, so an increasing angle turns
+        // the piece clockwise around the center.
+        _windPhase += _windAngularSpeed * dt * ease;
+        // The lane breathes so the ring keeps loosening and tightening.
+        float breath = 1f + Mathf.Sin(_windAge * Mathf.Tau * _windBreathFreq + _windBreathOffset)
+            * WindBreathAmp;
+        // The whole gyre bobs a little, like the draft itself rises and sinks.
+        Vector2 center = _windCenter + Vector2.Down
+            * (Mathf.Sin(_windAge * Mathf.Tau * _windBobFreq + _windBobOffset) * _windBobAmp * ease);
+        Position = center + Vector2.Right.Rotated(_windPhase) * _windRadius * breath;
+        Rotation += _windSpin * dt * ease;
+    }
+
+    private void UpdateSettle(float dt)
+    {
+        _settleAge += dt;
+        float t = Mathf.Clamp(_settleAge / _settleSeconds, 0f, 1f);
+        // Quart-out: a fast entry that eases into a soft landing.
+        float eased = 1f - Mathf.Pow(1f - t, 4f);
+        Position = _settleFrom.Lerp(_settleTarget, eased);
+        RotationDegrees = Mathf.Lerp(_settleFromRot, _settleTargetRot, eased);
+        // Fade in over the first third of the fall so pieces don't pop.
+        Modulate = new Color(1f, 1f, 1f, Mathf.Min(t * 3f, 1f));
+        if (t >= 1f)
+        {
+            _settling = false;
+            Modulate = Colors.White;
+            Position = _settleTarget;
+            RotationDegrees = _settleTargetRot;
+        }
+    }
 
     /// <summary>
     /// True when opaque pixels of this piece fall within <paramref name="radius"/>
@@ -233,10 +391,22 @@ public partial class Debris : Node2D
 
     public override void _Process(double delta)
     {
+        float dt = (float)delta;
+        // Wind and settle modes own the piece completely — a swept fling
+        // cancels them implicitly by falling through to the slide below.
+        if (_windActive && !Swept)
+        {
+            UpdateEndRoundWind(dt);
+            return;
+        }
+        if (_settling && !Swept)
+        {
+            UpdateSettle(dt);
+            return;
+        }
         if (!Swept)
             return;
 
-        float dt = (float)delta;
         Position += _velocity * dt;
         Rotation += _angularVel * dt;
 
