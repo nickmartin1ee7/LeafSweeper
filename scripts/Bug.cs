@@ -13,22 +13,25 @@ public partial class Bug : Node2D
     private const string OutlineShaderPath = "res://assets/shaders/gold_outline.gdshader";
 
     private Sprite2D _sprite = null!;
-    private BugType _type = null!;
+    private BugVariant _variant = null!;
 
-    public BugType Type => _type;
+    public BugVariant Variant => _variant;
+
+    /// <summary>The species behind the found variant (flavor, comments).</summary>
+    public BugType Type => _variant.Species;
 
     [Signal] public delegate void CelebrationFinishedEventHandler();
 
-    public void Setup(BugType type, float scale, float camouflage)
+    public void Setup(BugVariant variant, float scale, float camouflage)
     {
-        _type = type;
+        _variant = variant;
         // A bug node is reused across levels; drop the old sprite first or
         // they stack up on top of each other.
         foreach (Node child in GetChildren())
             child.QueueFree();
         _sprite = new Sprite2D
         {
-            Texture = GD.Load<Texture2D>(type.TexturePath),
+            Texture = GD.Load<Texture2D>(variant.TexturePath),
             Material = new ShaderMaterial { Shader = GD.Load<Shader>(OutlineShaderPath) },
         };
         // 0 keeps the glow fully off during normal play.
@@ -48,13 +51,13 @@ public partial class Bug : Node2D
         Position.DistanceTo(worldPoint) <= TapRadius;
 
     /// <summary>World-space radius where taps register: type radius × node scale.</summary>
-    public float TapRadius => _type.TapRadius * Scale.X;
+    public float TapRadius => _variant.Species.TapRadius * Scale.X;
 
     /// <summary>
     /// World-space radius of the bug's visible body: type occlusion radius ×
     /// node scale. Debris must clear this (not the tap area) to uncover it.
     /// </summary>
-    public float OcclusionRadius => _type.OcclusionRadius * Scale.X;
+    public float OcclusionRadius => _variant.Species.OcclusionRadius * Scale.X;
 
     /// <summary>
     /// Golden discovery moment: the outline shines in while the bug grows,

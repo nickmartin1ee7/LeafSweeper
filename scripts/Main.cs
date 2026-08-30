@@ -109,6 +109,23 @@ public partial class Main : Node2D
 			&& _debris.TrueForAll(d => IsInstanceValid(d) && d.IsRidingWind);
 		GD.Print($"AUTOPLAY menu: pieces={_debris.Count} riding={menuOk}");
 
+		// Catalog: 39 species × 4 variants, legacy save keys intact, every
+		// texture resolves, and the id lookup round-trips.
+		bool texturesOk = true;
+		foreach (var v in BugTypes.AllVariants)
+			if (!FileAccess.FileExists(v.TexturePath))
+				texturesOk = false;
+		bool catalogOk = BugTypes.All.Length == 39
+			&& BugTypes.AllVariants.Length == 156
+			&& BugTypes.VariantById("ladybug").DisplayName == "Ladybug"
+			&& BugTypes.VariantById("ladybug_yellow").DisplayName == "Yellow Ladybug"
+			&& BugTypes.VariantById("aphid_pink").Species.Id == "aphid"
+			&& texturesOk;
+		var catalogPick = BugTypes.RandomVariant();
+		GD.Print($"AUTOPLAY catalog: species={BugTypes.All.Length} " +
+				 $"variants={BugTypes.AllVariants.Length} ok={catalogOk} " +
+				 $"pick={catalogPick.Id}");
+
 		StartLevel(3);
 
 		// Round start: the debris falls in and settles before the bug and
@@ -316,9 +333,11 @@ public partial class Main : Node2D
 			&& reloaded.TotalGusts == 1
 			&& reloaded.GustPower == SaveData.StartingGustPower
 			&& reloaded.BugFindCounts.Count == 1
+			&& reloaded.BugFindCounts.ContainsKey(_bug.Variant.Id)
 			&& reloaded.History.Count == 1
 			&& reloaded.History[0].Level == playedLevel
-			&& reloaded.History[0].Gusts == 1;
+			&& reloaded.History[0].Gusts == 1
+			&& catalogOk;
 
 		GD.Print($"AUTOPLAY save: level={_save.CurrentLevel} cleared={_save.LevelsCleared} " +
 				 $"sweeps={_save.TotalSweeps} gusts={_save.TotalGusts} " +
@@ -783,8 +802,8 @@ public partial class Main : Node2D
 			return;
 
 		Rect2 floor = PlayableArea();
-		var bugType = BugTypes.Random();
-		_bug.Setup(bugType, RoundConfig.BugScale(_activeLevel),
+		var bugVariant = BugTypes.RandomVariant();
+		_bug.Setup(bugVariant, RoundConfig.BugScale(_activeLevel),
 			RoundConfig.Camouflage(_activeLevel));
 		_bug.Position = new Vector2(
 			_rng.RandfRange(180f, floor.Size.X - 180f),
@@ -954,22 +973,22 @@ public partial class Main : Node2D
 
 		// Copy uses pre-save history so "best" refers to earlier rounds.
 		bool newBest = _save.LevelsCleared > 0 && _stats.Sweeps <= _save.BestSweeps();
-		string comment = _stats.Comment(_save, _bug.Type);
+		string comment = _stats.Comment(_save, _bug.Variant);
 		string roundLine = $"{LevelStats.FormatTime(_stats.Elapsed)} · {_stats.Sweeps} sweeps";
 		if (_stats.Gusts > 0)
 			roundLine += $" · {_stats.Gusts} gust{(_stats.Gusts == 1 ? "" : "s")}";
-		_save.RecordClear(_stats.Level, _stats.Sweeps, (int)_stats.Elapsed, _bug.Type.Id, _stats.Gusts);
+		_save.RecordClear(_stats.Level, _stats.Sweeps, (int)_stats.Elapsed, _bug.Variant.Id, _stats.Gusts);
 
 		// Lifetime cells for the card's stats row (post-save, so this find counts).
-		BugType type = _bug.Type;
-		_save.BugFindCounts.TryGetValue(type.Id, out int speciesFinds);
+		BugVariant variant = _bug.Variant;
+		_save.BugFindCounts.TryGetValue(variant.Id, out int finds);
 		var stats = new[]
 		{
 			new Hud.WinStat(_save.BestSweeps().ToString(),
 				newBest ? "New best round!" : "Best round", newBest),
-			new Hud.WinStat($"×{speciesFinds}",
-				speciesFinds == 1 ? $"First {type.DisplayName}!" : type.DisplayName,
-				speciesFinds == 1),
+			new Hud.WinStat($"×{finds}",
+				finds == 1 ? $"First {variant.DisplayName}!" : variant.DisplayName,
+				finds == 1),
 			new Hud.WinStat(_save.LevelsCleared.ToString(), "Bugs found", false),
 		};
 

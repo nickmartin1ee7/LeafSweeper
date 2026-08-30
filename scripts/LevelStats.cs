@@ -95,9 +95,9 @@ public sealed class LevelStats
     /// nod when relevant. Round numbers live in the stats row instead, so
     /// the comment stays pure flavor.
     /// </summary>
-    public string Comment(SaveData save, BugType bug)
+    public string Comment(SaveData save, BugVariant bug)
     {
-        var lines = new List<string> { BugFlavor.Pick(bug) };
+        var lines = new List<string> { BugFlavor.Pick(bug.Species) };
 
         int best = save.BestSweeps();
         if (best > 0 && Sweeps <= best)

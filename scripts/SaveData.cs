@@ -37,6 +37,9 @@ public sealed class SaveData
 	public int TotalSeconds { get; set; }
 	/// <summary>Current gust power balance: coins found add +1, each gust spent takes −1.</summary>
 	public int GustPower { get; set; } = StartingGustPower;
+	/// <summary>Lifetime count of prismatic (rainbow sparkle) bugs found.</summary>
+	public int PrismaticFinds { get; set; }
+
 	public Dictionary<string, int> BugFindCounts { get; } = new();
 	public List<LevelResult> History { get; } = new();
 
@@ -64,6 +67,7 @@ public sealed class SaveData
 			data.TotalGusts = Get(root, "totalGusts", 0).AsInt32();
 			data.TotalSeconds = Get(root, "totalSeconds", 0).AsInt32();
 			data.GustPower = Get(root, "gustPower", StartingGustPower).AsInt32();
+			data.PrismaticFinds = Get(root, "prismaticFinds", 0).AsInt32();
 
 			if (Get(root, "bugFindCounts", default).AsGodotDictionary() is { } finds)
 				foreach (var kv in finds)
@@ -129,6 +133,7 @@ public sealed class SaveData
 			["totalGusts"] = TotalGusts,
 			["totalSeconds"] = TotalSeconds,
 			["gustPower"] = GustPower,
+			["prismaticFinds"] = PrismaticFinds,
 			["bugFindCounts"] = finds,
 			["history"] = history,
 		};
