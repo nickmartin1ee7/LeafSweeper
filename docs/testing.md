@@ -9,6 +9,16 @@
 | Boot smoke | `godot --headless --quit-after 180` | no errors in output |
 | Save round-trip | `LEAF_AUTOPLAY=1 godot --headless --quit-after 2000` | `ok=True`, exit 0 |
 
+One-liner for a quick pass — build error count, then autoplay with output
+filtered to what matters:
+
+```sh
+dotnet build 2>&1 | grep -cE " error "; LEAF_AUTOPLAY=1 godot --headless --quit-after 2000 2>&1 | grep -E "AUTOPLAY|SCRIPT ERROR"
+```
+
+`0` from the first command means a clean build; pass means `AUTOPLAY …
+ok=True` lines and no `SCRIPT ERROR`.
+
 `LEAF_AUTOPLAY` makes `Main` play a level end-to-end headlessly (covered-bug
 uncover rule, **verified against alpha ground truth** — the blocker's
 coverage is recomputed straight from its texture's alpha channel and must
@@ -94,6 +104,11 @@ adb logcat | grep -iE "LeafSweeper|godot|mono|FATAL|AndroidRuntime"
 	(speeds shear per piece, the ring breathes and bobs, pieces tumble);
 	the litter keeps circling behind the win card until Next/Menu clears
 	the round; resizing mid-wind keeps the gyre centered on the floor.
+14. **Menu gyre** — the home screen dresses itself with a decorative
+	litter riding the same clockwise gyre, idled way down
+	(`MenuWindSpeedScale` 0.35): a calm backdrop behind the menu card,
+	no bug or coins, touches do nothing. Starting a round tears it
+	down into the settle curtain.
 
 Useful adb helpers while testing:
 

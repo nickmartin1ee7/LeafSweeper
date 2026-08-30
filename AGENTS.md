@@ -80,6 +80,13 @@ Start each dev task here; the *why* behind every step lives in
    the same slice (numbers in prose drift fast).
 5. Stop at "buildable and headlessly verified" and hand off to the human for
    playtesting; their findings become new todos.
+6. The final steps of every slice are to create a PR and merge it: push the
+   slice branch, open a PR against `main` (`gh pr create --base main --head
+   <slice>`), and merge that PR on GitHub (`gh pr merge` or the GitHub UI) —
+   never locally. A slice is only finished once its PR is merged and the
+   worktree and branch are cleaned up; `main` never advances any other way
+   (PR-only hard rule in step 2). Push, PR and merge happen only when the
+   human asks (rule 3).
 
 ## Code practices
 

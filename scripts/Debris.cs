@@ -155,7 +155,7 @@ public partial class Debris : Node2D
     /// radius), tumbles gently, and never fades — the litter keeps circling
     /// while the win card is up.
     /// </summary>
-    public void StartEndRoundWind(Vector2 center, RandomNumberGenerator rng)
+    public void StartEndRoundWind(Vector2 center, RandomNumberGenerator rng, float speedScale = 1f)
     {
         if (Swept || _windActive)
             return;
@@ -167,9 +167,11 @@ public partial class Debris : Node2D
         _windAge = 0f;
         _windEase = 0f;
         // Per-piece speed jitter shears the gyre; the self-spin echoes the
-        // orbit so the piece reads as tumbling along its lane.
-        _windAngularSpeed = WindSpeedBase * rng.RandfRange(1f - WindSpeedJitter, 1f + WindSpeedJitter);
-        _windSpin = rng.RandfRange(-1f, 1f) * WindSpinBase + _windAngularSpeed * 0.6f;
+        // orbit so the piece reads as tumbling along its lane. speedScale
+        // dials the whole motion down (the menu gyre idles far slower
+        // than the end-of-round one).
+        _windAngularSpeed = WindSpeedBase * rng.RandfRange(1f - WindSpeedJitter, 1f + WindSpeedJitter) * speedScale;
+        _windSpin = (rng.RandfRange(-1f, 1f) * WindSpinBase + _windAngularSpeed * 0.6f) * speedScale;
         _windBreathFreq = WindBreathFreq * rng.RandfRange(0.7f, 1.3f);
         _windBreathOffset = rng.RandfRange(0f, Mathf.Tau);
         _windBobAmp = WindBobAmp * rng.RandfRange(0.5f, 1.5f);
