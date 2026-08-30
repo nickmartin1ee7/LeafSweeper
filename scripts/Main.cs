@@ -42,12 +42,13 @@ public partial class Main : Node2D
 	private const float SettleSweepSeconds = 1.4f;
 	private const float SettleJitterSeconds = 0.25f;
 
-	// Ambient rustle pacing: every few seconds a stray draft brushes a
-	// small patch of the litter. Cosmetic only — see Debris.Rustle.
-	private const float RustleIntervalMin = 4f;   // seconds between drafts (min)
-	private const float RustleIntervalMax = 8f;   // seconds between drafts (max)
+	// Ambient rustle pacing: every couple of seconds a stray draft brushes
+	// a small patch of the litter. Cosmetic only — see Debris.Rustle.
+	private const float RustleIntervalMin = 2f;   // seconds between drafts (min)
+	private const float RustleIntervalMax = 4f;   // seconds between drafts (max)
 	private const float RustleGroupRadius = 130f; // px: pieces this close shiver together
-	private const int RustleMaxPieces = 6;        // cap so dense floors stay subtle
+	private const int RustleClusterMin = 4;       // pieces per draft (min)
+	private const int RustleClusterMax = 7;       // pieces per draft (max)
 
 	// Menu gyre density (pieces per px²): a mid-round litter so the home
 	// screen reads as "the floor, alive" without competing with the card.
@@ -336,7 +337,7 @@ public partial class Main : Node2D
 	}
 
 	/// <summary>
-	/// Ambient life: every 4–8s a stray draft rustles a random patch of
+	/// Ambient life: every 2–4s a stray draft rustles a random cluster of
 	/// the litter. Purely cosmetic (Debris.Rustle only wiggles sprites)
 	/// and gated to live, settled rounds so it can't interfere with the
 	/// settle-in, the win wind or the autoplay probes.
@@ -380,10 +381,12 @@ public partial class Main : Node2D
 			if (dist <= RustleGroupRadius)
 				group.Add((d, dist));
 		}
-		// Dense floors hold far more neighbors than one draft should lift:
-		// keep only the closest few so the rustle stays a flicker.
+		// Each draft lifts a random handful — about 4–7 pieces, closest
+		// first — so the rustle stays a localized flicker even on dense
+		// floors; sparse patches simply rustle smaller.
 		group.Sort((a, b) => a.Dist.CompareTo(b.Dist));
-		int count = Mathf.Min(group.Count, RustleMaxPieces);
+		int count = Mathf.Min(group.Count,
+			_rng.RandiRange(RustleClusterMin, RustleClusterMax));
 		for (int i = 0; i < count; i++)
 		{
 			// Pieces nearer the epicenter sit deeper in the draft, and the

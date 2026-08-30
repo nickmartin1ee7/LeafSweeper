@@ -39,9 +39,10 @@ size and silhouette, so you learn to spot shapes rather than colors.
 - **Between-round comments** picked from templates by how you played,
   referencing your history ("Your best is 12 sweeps!").
 - **Main menu** with lifetime progress and your favorite critter.
-- **Ambient rustles** — every 4–8s a stray draft shivers a small patch of
-  the litter in place. Purely cosmetic: the wobble lives on the pieces'
-  sprites, so coverage, sweeping and the win gyre are never affected.
+- **Ambient rustles** — every 2–4s a stray draft shivers a localized cluster
+  of about 4–7 pieces of the litter in place. Purely cosmetic: the wobble
+  lives on the pieces' sprites, so coverage, sweeping and the win gyre are
+  never affected.
 - **Procedurally generated art** — every texture in `assets/textures/` is
   reproducible from `tools/gen_art.mjs` (see `docs/art-style.md`).
 
