@@ -144,7 +144,7 @@ itself fights back — with your memory, not your reflexes.
 - **Storm Round warning.** The round *before* a storm round ends with a
   warning: an electrical "Storm Round" sign (`scripts/StormWarn.cs` +
   `assets/shaders/warn_sparks.gdshader` — lightning bolts that arc
-  and through the lettering, a neon rim hugging every glyph,
+  through the lettering, a neon rim hugging every glyph,
   stray sparks, set into a roiling storm cloud) crackles on above the win
   card during the end-of-round wind
   and fades out when the next round begins.
@@ -157,10 +157,23 @@ itself fights back — with your memory, not your reflexes.
   spot is consumed when its drop lands, and the newly dropped pieces count
   as ordinary unswept debris — so they re-hide the bug
   and gust coins, exactly like the round-start litter.
+- **The flood.** On top of the restoration, the storm *escalates*: every
+  4–6 seconds (the same cadence) a gust dumps a whole **cluster of 6–12
+  brand-new pieces** (`StormClusterMin` / `StormClusterMax`) onto random
+  floor spots — litter that was never swept, so even untouched ground
+  thickens as the round drags on. Each cluster tumbles in like any storm
+  drop and follows the normal overlap rules, re-covering the bug and coins.
+  The flood relents for the round once the live debris count reaches
+  **3× the round's starting litter** (`StormFloodCapMultiplier` — the final
+  cluster is truncated so the cap is exact); after that only the per-spot
+  restoration continues, so swept patches never stay clean but the floor
+  never drowns past 3×.
 - **Anti-hoarding.** Because gust-cleared ground is re-littered the same way
   as swept ground, banking gust coins can't stockpile permanent clean
   space — a storm round rewards a mental map of where you've been, and
-  punishes "save everything for later" play.
+  punishes "save everything for later" play. The flood doubles down: even
+  ground you never touched thickens, so "clean enough" is a moving target
+  until the cap.
 - **No pressure, still.** There is no fail state and no timer pressure; the
   storm only makes the floor harder to *hold in your head*. Restarting
   reshuffles everything, including the storm drops' future landing spots.
