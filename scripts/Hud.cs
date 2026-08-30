@@ -208,7 +208,17 @@ public partial class Hud : CanvasLayer
 
         var box = new HBoxContainer();
         box.AddThemeConstantOverride("separation", 28);
-        box.AddChild(_bookButton);
+        // All three columns are equal expand-fill slots, so the gust coin
+        // sits exactly on the dock's center no matter how wide the side
+        // coins are.
+        var bookSlot = new HBoxContainer
+        {
+            Alignment = BoxContainer.AlignmentMode.Begin,
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+        };
+        bookSlot.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        bookSlot.AddChild(_bookButton);
+        box.AddChild(bookSlot);
         var gustSlot = new CenterContainer
         {
             MouseFilter = Control.MouseFilterEnum.Ignore,
