@@ -157,6 +157,12 @@ Start each dev task here; the *why* behind every step lives in
 
   9) **REVIEW: Subagent review** — Launch a high-reasoning review agent for independent inspection.
      - TODO id: `agents-09-review-subagent`
+     - The reviewer must NEVER attempt to execute the Godot engine (no
+       `godot`/`godot-mono` runs — no import, boot, or autoplay). Runtime and
+       build validation is already done by the validating session; trust it.
+     - Review focus: code quality, maintainability, and reliability only —
+       correctness of logic, readability, structure, edge cases, and error
+       handling as visible in the diff and surrounding code.
      - Reviewer reports PASS/FAIL with summary of critical findings.
 
   10) **GATE: Iterate on FAIL** — If reviewer returns FAIL, loop back to #7, address issues, update TODOs.
