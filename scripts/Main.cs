@@ -35,9 +35,6 @@ public partial class Main : Node2D
 	private GameState _state = GameState.Menu;
 	private Vector2 _viewSize;
 
-	/// <summary>Gold gust coins hidden below the debris each round.</summary>
-	private const int GustCoinsPerLevel = 3;
-
 	// Round-start settle pacing (see Debris.SettleIn): the diagonal sweep
 	// across the floor plus per-piece jitter caps the total at ~2.5s.
 	private const float SettleSweepSeconds = 1.4f;
@@ -269,10 +266,11 @@ public partial class Main : Node2D
 		}
 		GD.Print($"AUTOPLAY burst: found={burstAt != null} ok={burstOk}");
 
-		// Gust coins: three hide below the debris each round; collecting one
-		// banks +1 power, spending a gust takes −1.
+		// Gust coins: one hides below the debris each round — every round
+		// type gets the same count (see RoundConfig.GustCoinsPerRound);
+		// collecting it banks +1 power, spending a gust takes −1.
 		var coin = _coins.Find(c => IsInstanceValid(c) && !c.Collected);
-		bool coinSpawned = _coins.Count == GustCoinsPerLevel;
+		bool coinSpawned = _coins.Count == RoundConfig.GustCoinsPerRound;
 		bool coinBanked = false;
 		if (coin != null)
 		{
@@ -971,7 +969,7 @@ public partial class Main : Node2D
 
 	private void SpawnGustCoins(Rect2 floor)
 	{
-		for (int i = 0; i < GustCoinsPerLevel; i++)
+		for (int i = 0; i < RoundConfig.GustCoinsPerRound; i++)
 		{
 			var coin = new GustCoin { Name = $"GustCoin{i}" };
 			coin.Setup(_rng.RandfRange(84f, 100f), _rng);
