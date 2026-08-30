@@ -68,7 +68,7 @@ Cheapest check first; escalate only when needed:
 | 1 | `dotnet build` | compile errors, API misuse |
 | 2 | `godot --headless --import` | bad scenes/textures/import errors |
 | 3 | `godot --headless --quit-after 180` | boot-time script crashes |
-| 4 | `LEAF_AUTOPLAY=1 godot --headless --quit-after 300` | gameplay logic + persistence |
+| 4 | `LEAF_AUTOPLAY=1 godot --headless --quit-after 2000` | gameplay logic + persistence |
 | 5 | windowed run + screenshot hook (visual slices) | rendered pixels: layout, layering, fonts |
 | 6 | render generated SVGs + visual checklist (art slices) | silhouette errors: detached/overlapping appendages, legs through the body |
 
@@ -90,7 +90,7 @@ pass, `1` on failure, so it can gate commits or CI. Lessons baked in:
   (a coin arriving at the dock button before its +1 banks) are tested the
   way players experience them: `RunHeadlessAutoplay` is `async void` and
   `await ToSignal(coin, GustCoin.SignalName.CollectionFlightFinished)`
-  before asserting. `--quit-after 300` must outlast the awaited animation
+  before asserting. `--quit-after 2000` must outlast the awaited animation
   (~1.6 s ≈ 100 frames).
 - **Pixel-accurate logic needs independent ground truth.** When a hot
   path uses a cached or approximated structure (`Debris.Covers` scans a

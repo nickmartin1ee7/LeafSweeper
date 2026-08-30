@@ -7,7 +7,7 @@
 | Compile | `dotnet build` | 0 errors |
 | Asset import | `godot --headless --import` | exits 0, no script errors |
 | Boot smoke | `godot --headless --quit-after 180` | no errors in output |
-| Save round-trip | `LEAF_AUTOPLAY=1 godot --headless --quit-after 300` | `ok=True`, exit 0 |
+| Save round-trip | `LEAF_AUTOPLAY=1 godot --headless --quit-after 2000` | `ok=True`, exit 0 |
 
 `LEAF_AUTOPLAY` makes `Main` play a level end-to-end headlessly (covered-bug
 uncover rule, **verified against alpha ground truth** — the blocker's
@@ -82,6 +82,18 @@ adb logcat | grep -iE "LeafSweeper|godot|mono|FATAL|AndroidRuntime"
 	debris outward (≤12 pieces), sweeps counter +1, gust power unchanged;
 	a double-tap on already-clear ground flings nothing and costs nothing;
 	a tap-then-drag never bursts.
+12. **Round-start settle** — each new round the debris tumbles in from
+	above in a staggered curtain (no visible bug or coins mid-fall);
+	touches and the gust button do nothing until every piece has landed;
+	then the bug and 3 gust coins are hidden under the fresh litter.
+	The dock's restart button runs the same reshuffle: the old litter
+	vanishes, a fresh curtain settles over new hiding spots, and play
+	stays locked until it lands.
+13. **End-of-round wind** — on a win, every piece still on the floor
+	picks up into a slow clockwise swirl around the floor's center
+	(speeds shear per piece, the ring breathes and bobs, pieces tumble);
+	the litter keeps circling behind the win card until Next/Menu clears
+	the round; resizing mid-wind keeps the gyre centered on the floor.
 
 Useful adb helpers while testing:
 
