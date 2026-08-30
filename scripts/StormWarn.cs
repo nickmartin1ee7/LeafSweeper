@@ -22,9 +22,9 @@ public partial class StormWarn : CanvasLayer
 
     // Once the storm round begins the sign rides the round's opening: a
     // two-second hold over the settle so the mood lands, then a slow
-    // one-second dissolve that yields the screen to gameplay.
+    // four-second dissolve that yields the screen to gameplay.
     private const float LingerSeconds = 2f;
-    private const float LingerFadeSeconds = 1f;
+    private const float LingerFadeSeconds = 4f;
 
     // Sign geometry as fractions of the viewport: centered horizontally,
     // sitting in the upper quarter so it never covers the win card that
@@ -46,6 +46,11 @@ public partial class StormWarn : CanvasLayer
     private Label _label = null!;
     private Tween _fade = null!;
     private Tween _linger = null!;
+
+    // Autoplay reads the tweened alpha to prove the fade is actually
+    // visible — the sign's pixels are painted by the shader, which must
+    // respect modulate or every fade silently becomes a hard cut.
+    public float FadeAlpha => _root.Modulate.A;
 
     public StormWarn()
     {

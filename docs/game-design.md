@@ -146,7 +146,7 @@ itself fights back — with your memory, not your reflexes.
   stray sparks, set into a roiling storm cloud) crackles on above the win
   card during the end-of-round wind
   and lingers two seconds into the storm round before dissolving out over
-  one more second.
+  four more seconds.
 - **Falling debris.** While the round is settled, **each swept patch
   re-litters itself on its own timer**: 4–6 seconds (`StormSpotDelayMin` /
   `StormSpotDelayMax`) after a spot is vacated, one fresh debris piece

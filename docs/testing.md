@@ -7,13 +7,13 @@
 | Compile | `dotnet build` | 0 errors |
 | Asset import | `godot --headless --import` | exits 0, no script errors |
 | Boot smoke | `godot --headless --quit-after 180` | no errors in output |
-| Save round-trip | `LEAF_AUTOPLAY=1 godot --headless --quit-after 4000` | `ok=True`, exit 0 |
+| Save round-trip | `LEAF_AUTOPLAY=1 godot --headless --quit-after 4700` | `ok=True`, exit 0 |
 
 One-liner for a quick pass — build error count, then autoplay with output
 filtered to what matters:
 
 ```sh
-dotnet build 2>&1 | grep -cE " error "; LEAF_AUTOPLAY=1 godot --headless --quit-after 4000 2>&1 | grep -E "AUTOPLAY|SCRIPT ERROR"
+dotnet build 2>&1 | grep -cE " error "; LEAF_AUTOPLAY=1 godot --headless --quit-after 4700 2>&1 | grep -E "AUTOPLAY|SCRIPT ERROR"
 ```
 
 `0` from the first command means a clean build; pass means `AUTOPLAY …
@@ -28,7 +28,9 @@ match `Debris.Covers` for a positive and a negative case, printed as
 shrink the cleared-spot pool** → **flood clusters grow the litter and stop
 dead at the 3× starting-litter cap** → win → **"Storm Round" warning sign
 is up** → save → reload) and the **warn-linger probe** (a fresh storm-round
-start holds the sign up for 2s, then dissolves it over 1s) and verifies
+start holds the sign up for 2s, then dissolves it over 4s — the probe also
+checks the alpha is caught mid-fade below full, since the sign is painted
+wholly by a shader that must respect the tweened modulate) and verifies
 `currentLevel`, `levelsCleared`, `totalSweeps`, `totalGusts`, `gustPower`,
 bug find counts and history round-trip correctly. It is `async void` and
 awaits in-game signals, so `--quit-after` must outlast the animations it
@@ -143,8 +145,8 @@ adb logcat | grep -iE "LeafSweeper|godot|mono|FATAL|AndroidRuntime"
 	starting count and the flood stops (swept patches keep
 	re-littering); the round before a storm round ends with the
 	electrical "Storm Round" warning sign, which lingers two seconds
-	into the storm round's opening and then fades out over one more
-	second; on win/menu the weather
+	into the storm round's opening and then fades out over four more
+	seconds; on win/menu the weather
 	fades back out.
 
 Useful adb helpers while testing:

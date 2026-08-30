@@ -124,6 +124,11 @@ float spark_field(vec2 uv, float seed, float time)
 
 void fragment()
 {
+    // StormWarn fades the whole sign by tweening the CanvasItem's
+    // modulate alpha — Godot delivers that chain in COLOR, so multiply
+    // it into the result or every fade is a silent no-op (the sign
+    // holds, then hard-cuts when hidden).
+    vec4 modulate = COLOR;
     vec2 uv = UV;
     float t = TIME;
     vec2 p = vec2(uv.x * aspect, uv.y);
@@ -206,5 +211,5 @@ void fragment()
     col = mix(col, text_col, m);
 
     float a = cloud * 0.96 + halo * 0.9 + rim * 1.35 + glow * 0.85 + core * 0.9 + sparks + m;
-    COLOR = vec4(col, clamp(a, 0.0, 1.0));
+    COLOR = vec4(col, clamp(a, 0.0, 1.0)) * modulate;
 }

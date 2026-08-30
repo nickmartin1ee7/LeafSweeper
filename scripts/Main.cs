@@ -523,9 +523,13 @@ public partial class Main : Node2D
 		ok &= stormCoinsOk;
 
 		// Storm warn linger: starting the warned-for round holds the sign
-		// up for 2s, then dissolves it over 1s. Replays the StartLevel
+		// up for 2s, then dissolves it over 4s. Replays the StartLevel
 		// path directly and awaits real frames — touches nothing the
-		// checks above read, so it can run before the final prints.
+		// checks above read, so it can run before the final prints. The
+		// mid-fade alpha check exists because the sign is painted wholly
+		// by warn_sparks.gdshader: if the shader ever stops multiplying
+		// the tweened modulate into its output, the fade silently turns
+		// back into a hard cut while Visible still behaves.
 		_warn.ShowWarning();
 		_warn.LingerThenFade();
 		bool lingerUp = _warn.Visible;
@@ -536,14 +540,22 @@ public partial class Main : Node2D
 			lingerT += GetProcessDeltaTime();
 		}
 		bool lingerHeld = _warn.Visible;
-		while (_warn.Visible && lingerT < 4.5) // hold 2s + fade 1s + slack
+		while (lingerT < 3.0 && _warn.Visible) // fade starts at 2s: wait into it
+		{
+			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+			lingerT += GetProcessDeltaTime();
+		}
+		bool lingerFading = _warn.Visible && _warn.FadeAlpha < 1f;
+		float lingerAlpha = _warn.FadeAlpha;
+		while (_warn.Visible && lingerT < 7.5) // hold 2s + fade 4s + slack
 		{
 			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
 			lingerT += GetProcessDeltaTime();
 		}
 		bool lingerGone = !_warn.Visible;
-		bool lingerOk = lingerUp && lingerHeld && lingerGone;
-		GD.Print($"AUTOPLAY warn-linger: held={lingerHeld} gone={lingerGone} ok={lingerOk}");
+		bool lingerOk = lingerUp && lingerHeld && lingerFading && lingerGone;
+		GD.Print($"AUTOPLAY warn-linger: held={lingerHeld} fading={lingerFading} " +
+				 $"alpha={lingerAlpha:F2} gone={lingerGone} ok={lingerOk}");
 		ok &= lingerOk;
 
 		GD.Print($"AUTOPLAY save: level={_save.CurrentLevel} cleared={_save.LevelsCleared} " +
@@ -1164,7 +1176,7 @@ public partial class Main : Node2D
 		_hud.ShowGustPower(_save.GustPower);
 		_hud.HideWin();
 		// The sign warned about THIS round starting: let it ride the storm
-		// round's opening (2s hold + 1s dissolve) instead of vanishing at
+		// round's opening (2s hold + 4s dissolve) instead of vanishing at
 		// once. Normal rounds and menu returns hide it immediately.
 		if (_warn.Visible && RoundConfig.IsStormLevel(level))
 			_warn.LingerThenFade();
