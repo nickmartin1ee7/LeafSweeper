@@ -22,6 +22,11 @@ public static class RoundConfig
     public const int CamoStartLevel = 60;
     public const float MaxCamo = 0.25f;
 
+    // Gust coins hidden below the debris each round. One coin on every
+    // round type: the gust-coin economy stays identical on storm rounds —
+    // storm difficulty comes from swept-spot re-littering, not extra coins.
+    public const int GustCoinsPerRound = 1;
+
     /// <summary>0..1 ramp that saturates at <see cref="SaturateLevel"/>.</summary>
     public static float Progress(int level)
     {
