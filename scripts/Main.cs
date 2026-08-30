@@ -103,6 +103,7 @@ public partial class Main : Node2D
 	private async void RunHeadlessAutoplay()
 	{
 		_save.Reset(); // deterministic: the test assumes a fresh save file
+		_forcePrismatic = true; // this round must roll the rare prismatic bug
 
 		// Home screen: the menu spawns a decorative litter lifted straight
 		// into the gyre — it must exist and be riding before play begins.
@@ -208,6 +209,12 @@ public partial class Main : Node2D
 			uncovered = !BugIsCovered();
 		}
 		GD.Print($"AUTOPLAY uncover: blocked={blocked} cleared={uncovered} truthOk={truthOk}");
+
+		// Prismatic round: the forced roll must have produced a prismatic
+		// bug (rainbow shader, no camouflage) — the grandiose win and the
+		// flare are checked after the win below.
+		bool prismaticSpawn = _bug.IsPrismatic;
+		GD.Print($"AUTOPLAY prismatic: spawned={prismaticSpawn}");
 
 		// Double-tap burst: two dead taps at a cluttered spot fling the
 		// nearby debris radially — sweep semantics (cap, free, counted)
@@ -359,6 +366,8 @@ public partial class Main : Node2D
 			&& reloaded.History.Count == 1
 			&& reloaded.History[0].Level == playedLevel
 			&& reloaded.History[0].Gusts == 1
+			&& reloaded.PrismaticFinds == 1
+			&& prismaticSpawn && _flareSeen && _grandWinShown
 			&& catalogOk
 			&& bookBeforeOk
 			&& bookAfterOk;
@@ -371,6 +380,8 @@ public partial class Main : Node2D
 		GD.Print($"AUTOPLAY book: entries={bookAfter.Entries.Count} " +
 				 $"beforeOk={bookBeforeOk} afterOk={bookAfterOk} " +
 				 $"label={(foundEntry?.Label ?? "none")}");
+		GD.Print($"AUTOPLAY prismatic win: flare={_flareSeen} grand={_grandWinShown} " +
+				 $"found={reloaded.PrismaticFinds}");
 		GetTree().Quit(ok ? 0 : 1);
 	}
 
@@ -830,6 +841,17 @@ public partial class Main : Node2D
 	/// the bug and the gust coins take their new random spots underneath
 	/// and the round's clock starts.
 	/// </summary>
+	/// <summary>
+	/// Chance a fresh round hides a prismatic (rainbow sparkle) bug.
+	/// LEAF_PRISMATIC=1 forces it for manual testing; autoplay forces it too.
+	/// </summary>
+	private const float PrismaticChance = 0.05f;
+
+	private bool _forcePrismatic;
+	private bool _flareSeen;
+	private bool _grandWinShown;
+	private SunFlare? _sunFlare;
+
 	private void OnSettleFinished()
 	{
 		if (_state != GameState.Playing)
@@ -837,8 +859,11 @@ public partial class Main : Node2D
 
 		Rect2 floor = PlayableArea();
 		var bugVariant = BugTypes.RandomVariant();
+		bool prismatic = _forcePrismatic
+			|| OS.GetEnvironment("LEAF_PRISMATIC") == "1"
+			|| _rng.Randf() < PrismaticChance;
 		_bug.Setup(bugVariant, RoundConfig.BugScale(_activeLevel),
-			RoundConfig.Camouflage(_activeLevel));
+			prismatic ? 0f : RoundConfig.Camouflage(_activeLevel), prismatic);
 		_bug.Position = new Vector2(
 			_rng.RandfRange(180f, floor.Size.X - 180f),
 			_rng.RandfRange(320f, floor.Size.Y - 200f));
@@ -1005,13 +1030,23 @@ public partial class Main : Node2D
 		_stats.Stop();
 		SetState(GameState.Won);
 
+		// A prismatic find erupts in a yellow-sun lens flare right at the
+		// winning tap, before the bug's golden moment begins.
+		_flareSeen |= _bug.IsPrismatic;
+		if (_bug.IsPrismatic)
+		{
+			_sunFlare = new SunFlare { Position = _bug.Position };
+			AddChild(_sunFlare);
+		}
+
 		// Copy uses pre-save history so "best" refers to earlier rounds.
 		bool newBest = _save.LevelsCleared > 0 && _stats.Sweeps <= _save.BestSweeps();
 		string comment = _stats.Comment(_save, _bug.Variant);
 		string roundLine = $"{LevelStats.FormatTime(_stats.Elapsed)} · {_stats.Sweeps} sweeps";
 		if (_stats.Gusts > 0)
 			roundLine += $" · {_stats.Gusts} gust{(_stats.Gusts == 1 ? "" : "s")}";
-		_save.RecordClear(_stats.Level, _stats.Sweeps, (int)_stats.Elapsed, _bug.Variant.Id, _stats.Gusts);
+		_save.RecordClear(_stats.Level, _stats.Sweeps, (int)_stats.Elapsed,
+			_bug.Variant.Id, _stats.Gusts, _bug.IsPrismatic);
 
 		// Lifetime cells for the card's stats row (post-save, so this find counts).
 		BugVariant variant = _bug.Variant;
@@ -1042,7 +1077,12 @@ public partial class Main : Node2D
 	private void OnBugCelebrationFinished()
 	{
 		if (_state == GameState.Won)
-			_hud.ShowWin(_pendingWinComment, _pendingWinRoundLine, _pendingWinStats, _bug);
+		{
+			_hud.ShowWin(_pendingWinComment, _pendingWinRoundLine, _pendingWinStats,
+				_bug, grandiose: _bug.IsPrismatic);
+			if (_bug.IsPrismatic)
+				_grandWinShown = true;
+		}
 	}
 
 	/// <summary>

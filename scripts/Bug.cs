@@ -11,6 +11,7 @@ namespace LeafSweeper;
 public partial class Bug : Node2D
 {
     private const string OutlineShaderPath = "res://assets/shaders/gold_outline.gdshader";
+    private const string PrismaticShaderPath = "res://assets/shaders/prismatic.gdshader";
 
     private Sprite2D _sprite = null!;
     private BugVariant _variant = null!;
@@ -20,11 +21,16 @@ public partial class Bug : Node2D
     /// <summary>The species behind the found variant (flavor, comments).</summary>
     public BugType Type => _variant.Species;
 
+    /// <summary>True when this round's critter rolled the rare prismatic look.</summary>
+    public bool IsPrismatic { get; private set; }
+
     [Signal] public delegate void CelebrationFinishedEventHandler();
 
-    public void Setup(BugVariant variant, float scale, float camouflage)
+    public void Setup(BugVariant variant, float scale, float camouflage,
+        bool prismatic = false)
     {
         _variant = variant;
+        IsPrismatic = prismatic;
         // A bug node is reused across levels; drop the old sprite first or
         // they stack up on top of each other.
         foreach (Node child in GetChildren())
@@ -43,8 +49,13 @@ public partial class Bug : Node2D
         ZIndex = 0;
         Scale = new Vector2(scale, scale);
         // Camouflage blends the bug toward dusty leaf colors; 0 = fully normal.
+        // Prismatic critters skip it entirely — they want to be seen (once
+        // uncovered) in full rainbow.
         Color leaf = new(0.62f, 0.60f, 0.38f);
-        _sprite.Modulate = Colors.White.Lerp(leaf, camouflage);
+        _sprite.Modulate = Colors.White.Lerp(leaf, prismatic ? 0f : camouflage);
+        if (prismatic)
+            ((ShaderMaterial)_sprite.Material).Shader =
+                GD.Load<Shader>(PrismaticShaderPath);
     }
 
     public bool ContainsPoint(Vector2 worldPoint) =>

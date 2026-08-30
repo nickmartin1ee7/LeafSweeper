@@ -38,6 +38,11 @@ public partial class Hud : CanvasLayer
     private HBoxContainer _statsRow = null!;
     private Button _nextButton = null!;
     private Button _menuButton = null!;
+    private PanelContainer _winPanel = null!;
+    private StyleBoxFlat _winStyle = null!;
+    private StyleBoxFlat _winGrandStyle = null!;
+    private PrismaticGlow? _prismaticGlow;
+    private Tween? _prismaticTitleLoop;
 
     private Control _restartDialog = null!;
 
@@ -251,6 +256,26 @@ public partial class Hud : CanvasLayer
             BorderWidthRight = 6,
             BorderColor = new Color("c9a06a"),
         };
+        _winStyle = panelStyle;
+        _winGrandStyle = new StyleBoxFlat
+        {
+            // Radiant gold for a prismatic find: warm panel, deeper gold rim.
+            BgColor = new Color("ffe9a8"),
+            CornerRadiusBottomLeft = 28,
+            CornerRadiusBottomRight = 28,
+            CornerRadiusTopLeft = 28,
+            CornerRadiusTopRight = 28,
+            ContentMarginLeft = 48,
+            ContentMarginRight = 48,
+            ContentMarginTop = 40,
+            ContentMarginBottom = 40,
+            BorderWidthBottom = 8,
+            BorderWidthTop = 8,
+            BorderWidthLeft = 8,
+            BorderWidthRight = 8,
+            BorderColor = new Color("d89a2a"),
+        };
+        _winPanel = panel;
         panel.AddThemeStyleboxOverride("panel", panelStyle);
 
         var box = new VBoxContainer { CustomMinimumSize = new Vector2(640, 0) };
@@ -395,17 +420,54 @@ public partial class Hud : CanvasLayer
     }
 
     public void ShowWin(string comment, string statsLine, WinStat[] stats,
-        Node2D? bug = null)
+        Node2D? bug = null, bool grandiose = false)
     {
         if (bug != null)
             SeatBug(bug);
         _winComment.Text = comment;
         _winStats.Text = statsLine;
         FillStatsRow(stats);
+        ApplyGrandiose(grandiose, bug);
         _winOverlay.Visible = true;
         _winOverlay.Modulate = new Color(1, 1, 1, 0);
         var tween = CreateTween();
         tween.TweenProperty(_winOverlay, "modulate:a", 1f, 0.35f);
+    }
+
+    /// <summary>
+    /// Dresses (or undresses) the win card for a prismatic find: radiant
+    /// gold panel, rotating rays with looping sparkles behind the content,
+    /// and a shimmering title.
+    /// </summary>
+    private void ApplyGrandiose(bool grandiose, Node2D? bug)
+    {
+        bool isPrismatic = grandiose && bug != null;
+        _winPanel.AddThemeStyleboxOverride("panel",
+            isPrismatic ? _winGrandStyle : _winStyle);
+
+        if (isPrismatic && _prismaticGlow == null)
+        {
+            _prismaticGlow = new PrismaticGlow();
+            _winPanel.AddChild(_prismaticGlow);
+            _winPanel.MoveChild(_prismaticGlow, 0);
+            _prismaticTitleLoop = CreateTween().SetLoops();
+            _prismaticTitleLoop.TweenProperty(_winTitle, "modulate",
+                new Color(1f, 0.85f, 0.4f), 0.5f);
+            _prismaticTitleLoop.TweenProperty(_winTitle, "modulate",
+                new Color(1f, 0.6f, 0.9f), 0.5f);
+            _prismaticTitleLoop.TweenProperty(_winTitle, "modulate",
+                new Color(0.6f, 0.9f, 1f), 0.5f);
+            _prismaticTitleLoop.TweenProperty(_winTitle, "modulate",
+                Colors.White, 0.5f);
+        }
+        else if (!isPrismatic && _prismaticGlow != null)
+        {
+            _prismaticTitleLoop?.Kill();
+            _prismaticTitleLoop = null;
+            _prismaticGlow.QueueFree();
+            _prismaticGlow = null;
+            _winTitle.Modulate = Colors.White;
+        }
     }
 
     /// <summary>Rebuilds the lifetime stats row from the given cells.</summary>

@@ -153,13 +153,17 @@ public sealed class SaveData
 		dir?.Rename(TempPath, Path);
 	}
 
-	/// <summary>Records a cleared level, updates aggregates, and saves.</summary>
-	public void RecordClear(int level, int sweeps, int seconds, string bugType, int gusts)
+	/// <summary>Records a cleared level, updates aggregates, and saves.
+	/// Prismatic finds bump their own lifetime counter.</summary>
+	public void RecordClear(int level, int sweeps, int seconds, string bugType,
+		int gusts, bool prismatic = false)
 	{
 		LevelsCleared++;
 		TotalSweeps += sweeps;
 		TotalGusts += gusts;
 		TotalSeconds += seconds;
+		if (prismatic)
+			PrismaticFinds++;
 		BugFindCounts.TryGetValue(bugType, out var count);
 		BugFindCounts[bugType] = count + 1;
 
@@ -189,6 +193,7 @@ public sealed class SaveData
 		TotalGusts = 0;
 		TotalSeconds = 0;
 		GustPower = StartingGustPower;
+		PrismaticFinds = 0;
 		BugFindCounts.Clear();
 		History.Clear();
 		Save();
