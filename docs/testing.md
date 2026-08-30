@@ -9,6 +9,16 @@
 | Boot smoke | `godot --headless --quit-after 180` | no errors in output |
 | Save round-trip | `LEAF_AUTOPLAY=1 godot --headless --quit-after 2000` | `ok=True`, exit 0 |
 
+One-liner for a quick pass — build error count, then autoplay with output
+filtered to what matters:
+
+```sh
+dotnet build 2>&1 | grep -cE " error "; LEAF_AUTOPLAY=1 godot --headless --quit-after 2000 2>&1 | grep -E "AUTOPLAY|SCRIPT ERROR"
+```
+
+`0` from the first command means a clean build; pass means `AUTOPLAY …
+ok=True` lines and no `SCRIPT ERROR`.
+
 `LEAF_AUTOPLAY` makes `Main` play a level end-to-end headlessly (covered-bug
 uncover rule, **verified against alpha ground truth** — the blocker's
 coverage is recomputed straight from its texture's alpha channel and must
