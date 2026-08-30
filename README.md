@@ -66,7 +66,8 @@ before the grandiose golden win card appears.
   levels. Saved atomically after every clear; a corrupt or missing file
   just starts a fresh save.
 - **Between-round comments** picked from templates by how you played,
-  referencing your history ("Your best is 12 sweeps!").
+  referencing your history ("Your best is 12 sweeps!") — plus a real fun
+  fact about the species you just found, picked from its own 6+ fact pool.
 - **Main menu** with lifetime progress and your favorite critter.
 - **Ambient rustles** — every 2–4s a stray draft shivers a localized cluster
   of about 4–7 pieces of the litter in place. Purely cosmetic: the wobble

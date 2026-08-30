@@ -90,8 +90,8 @@ public sealed class LevelStats
     }
 
     /// <summary>
-    /// Builds the win-overlay comment: a variant of the found bug's own
-    /// celebration line, plus a sweep-efficiency remark with a lifetime-best
+    /// Builds the win-overlay comment: a random fun fact about the found
+    /// bug's species, plus a sweep-efficiency remark with a lifetime-best
     /// nod when relevant. Round numbers live in the stats row instead, so
     /// the comment stays pure flavor.
     /// </summary>
