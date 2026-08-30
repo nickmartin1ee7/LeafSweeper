@@ -2,9 +2,19 @@ name: Release APK
 
 # Builds the signed Android APK and attaches it to a GitHub Release.
 #
-# - Push a tag like v0.2.0 → release "0.2.0" with versionCode 0*1000000 + 2*1000 + 0.
-# - Run manually from the Actions tab for a test build (artifact upload only;
-#   only tag builds ever publish a Release).
+# Versioning is pipeline-controlled: every build gets
+#   Major.Minor.<pipeline build id>     e.g. the 6th build → 0.0.6
+# where Major/Minor are pinned in the workflow env below and the patch
+# segment is GITHUB_RUN_NUMBER, GitHub's per-workflow build counter.
+# Bumping Major or Minor is an edit to this file; the build id always
+# comes from the pipeline. A step stamps the version into
+# export_presets.cfg at build time (version/name + version/code).
+#
+# - Push/merge to main → build, create tag vM.m.N on the commit and
+#   publish a Release with the APK.
+# - Run manually from the Actions tab for a test build (dry_run on by
+#   default: artifact upload only, no tag, no Release). Uncheck
+#   dry_run to publish that run's version as a Release.
 #
 # Required secrets:
 #   ANDROID_KEYSTORE_BASE64   — base64 of the release .keystore file
@@ -13,13 +23,9 @@ name: Release APK
 
 on:
   push:
-    tags: ['v*']
+    branches: [main]
   workflow_dispatch:
     inputs:
-      version:
-        description: 'Version to build, e.g. 0.2.0 or 0.2.0-rc1 (v prefix optional). Defaults to the latest v* tag.'
-        required: false
-        default: ''
       dry_run:
         description: 'Test build only (upload as workflow artifact, never publish)'
         type: boolean
@@ -31,6 +37,10 @@ permissions:
 env:
   GODOT_VERSION: '4.7.1'
   GODOT_RELEASE: '4.7.1-stable'
+  # Bump these by hand to change Major.Minor; the patch segment is the
+  # pipeline build id (GITHUB_RUN_NUMBER) and is never set by hand.
+  VERSION_MAJOR: '0'
+  VERSION_MINOR: '0'
 
 jobs:
   apk:
@@ -54,25 +64,15 @@ jobs:
 
       - name: Resolve version
         id: version
-        env:
-          INPUT_VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
-          NAME=""
-          if [ "$GITHUB_REF_TYPE" = tag ]; then
-            NAME="$GITHUB_REF_NAME"
-          elif [ -n "$INPUT_VERSION" ]; then
-            NAME="$INPUT_VERSION"
-          else
-            NAME="$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || true)"
-          fi
-          NAME="${NAME#v}"
-          if [[ "$NAME" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)(-.*)?$ ]]; then
-            CODE=$(( BASH_REMATCH[1] * 1000000 + BASH_REMATCH[2] * 1000 + BASH_REMATCH[3] ))
-          else
-            NAME="${NAME:-untagged}"
-            CODE="$GITHUB_RUN_NUMBER"
-          fi
+          # Major.Minor.<build id>. GITHUB_RUN_NUMBER increments on every
+          # run of this workflow (main pushes and manual dispatch share the
+          # counter), so each pipeline build gets a fresh patch segment.
+          NAME="$VERSION_MAJOR.$VERSION_MINOR.$GITHUB_RUN_NUMBER"
+          # Classic major*1e6 + minor*1e3 + patch mapping; stays strictly
+          # increasing as long as Major/Minor only ever bump upward.
+          CODE=$(( VERSION_MAJOR * 1000000 + VERSION_MINOR * 1000 + GITHUB_RUN_NUMBER ))
           {
             echo "name=$NAME"
             echo "code=$CODE"
@@ -192,12 +192,21 @@ jobs:
           if-no-files-found: error
 
       - name: Publish GitHub Release
-        if: github.ref_type == 'tag' && inputs.dry_run != true
+        if: inputs.dry_run != true
         env:
           GH_TOKEN: ${{ github.token }}
+          VERSION_NAME: ${{ steps.version.outputs.name }}
         run: |
           set -euo pipefail
-          gh release create "$GITHUB_REF_NAME" \
-            --title "LeafSweeper ${GITHUB_REF_NAME#v}" \
+          TAG="v$VERSION_NAME"
+          # The pipeline owns versioning: creating the release also creates
+          # the vM.m.N tag on this commit, so no tag is ever pushed by hand.
+          # On a rerun the release already exists — overwrite its assets.
+          if ! gh release create "$TAG" \
+            --target "$GITHUB_SHA" \
+            --title "LeafSweeper $VERSION_NAME" \
             --generate-notes \
-            build/LeafSweeper-*.apk build/SHA256SUMS.txt
+            build/LeafSweeper-*.apk build/SHA256SUMS.txt; then
+            echo "Release $TAG already exists (rerun?) — replacing assets"
+            gh release upload "$TAG" --clobber build/LeafSweeper-*.apk build/SHA256SUMS.txt
+          fi
