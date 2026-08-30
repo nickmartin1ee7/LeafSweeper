@@ -92,6 +92,11 @@ pass, `1` on failure, so it can gate commits or CI. Lessons baked in:
   `await ToSignal(coin, GustCoin.SignalName.CollectionFlightFinished)`
   before asserting. `--quit-after 2000` must outlast the awaited animation
   (~1.6 s ≈ 100 frames).
+- **Probes that start a fresh round re-roll the round state.** A round
+  started inside the autoplay (e.g. `StartLevel` to probe another round
+  type) settles a *new* bug variant and new coins — run such probes after
+  the aggregate `ok` is computed (or capture the found variant id first),
+  or the run fails with every printed component `True`.
 - **Pixel-accurate logic needs independent ground truth.** When a hot
   path uses a cached or approximated structure (`Debris.Covers` scans a
   cached 4px alpha mask), verify it in the autoplay against a brute-force
