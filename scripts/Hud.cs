@@ -5,7 +5,7 @@ namespace LeafSweeper;
 
 /// <summary>
 /// In-game HUD: a wood dock along the bottom (bug book + gust/restart coin
-/// buttons), the level label at the top-left, the sweep counter panel at the
+/// buttons), the level label at the top-left, the sweeps counter label at the
 /// top-right, and the win overlay with the between-round stats comment and
 /// Next/Menu buttons. The dock's fixed height also defines the playable
 /// area — nothing spawns underneath it, though swept debris may drift over.
@@ -20,9 +20,7 @@ public partial class Hud : CanvasLayer
 
     private Control _dock = null!;
     private Label _levelLabel = null!;
-    private PanelContainer _sweepsPanel = null!;
     private Label _sweepLabel = null!;
-    private Label _sweepsWordLabel = null!;
     private Button _bookButton = null!;
     private Button _windButton = null!;
     private Button _restartButton = null!;
@@ -55,9 +53,9 @@ public partial class Hud : CanvasLayer
         _levelLabel.Visible = false;
         AddChild(_levelLabel);
 
-        _sweepsPanel = BuildSweepsPanel();
-        _sweepsPanel.Visible = false;
-        AddChild(_sweepsPanel);
+        _sweepLabel = BuildSweepsLabel();
+        _sweepLabel.Visible = false;
+        AddChild(_sweepLabel);
 
         _dock = BuildDock();
         _dock.Visible = false;
@@ -92,60 +90,27 @@ public partial class Hud : CanvasLayer
     }
 
     /// <summary>
-    /// Compact cream sweep counter pinned to the top-right corner, out of
-    /// the dock's way and clear of the level label on the left.
+    /// Sweep counter as plain text pinned to the top-right corner, styled
+    /// like the level label, out of the dock's way and clear of the level
+    /// label on the left.
     /// </summary>
-    private PanelContainer BuildSweepsPanel()
+    private Label BuildSweepsLabel()
     {
-        _sweepLabel = MakeLabel(64, true, new Color("4a3a26"), 0);
-        _sweepLabel.HorizontalAlignment = HorizontalAlignment.Center;
-        _sweepsWordLabel = MakeLabel(36, true, new Color("6b5233"), 0);
-        _sweepsWordLabel.HorizontalAlignment = HorizontalAlignment.Center;
-        _sweepsWordLabel.Text = "Sweeps";
-
-        var box = new VBoxContainer();
-        box.AddThemeConstantOverride("separation", 0);
-        box.AddChild(_sweepLabel);
-        box.AddChild(_sweepsWordLabel);
-
-        var style = new StyleBoxFlat
-        {
-            BgColor = new Color(0.968f, 0.941f, 0.882f, 0.94f),
-            CornerRadiusBottomLeft = 24,
-            CornerRadiusBottomRight = 24,
-            CornerRadiusTopLeft = 24,
-            CornerRadiusTopRight = 24,
-            ContentMarginLeft = 40,
-            ContentMarginRight = 40,
-            ContentMarginTop = 16,
-            ContentMarginBottom = 16,
-            BorderWidthBottom = 4,
-            BorderWidthTop = 4,
-            BorderWidthLeft = 4,
-            BorderWidthRight = 4,
-            BorderColor = new Color("c9a06a"),
-        };
-
-        // PanelContainer, not Panel: a plain Panel is not a container and
-        // never resizes itself for its children, so these corner anchors
-        // (whose derived size is negative, clamped to zero) rendered a
-        // zero-size, invisible panel. A container sizes itself to the
-        // labels and grows leftward/downward from the top-right point.
-        var panel = new PanelContainer();
-        panel.AddThemeStyleboxOverride("panel", style);
-        // Anchored to the top-right corner, growing leftward as text widens.
-        panel.AnchorLeft = 1f;
-        panel.AnchorTop = 0f;
-        panel.AnchorRight = 1f;
-        panel.AnchorBottom = 0f;
-        panel.OffsetLeft = 0f;
-        panel.OffsetRight = -24f;
-        panel.OffsetTop = 24f;
-        panel.OffsetBottom = 0f;
-        panel.GrowHorizontal = Control.GrowDirection.Begin;
-        panel.GrowVertical = Control.GrowDirection.End;
-        panel.AddChild(box);
-        return panel;
+        _sweepLabel = MakeLabel(60, true);
+        _sweepLabel.HorizontalAlignment = HorizontalAlignment.Right;
+        // Explicit anchors, mirroring the level label: full width, pinned to
+        // the top, text hugging the right edge with a notch-safe margin.
+        // (Anchor presets leave offsets untouched, which silently produced
+        // zero-height rects before.)
+        _sweepLabel.AnchorLeft = 0f;
+        _sweepLabel.AnchorTop = 0f;
+        _sweepLabel.AnchorRight = 1f;
+        _sweepLabel.AnchorBottom = 0f;
+        _sweepLabel.OffsetLeft = 0f;
+        _sweepLabel.OffsetRight = -24f;
+        _sweepLabel.OffsetTop = 24f;
+        _sweepLabel.OffsetBottom = 130f;
+        return _sweepLabel;
     }
 
     private Control BuildDock()
@@ -341,7 +306,7 @@ public partial class Hud : CanvasLayer
 
     public void ShowLevel(int level) => _levelLabel.Text = $"Level {level}";
 
-    public void ShowSweeps(int sweeps) => _sweepLabel.Text = sweeps.ToString();
+    public void ShowSweeps(int sweeps) => _sweepLabel.Text = $"{sweeps} Sweeps";
 
     /// <summary>
     /// Updates the gust power counter on the dock and greys the gust button
@@ -539,7 +504,7 @@ public partial class Hud : CanvasLayer
     {
         _dock.Visible = visible;
         _levelLabel.Visible = visible;
-        _sweepsPanel.Visible = visible;
+        _sweepLabel.Visible = visible;
     }
 
     public void ShowRestartDialog()
