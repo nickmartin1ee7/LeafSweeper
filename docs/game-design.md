@@ -116,16 +116,20 @@ what actually spawn and what the collection counts, under names like
 
 ### Prismatic bugs
 
-Every fresh round rolls a **5% chance** (`LEAF_PRISMATIC=1` forces it for
+Every fresh round rolls a **1% chance** (`LEAF_PRISMATIC=1` forces it for
 testing) that the bug is *prismatic*: an overlay state on whatever variant
 spawned, not a catalog entry. The bug's sprite wears a hue-crawling rainbow
 shader with sparkle glints — applied to the bug's sprite only, and the bug
 sits below every debris layer, so the effect can never show through the
 leaves. Camouflage is bypassed so the rare find always reads clearly.
 Finding one erupts a **yellow-sun lens flare** at the winning tap and
-swaps the win card for a **grandiose** variant — radiant gold panel,
-rotating rays, looping sparkles, prismatic title — and the find is counted
-in the save (`prismaticFinds`) and on the book's stats page.
+swaps the win card for a **grandiose** variant — a lighter near-white
+panel with a gold rim, rotating rays, looping sparkles, prismatic title —
+and after the round a shiny **"Prismatic" banner** rides out above the
+dock (the storm sign's mirror image: the storm sign arrives *before* a
+storm round, the prismatic banner *after* a prismatic round) and lingers
+into the next round's opening before dissolving. The find is counted in
+the save (`prismaticFinds`) and on the book's stats page.
 
 ### Storm levels
 

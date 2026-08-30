@@ -35,6 +35,10 @@ public partial class Main : Node2D
 	private List<GustCoin> _coins = new();
 	private StormOverlay _storm = null!;
 	private StormWarn _warn = null!;
+
+	// The "Prismatic" banner that rides out a prismatic find — the storm
+	// sign's mirror image (see PrismaticSign).
+	private PrismaticSign _prismaticSign = null!;
 	private GameState _state = GameState.Menu;
 	private Vector2 _viewSize;
 
@@ -476,9 +480,13 @@ public partial class Main : Node2D
 		// forced the storm, so the round AFTER this one is stormy too.
 		bool warnShown = _warn.Visible;
 		bool warnOk = warnShown == NextRoundIsStorm();
+		// The prismatic banner must be up during this same end-round: the
+		// autoplay's round rolled the prismatic bug, so the shiny sign
+		// rides out after the round it crowned.
+		bool prismSignShown = _prismaticSign.Visible;
 		GD.Print($"AUTOPLAY wind: pieces={windPieces} riding={windRiding} " +
 				 $"checked={windChecked} moving={windMoving} clockwise={windClockwise} " +
-				 $"warn={warnShown} warnOk={warnOk}");
+				 $"warn={warnShown} warnOk={warnOk} prismSign={prismSignShown}");
 
 		// The restart probe re-runs the handler, which restarts the save's
 		// current level — not the hardcoded probe level 3 the round began
@@ -515,6 +523,7 @@ public partial class Main : Node2D
 			&& reloaded.History[0].Gusts == 1
 			&& reloaded.PrismaticFinds == 1
 			&& prismaticSpawn && _flareSeen && _grandWinShown
+			&& prismSignShown
 			&& catalogOk
 			&& bookBeforeOk
 			&& bookAfterOk;
@@ -535,6 +544,42 @@ public partial class Main : Node2D
 		GD.Print($"AUTOPLAY coins-storm: level={RoundConfig.StormFirstLevel} " +
 				 $"spawned={_coins.Count} expected={stormExpected} ok={stormCoinsOk}");
 		ok &= stormCoinsOk;
+
+		// Prismatic banner linger: starting the round after a prismatic
+		// find holds the banner up for 2s, then dissolves it over 4s —
+		// the storm sign's ride in reverse. Replays the StartLevel path
+		// directly and awaits real frames. The mid-fade alpha check exists
+		// because the banner is painted wholly by prismatic_sign.gdshader:
+		// if the shader ever stops multiplying the tweened modulate into
+		// its output, the fade silently turns back into a hard cut while
+		// Visible still behaves.
+		_prismaticSign.ShowSign();
+		_prismaticSign.LingerThenFade();
+		bool prismUp = _prismaticSign.Visible;
+		double prismT = 0;
+		while (prismT < 1.2) // inside the 2s hold: must still be up
+		{
+			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+			prismT += GetProcessDeltaTime();
+		}
+		bool prismHeld = _prismaticSign.Visible;
+		while (prismT < 3.0 && _prismaticSign.Visible) // fade starts at 2s
+		{
+			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+			prismT += GetProcessDeltaTime();
+		}
+		bool prismFading = _prismaticSign.Visible && _prismaticSign.FadeAlpha < 1f;
+		float prismAlpha = _prismaticSign.FadeAlpha;
+		while (_prismaticSign.Visible && prismT < 7.5) // hold 2s + fade 4s + slack
+		{
+			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+			prismT += GetProcessDeltaTime();
+		}
+		bool prismGone = !_prismaticSign.Visible;
+		bool prismLingerOk = prismUp && prismHeld && prismFading && prismGone;
+		GD.Print($"AUTOPLAY prismatic-sign: held={prismHeld} fading={prismFading} " +
+				 $"alpha={prismAlpha:F2} gone={prismGone} ok={prismLingerOk}");
+		ok &= prismLingerOk;
 
 		// Storm warn linger: starting the warned-for round holds the sign
 		// up for 2s, then dissolves it over 4s. Replays the StartLevel
@@ -1041,8 +1086,9 @@ public partial class Main : Node2D
 
 		// Explicit canvas-layer ladder (Godot draws same-layer CanvasLayers
 		// in non-deterministic order, so each owns a distinct index):
-		// world 0 → storm 1 → menu 2 → hud 3 → bug book 90. The storm veil
-		// and rain sit above the floor but below every UI.
+		// world 0 → storm 1 → menu 2 → hud 3 → warn 4 → prismatic 5 →
+		// bug book 90. The storm veil and rain sit above the floor but
+		// below every UI.
 		_storm = new StormOverlay { Name = "Storm" };
 		AddChild(_storm);
 
@@ -1050,6 +1096,13 @@ public partial class Main : Node2D
 		// its sparks never dim under the storm veil nor sit under UI.
 		_warn = new StormWarn { Name = "StormWarn" };
 		AddChild(_warn);
+
+		// The "Prismatic" banner rides out a prismatic find the same way,
+		// one rung above the storm sign so both can show at once (a
+		// prismatic round immediately before a storm round seats the
+		// banner just below the storm cloud — see PrismaticSign).
+		_prismaticSign = new PrismaticSign { Name = "PrismaticSign" };
+		AddChild(_prismaticSign);
 
 		_hud = new Hud { Name = "Hud" };
 		_hud.Layer = 3;
@@ -1205,6 +1258,10 @@ public partial class Main : Node2D
 			_warn.LingerThenFade();
 		else
 			_warn.HideWarning();
+		// Same ride for the prismatic banner: a round that follows a
+		// prismatic find holds it over the opening, then lets it dissolve.
+		if (_prismaticSign.Visible)
+			_prismaticSign.LingerThenFade();
 		SetState(GameState.Playing);
 	}
 
@@ -1215,9 +1272,11 @@ public partial class Main : Node2D
 	/// </summary>
 	/// <summary>
 	/// Chance a fresh round hides a prismatic (rainbow sparkle) bug.
-	/// LEAF_PRISMATIC=1 forces it for manual testing; autoplay forces it too.
+	/// Deliberately very rare — about one round in a hundred — so the find
+	/// stays a story worth telling. LEAF_PRISMATIC=1 forces it for manual
+	/// testing; autoplay forces it too.
 	/// </summary>
-	private const float PrismaticChance = 0.05f;
+	private const float PrismaticChance = 0.01f;
 
 	private bool _forcePrismatic;
 	private bool _forceStorm;
@@ -1456,6 +1515,13 @@ public partial class Main : Node2D
 		// litter away, the electrical "Storm Round" sign crackles on.
 		if (NextRoundIsStorm())
 			_warn.ShowWarning();
+		// A prismatic find rides its own banner out: the shiny "Prismatic"
+		// sign appears after the round it crowned, mirroring how the storm
+		// sign arrives before a storm round. If the storm sign shares this
+		// end-round, the banner yields its perch and slots in below the
+		// storm cloud instead of beside it.
+		if (_bug.IsPrismatic)
+			_prismaticSign.ShowSign(belowStormSign: _warn.Visible);
 		// The win overlay waits for the bug's golden moment.
 		_pendingWinComment = comment;
 		_pendingWinRoundLine = roundLine;
@@ -1468,8 +1534,11 @@ public partial class Main : Node2D
 		{
 			_hud.ShowWin(_pendingWinComment, _pendingWinRoundLine, _pendingWinStats,
 				_bug, grandiose: _bug.IsPrismatic);
+			// The flag doubles as the autoplay's grand-card assertion: it
+			// only sticks when the card actually dressed for the find
+			// (lighter panel + prismatic glow).
 			if (_bug.IsPrismatic)
-				_grandWinShown = true;
+				_grandWinShown = _hud.WinGrandActive;
 		}
 	}
 
@@ -1622,6 +1691,7 @@ public partial class Main : Node2D
 			ClearLevel();
 			_storm.FadeOut();
 			_warn.HideWarning();
+			_prismaticSign.HideSign();
 			_menu.Refresh(_save);
 			SpawnMenuDebris();
 		}

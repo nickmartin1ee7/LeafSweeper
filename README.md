@@ -31,7 +31,7 @@ beetle, lacewing, lanternfly, leafhopper, mayfly, rhinoceros beetle, shield
 bug, silverfish, slug, stag beetle, tiger beetle, tortoise beetle and water
 strider — each with four natural color variants (156 collectible looks,
 named like "Yellow Ladybug"), so you learn to spot shapes rather than
-colors. And 1 round in 20 hides a **prismatic** bug wearing a shifting
+colors. And 1 round in 100 hides a **prismatic** bug wearing a shifting
 rainbow sheen: find it and a yellow-sun lens flare erupts at your tap
 before the grandiose golden win card appears.
 
@@ -47,9 +47,10 @@ before the grandiose golden win card appears.
   collection. Bugs you haven't met yet are drifting black mist silhouettes
   marked "??? (x0)"; found ones show their art and count ("Firefly (x3)").
   Tap anywhere off the page to close it.
-- **Rare prismatic bugs** — a 5% chance per round (test with
+- **Rare prismatic bugs** — a 1% chance per round (test with
   `LEAF_PRISMATIC=1`): rainbow-sheened critter, sun-flare discovery, and a
-  grandiose golden win card.
+  grandiose win card — lifted to a lighter near-white with a gold rim —
+  plus a shiny "Prismatic" banner that rides out the round's end.
 - **Storm levels** — every 10th level (from level 10; test with
   `LEAF_STORM=1`) the sky darkens under wind-carried rain, drifting fog and
   lightning, and each patch you sweep is re-littered a few seconds later —
