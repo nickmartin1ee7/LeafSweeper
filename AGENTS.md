@@ -93,3 +93,25 @@ A new script's generated `.cs.uid` is committed together with the script.
   persistent paths.
 - Keystores, Android SDK and JDK paths stay out of the repo (editor settings
   or `keystore.env`, which is gitignored).
+
+  ## Agentic workflow (operational summary)
+
+  The following concise, mandatory workflow complements the repository-specific guidance above. Each step is tracked as a session TODO so adherence is visible and auditable.
+
+  1) PRE-REQ: Use TODOs to track adherence to this workflow and keep them updated.
+  2) PRE-REQ: Work from a git worktree branch for every agentic slice.
+  3) ORIENT: List project tree and read relevant docs/ to scope the slice.
+  4) ORIENT: Verify local tooling (dotnet, godot, gh, linters, CI runners).
+  5) DESIGN: Write a short implementation plan and test strategy.
+  6) DESIGN: Research authoritative docs; cite and verify claims before relying on them.
+  7) DEVELOP: Implement changes using small, atomic commits; update docs alongside code.
+  8) DEVELOP: Run and pass the tests that exercise the change.
+  9) REVIEW: Run an independent reviewer agent (high reasoning) to produce PASS/FAIL.
+  10) GATE: On FAIL, repeat from #7 and update TODOs (#GATE#).
+  11) GATE: On PASS, proceed to cleanup (#GATE#).
+  12) CLEANUP: Merge changes to main via PR and update changelog/docs.
+  13) CLEANUP: Delete the worktree and clean local artifacts.
+  14) IMPROVE: Record discovered improvements to AGENTS.md or docs/ for next sessions.
+
+  Follow the NixOS git push guidance above when pushing from this machine to avoid libcurl compatibility failures.
+
