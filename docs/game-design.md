@@ -133,7 +133,13 @@ no squinting at a two-page spread).
 - **Opening state**: the leather cover rises with the dim and holds —
   the player turns the page themselves to reach the stats.
 - **Paging**: dog-eared page corners — top-right (folded paper, drop
-  shadow, ▶) turns forward; bottom-right (same convention, ◀) turns back.
+  shadow, ▶) turns forward; bottom-right (same convention, ◀) turns back —
+  or swipe the page itself: flick left for forward, right for back. Both
+  feed the same turn. Going forward the page folds square into the spine
+  on its left edge (the next page already sits beneath it) and unfolds on
+  the far side through the 90° beat; going back the incoming sheet lays
+  down over the page from the spine outward — one even motion either way,
+  and the leather cover flips whole.
 - **Collection pages**: 3×5 grids (5×4 in landscape) of every variant.
   Found bugs show their art and a count ("Firefly (x3)"); unfound bugs are
   entirely black silhouettes wrapped in subtly drifting off-black mist,
