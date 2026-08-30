@@ -37,6 +37,16 @@ public partial class Main : Node2D
 	/// <summary>Gold gust coins hidden below the debris each round.</summary>
 	private const int GustCoinsPerLevel = 3;
 
+	// Round-start settle pacing (see Debris.SettleIn): the diagonal sweep
+	// across the floor plus per-piece jitter caps the total at ~2.5s.
+	private const float SettleSweepSeconds = 1.4f;
+	private const float SettleJitterSeconds = 0.25f;
+
+	// The level being set up; the bug's difficulty and the stats clock are
+	// only applied once the debris has finished settling into place.
+	private int _activeLevel;
+	private bool _awaitingSettle;
+
 	// Double-tap burst tuning: two dead taps inside the window and slop
 	// fire a radial gust burst — a sweep without the drag.
 	private const ulong DoubleTapWindowMs = 350;
@@ -73,6 +83,22 @@ public partial class Main : Node2D
 	{
 		_save.Reset(); // deterministic: the test assumes a fresh save file
 		StartLevel(3);
+
+		// Round start: the debris falls in and settles before the bug and
+		// the gust coins take their new hiding spots — wait for the floor
+		// to dress before probing the round.
+		while (_awaitingSettle)
+			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+
+		// Restart (the dock button's own handler): must reshuffle the same
+		// way a fresh round does — settle gate engaged again, then new
+		// hiding spots underneath. Everything below probes the restarted
+		// round, so the whole test covers the post-restart state too.
+		OnRestartConfirmed();
+		bool restartOk = _awaitingSettle;
+		GD.Print($"AUTOPLAY restart: engaged={restartOk} level={_activeLevel}");
+		while (_awaitingSettle)
+			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
 
 		// Covered-bug rule: debris parked on the bug blocks selection, and
 		// sweeping every overlapping piece away makes it selectable again.
@@ -179,17 +205,62 @@ public partial class Main : Node2D
 		bool gustSpent = _save.GustPower == SaveData.StartingGustPower;
 		WinLevel();
 
+		// End-of-round wind: winning must pick up every leftover piece into
+		// a clockwise gyre around the floor's center. Snapshot positions,
+		// let the gyre run, then check each outer piece moved clockwise.
+		int windPieces = 0;
+		bool windRiding = true;
+		var windSnapshot = new List<(Debris Piece, Vector2 From)>();
+		foreach (var d in _debris)
+			if (IsInstanceValid(d) && !d.Swept)
+			{
+				windPieces++;
+				windRiding &= d.IsRidingWind;
+				windSnapshot.Add((d, d.Position));
+			}
+		// The gyre eases in over ~1.8s; give it enough time to visibly move.
+		await ToSignal(GetTree().CreateTimer(1.2), SceneTreeTimer.SignalName.Timeout);
+		Vector2 gyreCenter = WindCenter();
+		bool windMoving = true;
+		bool windClockwise = true;
+		int windChecked = 0;
+		foreach (var (piece, from) in windSnapshot)
+		{
+			// Inner pieces barely travel (arc ≈ radius × angle) — only the
+			// outer ring proves the motion and its direction.
+			if (!IsInstanceValid(piece) || from.DistanceTo(gyreCenter) < 200f)
+				continue;
+			windChecked++;
+			if (from.DistanceTo(piece.Position) < 20f)
+				windMoving = false;
+			// Clockwise on screen (y down): the cross of the start and end
+			// offsets from the center is positive when the angle increased.
+			Vector2 a = from - gyreCenter;
+			Vector2 b = piece.Position - gyreCenter;
+			if (a.X * b.Y - a.Y * b.X <= 0f)
+				windClockwise = false;
+		}
+		bool windOk = windPieces > 0 && windRiding
+			&& (windChecked == 0 || (windMoving && windClockwise));
+		GD.Print($"AUTOPLAY wind: pieces={windPieces} riding={windRiding} " +
+				 $"checked={windChecked} moving={windMoving} clockwise={windClockwise}");
+
+		// The restart probe re-runs the handler, which restarts the save's
+		// current level — not the hardcoded probe level 3 the round began
+		// on — so every post-win expectation keys off the actually-played
+		// level instead of a constant.
+		int playedLevel = _activeLevel;
 		var reloaded = SaveData.Load();
 		bool ok = blocked && uncovered && truthOk && burstOk
-			&& coinSpawned && coinBanked && gustSpent
-			&& reloaded.CurrentLevel == 4
+			&& coinSpawned && coinBanked && gustSpent && restartOk && windOk
+			&& reloaded.CurrentLevel == playedLevel + 1
 			&& reloaded.LevelsCleared == 1
 			&& reloaded.TotalSweeps == 8
 			&& reloaded.TotalGusts == 1
 			&& reloaded.GustPower == SaveData.StartingGustPower
 			&& reloaded.BugFindCounts.Count == 1
 			&& reloaded.History.Count == 1
-			&& reloaded.History[0].Level == 3
+			&& reloaded.History[0].Level == playedLevel
 			&& reloaded.History[0].Gusts == 1;
 
 		GD.Print($"AUTOPLAY save: level={_save.CurrentLevel} cleared={_save.LevelsCleared} " +
@@ -200,13 +271,29 @@ public partial class Main : Node2D
 		GetTree().Quit(ok ? 0 : 1);
 	}
 
-	public override void _Process(double delta) => _stats.Tick(delta);
+	public override void _Process(double delta)
+	{
+		_stats.Tick(delta);
+		if (_awaitingSettle)
+			CheckSettleFinished();
+	}
+
+	/// <summary>Unlocks play once every piece has landed from the settle-in.</summary>
+	private void CheckSettleFinished()
+	{
+		foreach (var d in _debris)
+			if (IsInstanceValid(d) && d.IsSettling)
+				return;
+		_awaitingSettle = false;
+		OnSettleFinished();
+	}
 
 	// ------------------------------------------------------------- input --
 
 	public override void _UnhandledInput(InputEvent @event)
 	{
-		if (_state != GameState.Playing)
+		// Touches stay locked while the round-start settle is in flight.
+		if (_state != GameState.Playing || _awaitingSettle)
 			return;
 
 		switch (@event)
@@ -498,9 +585,17 @@ public partial class Main : Node2D
 		bool bugInWorld = IsInstanceValid(_bug) && _bug.Visible && _bug.GetParent() == this;
 		if (bugInWorld)
 			_bug.Position *= floorRatio;
+		Vector2 windCenter = WindCenter();
 		foreach (var d in _debris)
-			if (IsInstanceValid(d) && !d.Swept)
-				d.Position *= floorRatio;
+		{
+			if (!IsInstanceValid(d) || d.Swept)
+				continue;
+			d.Position *= floorRatio;
+			// Mid-settle pieces must land on the resized floor; wind riders
+			// keep circling the resized floor's center.
+			d.ScaleSettle(floorRatio);
+			d.SetWindCenter(windCenter);
+		}
 		// Coins still hiding in the debris stretch along; collected ones are
 		// mid-flight toward the dock and are left alone.
 		foreach (var c in _coins)
@@ -510,6 +605,7 @@ public partial class Main : Node2D
 
 	private void ClearLevel()
 	{
+		_awaitingSettle = false;
 		foreach (var d in _debris)
 			if (IsInstanceValid(d))
 				d.QueueFree();
@@ -527,31 +623,51 @@ public partial class Main : Node2D
 		FitGround();
 
 		// The bug may still be seated on the win card from the last round;
-		// take it back into the world before setting it up again.
+		// take it back into the world before the next round hides it again.
 		if (_bug.GetParent() != this)
 			_bug.Reparent(this);
+		_bug.Visible = false;
 
 		// The floor is everything above the HUD dock — the dock is never
 		// covered by debris or the bug.
 		Rect2 floor = PlayableArea();
 
-		var bugType = BugTypes.Random();
-		float bugScale = RoundConfig.BugScale(level);
-		_bug.Setup(bugType, bugScale, RoundConfig.Camouflage(level));
-		_bug.Position = new Vector2(
-			_rng.RandfRange(180f, floor.Size.X - 180f),
-			_rng.RandfRange(320f, floor.Size.Y - 200f));
-		_bug.Visible = true;
-
+		// Debris first: it falls in and settles, and only then do the bug
+		// and the gust coins take their new random spots underneath it
+		// (OnSettleFinished). Touches stay locked until the floor is set.
+		_activeLevel = level;
 		SpawnDebris(level, floor);
-		SpawnGustCoins(floor);
+		_awaitingSettle = true;
 
-		_stats.Start(level);
 		_hud.ShowLevel(level);
 		_hud.ShowSweeps(0);
 		_hud.ShowGustPower(_save.GustPower);
 		_hud.HideWin();
 		SetState(GameState.Playing);
+	}
+
+	/// <summary>
+	/// The settle-in finished: with the debris now lying where it landed,
+	/// the bug and the gust coins take their new random spots underneath
+	/// and the round's clock starts.
+	/// </summary>
+	private void OnSettleFinished()
+	{
+		if (_state != GameState.Playing)
+			return;
+
+		Rect2 floor = PlayableArea();
+		var bugType = BugTypes.Random();
+		_bug.Setup(bugType, RoundConfig.BugScale(_activeLevel),
+			RoundConfig.Camouflage(_activeLevel));
+		_bug.Position = new Vector2(
+			_rng.RandfRange(180f, floor.Size.X - 180f),
+			_rng.RandfRange(320f, floor.Size.Y - 200f));
+		_bug.Visible = true;
+
+		SpawnGustCoins(floor);
+
+		_stats.Start(_activeLevel);
 	}
 
 	/// <summary>
@@ -611,6 +727,10 @@ public partial class Main : Node2D
 					_rng.RandfRange(1.25f, 1.9f),
 					weight,
 					_rng);
+				// Round-start entrance: drop in with a tumble, staggered
+				// along the top-left → bottom-right diagonal.
+				float diag = (pos.X / floor.Size.X + pos.Y / floor.Size.Y) * 0.5f;
+				debris.SettleIn(_rng, diag * SettleSweepSeconds + _rng.RandfRange(0f, SettleJitterSeconds));
 
 				_debris.Add(debris);
 				(placed < topCount ? _debrisTop : _debrisBottom).AddChild(debris);
@@ -705,6 +825,9 @@ public partial class Main : Node2D
 		// center; the win card seats it below the title when it arrives.
 		_bug.Celebrate(_viewSize / 2f);
 		PetalSparkle();
+		// The round is over: whatever is still on the floor gets picked up
+		// by a clockwise wind and keeps circling while the card is up.
+		StartEndRoundWind();
 		// The win overlay waits for the bug's golden moment.
 		_pendingWinComment = comment;
 		_pendingWinRoundLine = roundLine;
@@ -717,10 +840,30 @@ public partial class Main : Node2D
 			_hud.ShowWin(_pendingWinComment, _pendingWinRoundLine, _pendingWinStats, _bug);
 	}
 
+	/// <summary>
+	/// Lifts every leftover piece into the end-of-round wind gyre: a slow
+	/// clockwise swirl around the floor's center that keeps the litter
+	/// gently airborne while the win card is up.
+	/// </summary>
+	private void StartEndRoundWind()
+	{
+		Vector2 center = WindCenter();
+		foreach (var d in _debris)
+			if (IsInstanceValid(d) && !d.Swept)
+				d.StartEndRoundWind(center, _rng);
+	}
+
+	/// <summary>
+	/// The gyre's center: the middle of the playable floor (the dock is
+	/// never part of the round).
+	/// </summary>
+	private Vector2 WindCenter() =>
+		new(_viewSize.X / 2f, Mathf.Max(1f, _viewSize.Y - Hud.DockHeight) / 2f);
+
 	/// <summary>Blows away 25% of the remaining debris with a gusty fling.</summary>
 	private void OnWindPressed()
 	{
-		if (_state != GameState.Playing)
+		if (_state != GameState.Playing || _awaitingSettle)
 			return;
 
 		var alive = new List<Debris>();
