@@ -127,8 +127,8 @@ The gold book coin at the dock's bottom-left opens the **Bug Collection
 Book**: a full-screen, single-page book (everything sized for a phone —
 no squinting at a two-page spread).
 
-- **Opening states**: the leather cover rises with the dim, holds a beat,
-  then turns itself to the **stats page**.
+- **Opening state**: the leather cover rises with the dim and holds —
+  the player turns the page themselves to reach the stats.
 - **Paging**: dog-eared page corners — top-right (folded paper, drop
   shadow, ▶) turns forward; bottom-right (same convention, ◀) turns back.
 - **Collection pages**: 3×5 grids (5×4 in landscape) of every variant.

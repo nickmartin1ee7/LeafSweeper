@@ -5,8 +5,8 @@ namespace LeafSweeper;
 
 /// <summary>
 /// The bug collection book: a full-screen overlay showing ONE oversized page
-/// at a time so everything stays readable on a phone. It opens on the cover,
-/// auto-turns to the stats page, and paging uses dog-eared page corners
+/// at a time so everything stays readable on a phone. It opens on the cover
+/// and paging uses dog-eared page corners
 /// (folded paper + drop shadow + arrow): top-right turns forward, bottom-right
 /// turns back. Tapping anywhere outside the page closes the book, and the dim
 /// swallows every tap while open so nothing underneath (dock buttons) reacts.
@@ -82,15 +82,13 @@ public partial class BugBook : CanvasLayer
         _bookBody.Position = new Vector2(0f, 620f);
         RebuildPage();
 
-        // Entrance beat: dim rises, the closed cover rises from below, holds
-        // a moment, then the page turns itself over to the stats.
+        // Entrance beat: dim rises and the closed cover rises from below,
+        // then holds on the cover until the player turns the page themselves.
         _anim?.Kill();
         _anim = CreateTween();
         _anim.TweenProperty(_root, "modulate:a", 1f, 0.2f);
         _anim.Parallel().TweenProperty(_bookBody, "position", Vector2.Zero, 0.45f)
             .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
-        _anim.TweenInterval(0.55f);
-        _anim.TweenCallback(Callable.From(() => TurnPage(1)));
     }
 
     public void Close()
