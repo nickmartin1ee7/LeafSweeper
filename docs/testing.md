@@ -72,8 +72,9 @@ adb logcat | grep -iE "LeafSweeper|godot|mono|FATAL|AndroidRuntime"
    sticks resist more; fast sweeps don't miss debris (no tunneling).
 4. **Find & tap bug** — petal sparkles, celebration pulse, win overlay with
    comment + stats (time · sweeps).
-5. **Gust coins** — one gold coin (wind icon on the face) hides under the
-   debris; uncover it and tap: it shines golden, grows, spins up in a
+5. **Gust coins** — gold coins (wind icon on the face) hide under the
+   debris: one on a normal round, three on a storm round; uncover one
+   and tap it: it shines golden, grows, spins up in a
    rising counter-clockwise loop **above the dock**, snaps down into the
    gust button, fires a gold ring-and-spark burst, and
    the ×N badge pulses as it ticks up; pressing Gust spends one (×0 leaves
@@ -96,7 +97,8 @@ adb logcat | grep -iE "LeafSweeper|godot|mono|FATAL|AndroidRuntime"
 12. **Round-start settle** — each new round the debris tumbles in from
 	above in a staggered curtain (no visible bug or coins mid-fall);
 	touches and the gust button do nothing until every piece has landed;
-	then the bug and the gust coin are hidden under the fresh litter.
+	then the bug and the gust coins (one on a normal round, three on a
+	storm round) are hidden under the fresh litter.
 	The dock's restart button runs the same reshuffle: the old litter
 	vanishes, a fresh curtain settles over new hiding spots, and play
 	stays locked until it lands.
