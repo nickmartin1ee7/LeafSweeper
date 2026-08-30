@@ -7,6 +7,12 @@ gating every hand-off. This document captures the workflow, patterns and
 practices so a contributor can reproduce the loop — or so a future agent
 session can pick the project up cold.
 
+> **Scope note:** [`AGENTS.md`](../AGENTS.md) is the source of truth for the
+> operational rules — validation commands, cleanup, the worktree slice loop,
+> the PR requirement and the TODO-tracked workflow. This document explains
+> *why* those rules exist and records the troubleshooting patterns behind
+> them; if any command line here disagrees with AGENTS.md, follow AGENTS.md.
+
 ## The session loop
 
 Each slice of work went through the same six steps:
@@ -292,24 +298,10 @@ fast, so doc alignment is part of the slice, not a cleanup phase.
 
 ## Quick reference
 
-```sh
-dotnet build                                   # 1. compile
-godot --headless --import                      # 2. import
-godot --headless --quit-after 180              # 3. boot smoke
-LEAF_AUTOPLAY=1 godot --headless --quit-after 300   # 4. gameplay self-test
-
-# Worktree slice loop (run from the main checkout)
-git worktree add ../LeafSweeper-<slice> -b <slice>   # isolate the slice
-# ...dotnet build / headless checks / atomic commits in the worktree...
-git -c credential.helper= -c http.sslVerify=false push \
-  "https://nickmartin1ee7:$(gh auth token)@github.com/<owner>/<repo>.git" <slice>
-gh pr create --base main --head <slice>              # main advances via PR only
-git pull                                             # sync merged main (token URL if fetch fails)
-git worktree remove ../LeafSweeper-<slice>           # clean up after merge (always)
-git branch -d <slice>
-
-git diff --ignore-all-space --stat   # main checkout: confirm stray whitespace-only edits before discarding
-```
+The command cheatsheet (validate ladder, post-run cleanup, worktree slice
+loop with push/PR steps, whitespace check) lives once, in
+[`AGENTS.md`](../AGENTS.md) — a single copy so it cannot drift from the
+rules agents actually follow.
 
 See also: [`docs/architecture.md`](architecture.md) for the code map,
 [`docs/testing.md`](testing.md) for the device checklist,

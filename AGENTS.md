@@ -1,9 +1,11 @@
 # AGENTS.md
 
 Instructions for AI coding agents contributing to LeafSweeper — a Godot 4.7
-(C# / .NET 8) Android puzzle game. The full workflow rationale lives in
-[`docs/agentic-development.md`](docs/agentic-development.md); this file is the
-operational summary.
+(C# / .NET 8) Android puzzle game. This file is the operating manual: it holds
+everything an agent needs every session. For the rationale behind the workflow,
+the validation levels and a troubleshooting table, read
+[`docs/agentic-development.md`](docs/agentic-development.md) once before the
+first dev task; when the two disagree, this file wins.
 
 ## Validate after every change (in this order)
 
@@ -34,6 +36,9 @@ git diff --ignore-all-space --stat   # must be empty before committing; discard 
 A new script's generated `.cs.uid` is committed together with the script.
 
 ## Workflow
+
+Start each dev task here; the *why* behind every step lives in
+[`docs/agentic-development.md`](docs/agentic-development.md).
 
 1. Plan first, code second — planned work tracked as todos; one todo = one
    vertical slice. No drive-by refactors of unrelated code.
