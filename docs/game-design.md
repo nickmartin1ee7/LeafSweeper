@@ -68,8 +68,8 @@ Title menu → Play → Round (sweep debris, find bug) → Tap bug
   bug waits patiently and never animates away.
 - **Cozy tone.** All UI copy is warm and unhurried; the win comment is the
   game's "voice" (see Comments below).
-- **A living floor.** Every few seconds a stray draft rustles a little
-  patch of the litter — the meadow breathes even when you're idle. It is
+- **A living floor.** Every couple of seconds a stray draft rustles a little
+  cluster of the litter — the meadow breathes even when you're idle. It is
   decoration only and never moves the gameplay.
 - **Casual-tuned difficulty.** By level 200 the game is only moderately
   harder than level 1. Nothing ever spikes.
