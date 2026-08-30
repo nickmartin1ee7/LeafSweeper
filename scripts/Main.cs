@@ -42,6 +42,14 @@ public partial class Main : Node2D
 	private const float SettleSweepSeconds = 1.4f;
 	private const float SettleJitterSeconds = 0.25f;
 
+	// Menu gyre density (pieces per px²): a mid-round litter so the home
+	// screen reads as "the floor, alive" without competing with the card.
+	private const float MenuDebrisCoverage = 0.00065f;
+
+	// Menu gyre speed relative to the end-of-round wind: an idle backdrop,
+	// not a celebration — slow enough that pieces take ~30s+ per lap.
+	private const float MenuWindSpeedScale = 0.35f;
+
 	// The level being set up; the bug's difficulty and the stats clock are
 	// only applied once the debris has finished settling into place.
 	private int _activeLevel;
@@ -82,6 +90,13 @@ public partial class Main : Node2D
 	private async void RunHeadlessAutoplay()
 	{
 		_save.Reset(); // deterministic: the test assumes a fresh save file
+
+		// Home screen: the menu spawns a decorative litter lifted straight
+		// into the gyre — it must exist and be riding before play begins.
+		bool menuOk = _debris.Count > 0
+			&& _debris.TrueForAll(d => IsInstanceValid(d) && d.IsRidingWind);
+		GD.Print($"AUTOPLAY menu: pieces={_debris.Count} riding={menuOk}");
+
 		StartLevel(3);
 
 		// Round start: the debris falls in and settles before the bug and
@@ -253,6 +268,7 @@ public partial class Main : Node2D
 		var reloaded = SaveData.Load();
 		bool ok = blocked && uncovered && truthOk && burstOk
 			&& coinSpawned && coinBanked && gustSpent && restartOk && windOk
+			&& menuOk
 			&& reloaded.CurrentLevel == playedLevel + 1
 			&& reloaded.LevelsCleared == 1
 			&& reloaded.TotalSweeps == 8
@@ -569,7 +585,14 @@ public partial class Main : Node2D
 		FitGround();
 
 		if (_state == GameState.Menu)
+		{
+			// The menu gyre orbits a fixed center; re-center it on the
+			// new screen and leave the decorative litter where it rides.
+			foreach (var d in _debris)
+				if (IsInstanceValid(d) && d.IsRidingWind)
+					d.SetWindCenter(WindCenter());
 			return;
+		}
 
 		// Stretch the live round's layout from the old playable rect onto
 		// the new one so the floor never shows bare background mid-level.
@@ -680,6 +703,27 @@ public partial class Main : Node2D
 
 	private void SpawnDebris(int level, Rect2 floor)
 	{
+		int count = (int)(floor.Size.X * floor.Size.Y * RoundConfig.Coverage(level));
+		ScatterDebris(floor, count, dropIn: true);
+	}
+
+	/// <summary>
+	/// Dresses the home screen: a decorative litter scattered across the
+	/// whole viewport (the dock is hidden in the menu), lifted straight
+	/// into the end-of-round wind gyre so the menu card floats over a
+	/// slowly spinning floor. The wind's ease-in ramp makes the gyre
+	/// pick up from still, and riding pieces never fade.
+	/// </summary>
+	private void SpawnMenuDebris()
+	{
+		Rect2 area = new(Vector2.Zero, _viewSize);
+		int count = (int)(area.Size.X * area.Size.Y * MenuDebrisCoverage);
+		ScatterDebris(area, count, dropIn: false);
+		StartEndRoundWind(MenuWindSpeedScale);
+	}
+
+	private void ScatterDebris(Rect2 floor, int count, bool dropIn)
+	{
 		// Distinct textures with a cozy mix; leaves dominate, heavier stuff sparser.
 		(string path, DebrisWeight weight, int freq)[] palette =
 		{
@@ -702,8 +746,7 @@ public partial class Main : Node2D
 
 		// Jittered-grid placement: one slot per cell guarantees the whole floor
 		// is covered evenly (no bare patches, no visible bug), while the jitter
-		// keeps it from looking like a lattice. Count = floor area × coverage.
-		int count = (int)(floor.Size.X * floor.Size.Y * RoundConfig.Coverage(level));
+		// keeps it from looking like a lattice.
 		float cell = Mathf.Sqrt(floor.Size.X * floor.Size.Y / Mathf.Max(count, 1));
 		int topCount = count * 35 / 100; // 35% drawn above the rest for depth
 
@@ -728,9 +771,14 @@ public partial class Main : Node2D
 					weight,
 					_rng);
 				// Round-start entrance: drop in with a tumble, staggered
-				// along the top-left → bottom-right diagonal.
-				float diag = (pos.X / floor.Size.X + pos.Y / floor.Size.Y) * 0.5f;
-				debris.SettleIn(_rng, diag * SettleSweepSeconds + _rng.RandfRange(0f, SettleJitterSeconds));
+				// along the top-left → bottom-right diagonal. The menu
+				// skips this — its pieces spawn in place and the gyre
+				// lifts them immediately.
+				if (dropIn)
+				{
+					float diag = (pos.X / floor.Size.X + pos.Y / floor.Size.Y) * 0.5f;
+					debris.SettleIn(_rng, diag * SettleSweepSeconds + _rng.RandfRange(0f, SettleJitterSeconds));
+				}
 
 				_debris.Add(debris);
 				(placed < topCount ? _debrisTop : _debrisBottom).AddChild(debris);
@@ -845,20 +893,22 @@ public partial class Main : Node2D
 	/// clockwise swirl around the floor's center that keeps the litter
 	/// gently airborne while the win card is up.
 	/// </summary>
-	private void StartEndRoundWind()
+	private void StartEndRoundWind(float speedScale = 1f)
 	{
 		Vector2 center = WindCenter();
 		foreach (var d in _debris)
 			if (IsInstanceValid(d) && !d.Swept)
-				d.StartEndRoundWind(center, _rng);
+				d.StartEndRoundWind(center, _rng, speedScale);
 	}
 
 	/// <summary>
-	/// The gyre's center: the middle of the playable floor (the dock is
-	/// never part of the round).
+	/// The gyre's center: the middle of the playable floor during a round
+	/// (the dock is never part of it); the whole viewport's middle on the
+	/// menu, where the dock is hidden and the gyre is pure decoration.
 	/// </summary>
-	private Vector2 WindCenter() =>
-		new(_viewSize.X / 2f, Mathf.Max(1f, _viewSize.Y - Hud.DockHeight) / 2f);
+	private Vector2 WindCenter() => _state == GameState.Menu
+		? new Vector2(_viewSize.X / 2f, _viewSize.Y / 2f)
+		: new Vector2(_viewSize.X / 2f, Mathf.Max(1f, _viewSize.Y - Hud.DockHeight) / 2f);
 
 	/// <summary>Blows away 25% of the remaining debris with a gusty fling.</summary>
 	private void OnWindPressed()
@@ -970,6 +1020,7 @@ public partial class Main : Node2D
 		{
 			ClearLevel();
 			_menu.Refresh(_save);
+			SpawnMenuDebris();
 		}
 	}
 
