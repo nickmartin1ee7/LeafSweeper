@@ -41,10 +41,17 @@ A new script's generated `.cs.uid` is committed together with the script.
    never the main checkout (it carries human's in-progress edits):
    ```sh
    git worktree add ../LeafSweeper-<slice> -b <slice>
-   # validate + atomic commits there, then:
-   git merge <slice>
-   git worktree remove ../LeafSweeper-<slice>; git branch -d <slice>
+   # validate + atomic commits there, then push the branch and open a PR
+   # (push/PR only when the human asks — see rule 3):
+   git -c credential.helper= -c http.sslVerify=false push \
+     "https://nickmartin1ee7:$(gh auth token)@github.com/<owner>/<repo>.git" <slice>
+   gh pr create --base main --head <slice>
+   # once the PR is merged on GitHub (pull/fetch may need the same token URL):
+   git pull; git worktree remove ../LeafSweeper-<slice>; git branch -d <slice>
    ```
+   **Hard rule — PRs only:** `main` advances exclusively through GitHub PRs.
+   Never `git merge` a slice branch into `main` locally and never push
+   directly to `main`.
    **Hard rule for agent sessions:** even when your session's working
    directory *is* the main checkout, do not edit repo files there —
    create the worktree before the first edit and work only inside it.
@@ -57,8 +64,8 @@ A new script's generated `.cs.uid` is committed together with the script.
    pre-existing edits may remain.
    Merged branches are never left behind.
 3. Commit atomically — and only when the human asks: an agent session never
-   commits, merges or pushes on its own initiative; it hands off the slice
-   green and uncommitted on its branch. When a commit is requested: one
+   commits, pushes or opens a PR on its own initiative; it hands off the
+   slice green and uncommitted on its branch. When a commit is requested: one
    logical change per commit; message leads with the change, body explains
    the *why*; `.uid`/`.import` metadata in its own commit.
 4. Docs live with code: behavior changes update `README.md` and `docs/*` in

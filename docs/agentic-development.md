@@ -31,16 +31,16 @@ Each slice of work went through the same six steps:
    below. Nothing is committed without a green build plus the cheapest
    meaningful runtime check.
 5. **Commit atomically — and only when the human asks.** An agent session
-   does not commit, merge or push on its own initiative: it hands the
+   does not commit, push or open a PR on its own initiative: it hands the
    slice off green and uncommitted on its branch, and the human decides
    when to land it. When a commit *is* wanted: one logical change per
    commit — a fix, a feature, or a doc alignment, never a mixed bag.
    Commit messages lead with the change ("Cover the whole floor with
    debris…") and explain the *why* in the body. Generated metadata
    (`.uid`, `.import` files) gets its own commit, separate from behavior
-   changes. When the slice is green and merged, always remove the
-   worktree and delete the branch — merged branches are never left
-   behind.
+   changes. Landing always goes through a GitHub PR: push the slice branch,
+   open the PR, and once it is merged, remove the worktree and delete the
+   branch — merged branches are never left behind.
 6. **Hand off to the human for playtesting.** The agent stops at "buildable
    and headlessly verified" and the human verifies feel and visuals in the
    editor or on device. Feedback comes back as concrete findings
@@ -216,10 +216,11 @@ they produce, so a playtest finding maps to one named knob:
 **Slices happen in worktrees.** Each slice is implemented in a dedicated
 git worktree beside the main checkout, on a short-lived branch — never in
 the main checkout itself, which routinely carries the human's uncommitted
-in-progress edits. Validate and commit in the worktree, merge the branch
-into `main` locally, then clean up without being asked: `git worktree
-remove` the slice directory and `git branch -d` the merged branch.
-Merged branches are never left behind.
+in-progress edits. Validate and commit in the worktree, push the branch,
+and open a GitHub PR — `main` advances only through PRs, never through a
+local `git merge`. Once the PR is merged, clean up without being asked:
+`git worktree remove` the slice directory and `git branch -d` the merged
+branch. Merged branches are never left behind.
 
 An agent session whose working directory *is* the main checkout must treat
 that as a trap, not an invitation: the folder-backed session makes the
@@ -300,8 +301,11 @@ LEAF_AUTOPLAY=1 godot --headless --quit-after 300   # 4. gameplay self-test
 # Worktree slice loop (run from the main checkout)
 git worktree add ../LeafSweeper-<slice> -b <slice>   # isolate the slice
 # ...dotnet build / headless checks / atomic commits in the worktree...
-git merge <slice>                                    # absorb into main
-git worktree remove ../LeafSweeper-<slice>           # clean up (always)
+git -c credential.helper= -c http.sslVerify=false push \
+  "https://nickmartin1ee7:$(gh auth token)@github.com/<owner>/<repo>.git" <slice>
+gh pr create --base main --head <slice>              # main advances via PR only
+git pull                                             # sync merged main (token URL if fetch fails)
+git worktree remove ../LeafSweeper-<slice>           # clean up after merge (always)
 git branch -d <slice>
 
 git diff --ignore-all-space --stat   # main checkout: confirm stray whitespace-only edits before discarding
