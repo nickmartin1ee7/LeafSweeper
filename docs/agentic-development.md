@@ -128,8 +128,16 @@ off, using the same env-gated-hook pattern:
    level, await ~30 `ProcessFrame`s, save
    `GetViewport().GetTexture().GetImage()` to the path, then quit.
 2. `LEAF_SHOT=/tmp/shot.png godot --path .` — **windowed**, not headless:
-   headless mode has no framebuffer to capture.
+   headless mode has no framebuffer to capture. **Ask the human before any
+   non-headless (windowed) launch** — it pops a game window on their
+   desktop; headless runs need no confirmation.
 3. Inspect the PNG, iterate, then **remove the hook** before committing.
+
+Distinguish temporary hooks from **permanent** ones: `LEAF_AUTOPLAY`,
+`LEAF_STORM` and `LEAF_PRISMATIC` in `Main` are documented, always-available
+testing surfaces (see `docs/testing.md` → "Testing env vars") — never remove
+or "clean up" those. Only `LEAF_SHOT`-style one-off capture hooks are
+temporary.
 
 **Level 6 exists because generators emit plausible-but-broken art.** Every
 rung above was green while the bug catalog shipped with wings attached to
