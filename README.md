@@ -85,6 +85,8 @@ development.
 
 ## Documentation
 
+- [`AGENTS.md`](AGENTS.md) — instructions for AI coding agents contributing
+  to this repo (workflow, validation, environment quirks).
 - [`docs/game-design.md`](docs/game-design.md) — the design document.
 - [`docs/architecture.md`](docs/architecture.md) — scripts, scene tree, data flow.
 - [`docs/art-style.md`](docs/art-style.md) — art direction, palette and how to
