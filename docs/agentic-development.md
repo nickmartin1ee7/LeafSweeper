@@ -82,6 +82,14 @@ pass, `1` on failure, so it can gate commits or CI. Lessons baked in:
   resets first.
 - **Env-gated hooks beat test frameworks** for this scale — no extra
   dependencies, runs with the same binary the player runs.
+- **A custom `canvas_item` shader must multiply the incoming `COLOR`
+  into its output** or every tweened modulate fade on it is a silent
+  no-op: the pixels ignore the alpha while `Visible` still toggles, so
+  state-based checks pass while nothing fades. Found when the Storm
+  Round sign's linger "fade" hard-cut instead of dissolving — the
+  shader now scales its `COLOR` by the delivered modulate, and the
+  autoplay probe asserts the tween's alpha mid-fade so a regression
+  fails loudly.
 - **A fresh worktree needs `--import` before level 4.** Without a prior
   import pass nothing boots and autoplay **silently exits 0 with no
   `AUTOPLAY` output** — always grep for `AUTOPLAY`, never trust the exit
