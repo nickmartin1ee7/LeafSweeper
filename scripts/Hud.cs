@@ -145,12 +145,6 @@ public partial class Hud : CanvasLayer
 
     private Control BuildDock()
     {
-        _sweepLabel = MakeLabel(64, true);
-        _sweepLabel.HorizontalAlignment = HorizontalAlignment.Center;
-        _sweepsWordLabel = MakeLabel(36, true);
-        _sweepsWordLabel.HorizontalAlignment = HorizontalAlignment.Center;
-        _sweepsWordLabel.Text = "Sweeps";
-
         _bookButton = MakeCoinButton("res://assets/icons/book.svg");
         _bookButton.TooltipText = "Open the bug book";
         _bookButton.Pressed += () => BookPressed?.Invoke();
