@@ -37,6 +37,9 @@ public partial class MainMenu : CanvasLayer
 
         _progressLabel = Hud.MakeLabel(42, true, new Color("f5e8cd"));
         _progressLabel.HorizontalAlignment = HorizontalAlignment.Center;
+        // Long lifetime + favorite-critter lines must wrap, never run off
+        // the screen edge.
+        _progressLabel.AutowrapMode = TextServer.AutowrapMode.WordSmart;
 
         _playButton = Hud.MakeButton("Play", new Color("6f9a44"), 56);
         _playButton.Pressed += () => PlayPressed?.Invoke();
