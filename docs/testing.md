@@ -94,6 +94,11 @@ adb logcat | grep -iE "LeafSweeper|godot|mono|FATAL|AndroidRuntime"
 	(speeds shear per piece, the ring breathes and bobs, pieces tumble);
 	the litter keeps circling behind the win card until Next/Menu clears
 	the round; resizing mid-wind keeps the gyre centered on the floor.
+14. **Menu gyre** — the home screen dresses itself with a decorative
+	litter riding the same clockwise gyre, idled way down
+	(`MenuWindSpeedScale` 0.35): a calm backdrop behind the menu card,
+	no bug or coins, touches do nothing. Starting a round tears it
+	down into the settle curtain.
 
 Useful adb helpers while testing:
 
