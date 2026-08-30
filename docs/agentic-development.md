@@ -30,13 +30,17 @@ Each slice of work went through the same six steps:
 4. **Validate headlessly after every slice.** See the validation ladder
    below. Nothing is committed without a green build plus the cheapest
    meaningful runtime check.
-5. **Commit atomically.** One logical change per commit — a fix, a feature,
-   or a doc alignment, never a mixed bag. Commit messages lead with the
-   change ("Cover the whole floor with debris…") and explain the *why* in
-   the body. Generated metadata (`.uid`, `.import` files) gets its own
-   commit, separate from behavior changes. When the slice is green, merge
-   its branch into `main` locally, then always remove the worktree and
-   delete the branch — merged branches are never left behind.
+5. **Commit atomically — and only when the human asks.** An agent session
+   does not commit, merge or push on its own initiative: it hands the
+   slice off green and uncommitted on its branch, and the human decides
+   when to land it. When a commit *is* wanted: one logical change per
+   commit — a fix, a feature, or a doc alignment, never a mixed bag.
+   Commit messages lead with the change ("Cover the whole floor with
+   debris…") and explain the *why* in the body. Generated metadata
+   (`.uid`, `.import` files) gets its own commit, separate from behavior
+   changes. When the slice is green and merged, always remove the
+   worktree and delete the branch — merged branches are never left
+   behind.
 6. **Hand off to the human for playtesting.** The agent stops at "buildable
    and headlessly verified" and the human verifies feel and visuals in the
    editor or on device. Feedback comes back as concrete findings
@@ -82,6 +86,14 @@ pass, `1` on failure, so it can gate commits or CI. Lessons baked in:
   `await ToSignal(coin, GustCoin.SignalName.CollectionFlightFinished)`
   before asserting. `--quit-after 300` must outlast the awaited animation
   (~1.6 s ≈ 100 frames).
+- **Pixel-accurate logic needs independent ground truth.** When a hot
+  path uses a cached or approximated structure (`Debris.Covers` scans a
+  cached 4px alpha mask), verify it in the autoplay against a brute-force
+  recompute that shares no code with it — `CoversByTextureAlpha` samples
+  the texture's alpha channel directly — for a positive case (a blocker
+  parked on the bug) *and* a negative one (a far-away point). A fast path
+  and its verifier must never share the bug being tested for: a shared
+  coordinate-mapping mistake would otherwise self-confirm as green.
 - **Import artifacts dirty the worktree.** Each `--import` run rewrites
   `LeafSweeper.csproj` (dropping a redundant line) and leaves
   `LeafSweeper.csproj.old` — `git checkout -- LeafSweeper.csproj` and
@@ -191,6 +203,7 @@ they produce, so a playtest finding maps to one named knob:
 | "Floor is visible / bug is findable too fast" | `RoundConfig.CoverageStart/End` |
 | "Bug shows stacked sprites" | node lifecycle in `Bug.Setup` |
 | "Sweeps clear too much / too little" | `Sweeper.SweepRadius`, `Sweeper.MaxDebrisPerSwipe`, `Debris.FlingFactor`, `Debris.Friction`, `Debris.FadeDelayScale` |
+| "Must sweep a huge empty radius before a bug/coin is tappable" | occlusion radii — `BugType.OcclusionRadius` (45% of tap, clamped 18–36px), `GustCoin.OcclusionRatio`; mask fidelity — `Debris.MaskCellSize`, `Debris.AlphaThreshold` |
 | "Taps inflate the swipe counter" | `Sweeper.End()` — `onSwipeCompleted` fires only when `_clearedThisSwipe > 0`, so taps and fruitless drags never count |
 | "Menu looks wrong at odd aspects" | fit-on-resize (`Main.FitGround` + `Main.OnViewportResized`) |
 | "A Control (dock/HUD) is invisible despite being added" | `SetAnchorsPreset` sets anchors but **not offsets** — a zero-height rect pinned to the screen edge; set anchors *and* offsets explicitly (`Hud.BuildDock`) |
@@ -207,6 +220,27 @@ into `main` locally, then clean up without being asked: `git worktree
 remove` the slice directory and `git branch -d` the merged branch.
 Merged branches are never left behind.
 
+An agent session whose working directory *is* the main checkout must treat
+that as a trap, not an invitation: the folder-backed session makes the
+main checkout the default cwd, and editing files there dirties it exactly
+as if you'd worked on the human's desk. Create the worktree *before* the
+first edit. If edits already landed in the main checkout, recover without
+losing work — this happened for real (the occlusion-hitbox slice was
+written straight into the main checkout) and the rescue took three steps:
+
+```sh
+git diff -- <changed files> > ~/persistent/slice.patch   # 1. capture
+git worktree add ../LeafSweeper-<slice> -b <slice>       # 2. isolate
+git apply ~/persistent/slice.patch                       #    (in worktree)
+git checkout -- <changed files>                          # 3. restore main
+```
+
+Keep the patch in a persistent path (`/tmp` is volatile between agent
+tool calls), verify the worktree's `git status` shows the slice before
+restoring the main checkout, and never commit during the rescue unless
+told to. At hand-off the main checkout must look untouched: `git status`
+shows nothing but the human's own pre-existing edits.
+
 **Docs live with code.** Behavior changes update `README.md` and
 `docs/*` in the same session — numbers in prose (counts, radii) drift
 fast, so doc alignment is part of the slice, not a cleanup phase.
@@ -219,7 +253,8 @@ fast, so doc alignment is part of the slice, not a cleanup phase.
   with whitespace-only churn (spaces→tabs). After each Godot run:
   `git checkout -- LeafSweeper.csproj; rm -f LeafSweeper.csproj.old`, and
   before committing, confirm the churn is content-free (`git diff -w` is
-  empty) and discard it. The binary on this machine is `godot-mono`
+  empty) and discard it with `git checkout -- <file>` — never hand off
+  whitespace-only dirty files. The binary on this machine is `godot-mono`
   (NixOS), not plain `godot`.
 - **.NET target pinned to net8.0.** The contributor's local SDK is 8.0.x
   (`NETSDK1045` on net9.0). Keep `LeafSweeper.csproj` at net8.0 unless the

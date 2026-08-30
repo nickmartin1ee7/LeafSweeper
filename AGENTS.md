@@ -45,10 +45,22 @@ A new script's generated `.cs.uid` is committed together with the script.
    git merge <slice>
    git worktree remove ../LeafSweeper-<slice>; git branch -d <slice>
    ```
+   **Hard rule for agent sessions:** even when your session's working
+   directory *is* the main checkout, do not edit repo files there —
+   create the worktree before the first edit and work only inside it.
+   If edits already landed in the main checkout, recover before
+   continuing: dump the changed files to a patch in a persistent path
+   (`git diff -- <files> > ~/persistent/slice.patch`), `git worktree
+   add` a slice worktree, `git apply` the patch there, then
+   `git checkout -- <files>` in the main checkout so it returns to its
+   pre-session state. Verify with `git status` — only the human's own
+   pre-existing edits may remain.
    Merged branches are never left behind.
-3. Commit atomically: one logical change per commit; message leads with the
-   change, body explains the *why*; `.uid`/`.import` metadata in its own
-   commit.
+3. Commit atomically — and only when the human asks: an agent session never
+   commits, merges or pushes on its own initiative; it hands off the slice
+   green and uncommitted on its branch. When a commit is requested: one
+   logical change per commit; message leads with the change, body explains
+   the *why*; `.uid`/`.import` metadata in its own commit.
 4. Docs live with code: behavior changes update `README.md` and `docs/*` in
    the same slice (numbers in prose drift fast).
 5. Stop at "buildable and headlessly verified" and hand off to the human for
