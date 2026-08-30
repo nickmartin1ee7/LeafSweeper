@@ -42,10 +42,21 @@ public partial class Main : Node2D
 	private const float SettleSweepSeconds = 1.4f;
 	private const float SettleJitterSeconds = 0.25f;
 
+	// Ambient rustle pacing: every few seconds a stray draft brushes a
+	// small patch of the litter. Cosmetic only — see Debris.Rustle.
+	private const float RustleIntervalMin = 4f;   // seconds between drafts (min)
+	private const float RustleIntervalMax = 8f;   // seconds between drafts (max)
+	private const float RustleGroupRadius = 130f; // px: pieces this close shiver together
+	private const int RustleMaxPieces = 6;        // cap so dense floors stay subtle
+
 	// The level being set up; the bug's difficulty and the stats clock are
 	// only applied once the debris has finished settling into place.
 	private int _activeLevel;
 	private bool _awaitingSettle;
+
+	// Ambient rustle timer: counts down to the next stray draft while a
+	// round is live (seeded fresh in OnSettleFinished).
+	private float _rustleCountdown;
 
 	// Double-tap burst tuning: two dead taps inside the window and slop
 	// fire a radial gust burst — a sweep without the drag.
@@ -99,6 +110,35 @@ public partial class Main : Node2D
 		GD.Print($"AUTOPLAY restart: engaged={restartOk} level={_activeLevel}");
 		while (_awaitingSettle)
 			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+
+		// Ambient rustles: a triggered draft must shiver at least one
+		// piece's sprite while every unswept node transform — the ground
+		// truth behind coverage, sweeping and the gyre — stays exactly
+		// where it was, then everything settles back at rest.
+		var rustleProbe = new List<(Debris Piece, Vector2 From)>();
+		foreach (var d in _debris)
+			if (IsInstanceValid(d) && !d.Swept && !d.IsSettling && !d.IsRidingWind)
+				rustleProbe.Add((d, d.Position));
+		TriggerAmbientRustle();
+		bool rustleShivered = false;
+		bool rustleGrounded = true;
+		foreach (var (piece, from) in rustleProbe)
+			if (IsInstanceValid(piece) && !piece.Swept && piece.Position != from)
+				rustleGrounded = false;
+		foreach (var d in _debris)
+			if (IsInstanceValid(d) && d.IsRustling)
+				rustleShivered = true;
+		await ToSignal(GetTree().CreateTimer(1.0), SceneTreeTimer.SignalName.Timeout);
+		bool rustleSettled = true;
+		foreach (var (piece, from) in rustleProbe)
+		{
+			if (!IsInstanceValid(piece) || piece.Swept)
+				continue;
+			if (piece.IsRustling || piece.Position != from)
+				rustleSettled = false;
+		}
+		bool rustleOk = rustleShivered && rustleGrounded && rustleSettled;
+		GD.Print($"AUTOPLAY rustle: shivered={rustleShivered} grounded={rustleGrounded} settled={rustleSettled}");
 
 		// Covered-bug rule: debris parked on the bug blocks selection, and
 		// sweeping every overlapping piece away makes it selectable again.
@@ -251,7 +291,7 @@ public partial class Main : Node2D
 		// level instead of a constant.
 		int playedLevel = _activeLevel;
 		var reloaded = SaveData.Load();
-		bool ok = blocked && uncovered && truthOk && burstOk
+		bool ok = blocked && uncovered && truthOk && burstOk && rustleOk
 			&& coinSpawned && coinBanked && gustSpent && restartOk && windOk
 			&& reloaded.CurrentLevel == playedLevel + 1
 			&& reloaded.LevelsCleared == 1
@@ -276,6 +316,66 @@ public partial class Main : Node2D
 		_stats.Tick(delta);
 		if (_awaitingSettle)
 			CheckSettleFinished();
+		TickAmbientRustle(delta);
+	}
+
+	/// <summary>
+	/// Ambient life: every 4–8s a stray draft rustles a random patch of
+	/// the litter. Purely cosmetic (Debris.Rustle only wiggles sprites)
+	/// and gated to live, settled rounds so it can't interfere with the
+	/// settle-in, the win wind or the autoplay probes.
+	/// </summary>
+	private void TickAmbientRustle(double delta)
+	{
+		if (_state != GameState.Playing || _awaitingSettle)
+			return;
+		_rustleCountdown -= (float)delta;
+		if (_rustleCountdown > 0f)
+			return;
+		_rustleCountdown = _rng.RandfRange(RustleIntervalMin, RustleIntervalMax);
+		TriggerAmbientRustle();
+	}
+
+	/// <summary>
+	/// One draft: a random at-rest piece is the epicenter and its close
+	/// neighbors shiver with it along the same draft direction — a gust
+	/// that combs a small patch, not a popcorn field.
+	/// </summary>
+	private void TriggerAmbientRustle()
+	{
+		// Only pieces at rest take the draft: swept pieces are flying,
+		// settling pieces are falling in, wind riders are mid-gyre, and
+		// pieces already shivering keep their own wobble.
+		var rest = new List<Debris>(_debris.Count);
+		foreach (var d in _debris)
+			if (IsInstanceValid(d) && !d.Swept && !d.IsSettling
+				&& !d.IsRidingWind && !d.IsRustling)
+				rest.Add(d);
+		if (rest.Count == 0)
+			return;
+
+		Debris epicenter = rest[_rng.RandiRange(0, rest.Count - 1)];
+		Vector2 draft = Vector2.Right.Rotated(_rng.RandfRange(0f, Mathf.Tau));
+
+		var group = new List<(Debris Piece, float Dist)>();
+		foreach (var d in rest)
+		{
+			float dist = d.Position.DistanceTo(epicenter.Position);
+			if (dist <= RustleGroupRadius)
+				group.Add((d, dist));
+		}
+		// Dense floors hold far more neighbors than one draft should lift:
+		// keep only the closest few so the rustle stays a flicker.
+		group.Sort((a, b) => a.Dist.CompareTo(b.Dist));
+		int count = Mathf.Min(group.Count, RustleMaxPieces);
+		for (int i = 0; i < count; i++)
+		{
+			// Pieces nearer the epicenter sit deeper in the draft, and the
+			// direction jitters per piece so the patch shears organically.
+			float falloff = 1f - group[i].Dist / RustleGroupRadius * 0.6f;
+			group[i].Piece.Rustle(
+				draft.Rotated(_rng.RandfRange(-0.35f, 0.35f)), falloff, _rng);
+		}
 	}
 
 	/// <summary>Unlocks play once every piece has landed from the settle-in.</summary>
@@ -668,6 +768,7 @@ public partial class Main : Node2D
 		SpawnGustCoins(floor);
 
 		_stats.Start(_activeLevel);
+		_rustleCountdown = _rng.RandfRange(RustleIntervalMin, RustleIntervalMax);
 	}
 
 	/// <summary>
