@@ -144,13 +144,16 @@ A new script's generated `.cs.uid` is committed together with the script.
       - TODO id: `agents-11-gate-on-pass`
       - Unblock merge actions (#GATE#).
 
-  12) **CLEANUP: Merge to main** — Merge the worktree branch to main; update changelog/docs.
+  12) **CLEANUP: Create and merge PR** — Open a GitHub PR from the worktree branch and merge via GitHub (not locally).
       - TODO id: `agents-12-merge`
-      - PR includes test results and review summary.
+      - PR title and description include test results and review summary.
+      - **REQUIRED: Merge via GitHub UI or `gh` CLI, never with `git merge` locally.**
+      - After GitHub merge, sync the worktree branch locally: `git fetch origin main && git rebase origin/main`.
 
-  13) **CLEANUP: Delete worktree** — Remove the local worktree and slice branch.
+  13) **CLEANUP: Delete worktree** — Remove the local worktree and slice branch after remote merge is confirmed.
       - TODO id: `agents-13-delete-worktree`
       - Clean: `git worktree remove <path> && git branch -d <slice>`.
+      - Verify on GitHub that the slice branch is deleted by GitHub's post-merge cleanup, or delete it manually: `git push origin --delete <slice>`.
 
   14) **IMPROVE: Update docs** — Capture improvements back into AGENTS.md or docs/.
       - TODO id: `agents-14-improve-docs`
