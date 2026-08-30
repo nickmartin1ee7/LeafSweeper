@@ -59,8 +59,12 @@ before the grandiose golden win card appears.
   escalates: every 4–6 seconds a gust dumps a fresh cluster of 6–12 brand-new
   pieces onto random spots, piling the litter up to 3× the round's starting
   floor before the flood relents (swept patches keep re-littering after
-  that). The round before a storm round warns you with a sparking "Storm
-  Round" sign.
+  that). Two storm-only rhythms layer on more chaos, each on its own
+  10–20s timer: a spiral gust spins a small clockwise swirl through the
+  litter (never wider than a fifth of the screen), and loose debris rafts
+  drift across the screen in spiral-y loops — pure atmosphere; the rafts
+  never land. The round before a storm round warns you with a sparking
+  "Storm Round" sign.
 - **Local save data** (`user://save.json`, app-private on Android — no
   permissions): current level, levels cleared, lifetime sweeps & play time,
   per-bug-variant find counts, prismatic finds, and the last 50 cleared
@@ -71,9 +75,9 @@ before the grandiose golden win card appears.
   fact about the species you just found, picked from its own 6+ fact pool.
 - **Main menu** with lifetime progress and your favorite critter.
 - **Ambient rustles** — every 2–4s a stray draft shivers a localized cluster
-  of about 4–7 pieces of the litter in place. Purely cosmetic: the wobble
-  lives on the pieces' sprites, so coverage, sweeping and the win gyre are
-  never affected.
+  of about 4–7 pieces of the litter in place (three times as often during
+  storms). Purely cosmetic: the wobble lives on the pieces' sprites, so
+  coverage, sweeping and the win gyre are never affected.
 - **Procedurally generated art** — every texture in `assets/textures/` is
   reproducible from `tools/gen_art.mjs` (see `docs/art-style.md`).
 

@@ -238,13 +238,15 @@ public partial class Debris : Node2D
     /// child sprite, so the node transform behind the gameplay math
     /// (coverage, sweeping, the wind gyre) never moves. Ignored while the
     /// piece is mid-fling, falling into place or riding the gyre.
+    /// <paramref name="delay"/> holds the shiver back (spiral gusts
+    /// stagger pieces by their clockwise distance from the wave's start).
     /// </summary>
-    public void Rustle(Vector2 dir, float falloff, RandomNumberGenerator rng)
+    public void Rustle(Vector2 dir, float falloff, RandomNumberGenerator rng, float delay = 0f)
     {
         if (Swept || _settling || _windActive)
             return;
         _rustling = true;
-        _rustleAge = 0f;
+        _rustleAge = -delay;
         _rustleSeconds = RustleSeconds * rng.RandfRange(0.8f, 1.2f);
         _rustleDir = dir.Normalized();
         _rustleAmp = RustleAmp[(int)Weight] * falloff * rng.RandfRange(0.7f, 1.3f);

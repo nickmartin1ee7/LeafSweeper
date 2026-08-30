@@ -75,8 +75,10 @@ Title menu → Play → Round (sweep debris, find bug) → Tap bug
 - **Cozy tone.** All UI copy is warm and unhurried; the win comment is the
   game's "voice" (see Comments below).
 - **A living floor.** Every couple of seconds a stray draft rustles a little
-  cluster of the litter — the meadow breathes even when you're idle. It is
-  decoration only and never moves the gameplay.
+  cluster of the litter — the meadow breathes even when you're idle (and
+  during storms the drafts come three times as fast, plus spiral gusts and
+  drifting litter of their own). It is decoration only and never moves the
+  gameplay.
 - **Casual-tuned difficulty.** By level 200 the game is only moderately
   harder than level 1. Nothing ever spikes.
 
@@ -174,6 +176,21 @@ itself fights back — with your memory, not your reflexes.
   cluster is truncated so the cap is exact); after that only the per-spot
   restoration continues, so swept patches never stay clean but the floor
   never drowns past 3×.
+- **Spiral gusts.** Every 10–20 seconds (`SpiralIntervalMin` /
+  `SpiralIntervalMax`) the storm tightens into a small cyclone: the litter
+  inside a circle around a random epicenter shivers along the clockwise
+  tangent, each piece delayed by its clockwise angle from 12 o'clock, so
+  the swirl visibly spins once through the patch. The swirl never exceeds
+  a fifth of the screen — its radius is a tenth of the playable floor's
+  smaller dimension (`SpiralRadiusFraction`). Cosmetic only: pieces shiver
+  on their sprites and settle right back.
+- **Drifting litter.** A second, independent 10–20s timer
+  (`DriftIntervalMin` / `DriftIntervalMax`) sends a raft of 6–10 loose
+  pieces spiraling across the screen — entering offscreen left, looping in
+  spiral-y arcs while the raft sags downwind, and exiting offscreen right
+  in ~2.4s (`StormDrift.cs`). Pure storm chaos: the raft never lands, so
+  the litter economy never notices it; win, restart or menu ends the
+  crossing early.
 - **Anti-hoarding.** Because gust-cleared ground is re-littered the same way
   as swept ground, banking gust coins can't stockpile permanent clean
   space — a storm round rewards a mental map of where you've been, and
