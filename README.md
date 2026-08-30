@@ -83,7 +83,7 @@ Requirements: .NET SDK 8+ (project targets `Godot.NET.Sdk/4.7.1`), Godot 4.7.1 m
 dotnet build                    # compile C#
 godot --headless --import       # import assets/scenes
 godot --headless --quit-after 180   # boot the game headless (smoke test)
-LEAF_AUTOPLAY=1 godot --headless --quit-after 4000   # self-test: plays a level (with a forced prismatic bug and storm weather), verifies catalog/book/save round-trip, exit code 0 on pass
+LEAF_AUTOPLAY=1 godot --headless --quit-after 4700   # self-test: plays a level (with a forced prismatic bug and storm weather), verifies catalog/book/save round-trip, exit code 0 on pass
 ```
 
 For desktop testing, just open the project in the Godot editor and press

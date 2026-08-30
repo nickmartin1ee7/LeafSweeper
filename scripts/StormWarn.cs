@@ -7,11 +7,11 @@ namespace LeafSweeper;
 /// the round BEFORE a storm level. The label renders alone into a
 /// SubViewport, and warn_sparks.gdshader repaints it as living
 /// electricity — a neon rim hugging every glyph, lightning bolts arcing
-/// around and through the lettering, sparks and flicker — over a soft,
-/// borderless dark card (no boxy fence). Fades in with the crackle,
-/// fades out when the next round begins. Own canvas layer above the HUD
-/// — explicit ladder: world 0 → storm 1 → menu 2 → hud 3 → warn 4 →
-/// bug book 90.
+/// around and through the lettering, sparks and flicker — set into a
+/// roiling storm cloud the same shader paints behind the lettering.
+/// Fades in with the crackle, fades out when the next round begins. Own
+/// canvas layer above the HUD — explicit ladder: world 0 → storm 1 →
+/// menu 2 → hud 3 → warn 4 → bug book 90.
 /// </summary>
 public partial class StormWarn : CanvasLayer
 {
@@ -20,11 +20,22 @@ public partial class StormWarn : CanvasLayer
     // A quick dramatic entrance — the sign snaps on like failing neon.
     private const float FadeSeconds = 0.45f;
 
+    // Once the storm round begins the sign rides the round's opening: a
+    // two-second hold over the settle so the mood lands, then a slow
+    // four-second dissolve that yields the screen to gameplay.
+    private const float LingerSeconds = 2f;
+    private const float LingerFadeSeconds = 4f;
+
     // Sign geometry as fractions of the viewport: centered horizontally,
     // sitting in the upper quarter so it never covers the win card that
-    // owns the screen center during the end-round. Taller than before so
-    // the bolts have room to arc above and below the lettering.
-    private const float WidthFraction = 0.46f;
+    // owns the screen center during the end-round. Wider than the text
+    // needs so the cloud puffs keep padding left/right instead of running
+    // flush off the panel edges.
+    private const float WidthFraction = 0.54f;
+
+    // The text keeps the size it had at the old, narrower panel: extra
+    // panel width is cloud padding around it, not lettering room.
+    private const float TextWidthFraction = 0.83f;
     private const float HeightFraction = 0.155f;
     private const float TopAnchor = 0.12f;
 
@@ -34,6 +45,12 @@ public partial class StormWarn : CanvasLayer
     private SubViewport _vp = null!;
     private Label _label = null!;
     private Tween _fade = null!;
+    private Tween _linger = null!;
+
+    // Autoplay reads the tweened alpha to prove the fade is actually
+    // visible — the sign's pixels are painted by the shader, which must
+    // respect modulate or every fade silently becomes a hard cut.
+    public float FadeAlpha => _root.Modulate.A;
 
     public StormWarn()
     {
@@ -55,18 +72,9 @@ public partial class StormWarn : CanvasLayer
         AddChild(_root);
 
         _panel = new Panel { MouseFilter = Control.MouseFilterEnum.Ignore };
-        _panel.AddThemeStyleboxOverride("panel", new StyleBoxFlat
-        {
-            // Soft borderless card: dark enough for the neon to pop,
-            // with a wide blurred shadow so it never reads as a box.
-            BgColor = new Color(0.03f, 0.05f, 0.10f, 0.58f),
-            CornerRadiusBottomLeft = 24,
-            CornerRadiusBottomRight = 24,
-            CornerRadiusTopLeft = 24,
-            CornerRadiusTopRight = 24,
-            ShadowSize = 16,
-            ShadowColor = new Color(0f, 0f, 0f, 0.45f),
-        });
+        // No card: the shader paints a storm cloud as the sign's
+        // background, so the panel is purely a layout rect.
+        _panel.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
         _panel.AnchorLeft = 0.5f;
         _panel.AnchorTop = TopAnchor;
         _panel.AnchorRight = 0.5f;
@@ -116,10 +124,17 @@ public partial class StormWarn : CanvasLayer
         _panel.OffsetTop = -h / 2f;
         _panel.OffsetBottom = h / 2f;
         _vp.Size = new Vector2I((int)w, (int)h);
-        // Width is the binding constraint in portrait: "Storm Round" spans
-        // ~5.8 em in the default font, so cap by w/6.0 (small margin over
-        // the measured 5.8) or the glyphs clip out of the SubViewport mask.
-        _label.LabelSettings.FontSize = Mathf.Max(28, (int)Mathf.Min(h * 0.56f, w / 6.0f));
+        // Start from the height-scaled size, then shrink by measurement
+        // until the rendered text fits its slice of the panel width with
+        // margin — real font metrics beat any constant divisor ("Storm
+        // Round" was still clipping its trailing "d" at w/6.0). The text
+        // budget stays a fixed fraction of the panel, so widening the
+        // panel buys the cloud padding rather than bigger letters.
+        _label.LabelSettings.FontSize = Mathf.Max(28, (int)(h * 0.56f));
+        while (_label.LabelSettings.FontSize > 28 && _label.GetMinimumSize().X > w * TextWidthFraction)
+        {
+            _label.LabelSettings.FontSize = Mathf.Max(28, _label.LabelSettings.FontSize - 3);
+        }
         if (_fx.Material is ShaderMaterial mat)
         {
             mat.SetShaderParameter("text_mask", _vp.GetTexture());
@@ -147,18 +162,46 @@ public partial class StormWarn : CanvasLayer
         FadeTo(0f);
     }
 
+    /// <summary>
+    /// Holds the sign over the storm round's opening for
+    /// <see cref="LingerSeconds"/>, then dissolves it out over
+    /// <see cref="LingerFadeSeconds"/>. StartLevel calls this instead of
+    /// <see cref="HideWarning"/> when the round being started is the storm
+    /// round the sign warned about.
+    /// </summary>
+    public void LingerThenFade()
+    {
+        if (!Visible)
+            return;
+        KillFades();
+        _root.Modulate = new Color(1f, 1f, 1f, 1f);
+        _linger = CreateTween();
+        _linger.TweenInterval(LingerSeconds);
+        _linger.TweenProperty(_root, "modulate:a", 0f, LingerFadeSeconds);
+        _linger.TweenCallback(Callable.From(FinishHide));
+    }
+
     private void FadeTo(float target)
     {
-        if (_fade != null && _fade.IsValid())
-            _fade.Kill();
+        KillFades();
         _fade = CreateTween();
         _fade.TweenProperty(_root, "modulate:a", target, FadeSeconds);
         if (target == 0f)
-            _fade.TweenCallback(Callable.From(() =>
-            {
-                Visible = false;
-                // Sign gone → stop paying for the label viewport.
-                _vp.RenderTargetUpdateMode = SubViewport.UpdateMode.Disabled;
-            }));
+            _fade.TweenCallback(Callable.From(FinishHide));
+    }
+
+    private void KillFades()
+    {
+        if (_fade != null && _fade.IsValid())
+            _fade.Kill();
+        if (_linger != null && _linger.IsValid())
+            _linger.Kill();
+    }
+
+    private void FinishHide()
+    {
+        Visible = false;
+        // Sign gone → stop paying for the label viewport.
+        _vp.RenderTargetUpdateMode = SubViewport.UpdateMode.Disabled;
     }
 }

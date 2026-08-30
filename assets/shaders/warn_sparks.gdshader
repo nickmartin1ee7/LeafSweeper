@@ -2,14 +2,16 @@ shader_type canvas_item;
 
 // "Storm Round" electric sign. The label renders alone into a SubViewport
 // whose texture arrives as `text_mask`, so this shader knows exactly where
-// the lettering sits. It rebuilds the sign as glowing electricity: a hot
-// neon rim hugging every glyph edge, a deep blue aura, jagged lightning
-// bolts that arc around and through the lettering (each vertex hashed,
-// re-vibrated ~10x per second, blacking out occasionally like a failing
-// transformer), a tall-arc bolt crashing through the middle, an energy pulse that travels
-// along the text line, sparks that cluster near the glyphs, and an
-// occasional full-sign blackout. Pure TIME math — deterministic, cheap,
-// headless-safe.
+// the lettering sits. It rebuilds the sign as a roiling storm cloud with
+// living electricity inside: a dark cloud silhouette (breathing bumps,
+// churning fbm belly, flat raining underside — clean-edged, no rim or
+// mist halo) behind the lettering, a hot neon rim hugging every glyph
+// edge, a deep blue aura, jagged lightning bolts that arc through the
+// lettering (each vertex hashed, re-vibrated ~10x per second, blacking
+// out occasionally like a failing transformer), an energy pulse that
+// travels along the text line, sparks that cluster near the glyphs, and
+// an occasional full-sign blackout. Pure TIME math —
+// deterministic, cheap, headless-safe.
 //
 // `texel` (1 / mask size), `aspect` (mask width / height) and `text_mask`
 // are set by StormWarn whenever the sign is laid out.
@@ -34,6 +36,42 @@ float sd_seg(vec2 p, vec2 a, vec2 b)
     vec2 ba = b - a;
     float h = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-6), 0.0, 1.0);
     return length(pa - ba * h);
+}
+
+// Smooth value noise + 3-octave fbm for the cloud's churning interior.
+float vnoise(vec2 p)
+{
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    return mix(mix(hash12(i), hash12(i + vec2(1.0, 0.0)), u.x),
+            mix(hash12(i + vec2(0.0, 1.0)), hash12(i + vec2(1.0, 1.0)), u.x), u.y);
+}
+
+float fbm(vec2 p)
+{
+    return vnoise(p) * 0.62 + vnoise(p * 2.3 + 7.7) * 0.26 + vnoise(p * 5.1 + 31.0) * 0.12;
+}
+
+// Distance to the storm-cloud silhouette in panel space (x already scaled
+// by aspect, y in 0..1): one broad belly plus a row of slowly breathing
+// bumps along the top, soft-unioned. Negative inside the cloud.
+float cloud_sd(vec2 p, float time)
+{
+    vec2 c = vec2(0.50 * aspect, 0.66);
+    vec2 r = vec2(0.46 * aspect, 0.34);
+    float d = (length((p - c) / r) - 1.0) * min(r.x, r.y);
+    for (int i = 0; i < 6; i++)
+    {
+        float f = float(i);
+        // End bumps stop at 20%/80% of the width so the silhouette keeps
+        // padding inside the panel instead of clipping off the edges.
+        float cx = (0.20 + 0.60 * f / 5.0 + 0.015 * sin(time * 0.4 + f * 1.9)) * aspect;
+        float cy = 0.50 - 0.06 * hash11(f * 9.1 + 2.0);
+        float r = 0.20 + 0.07 * hash11(f * 3.7 + 1.0) + 0.026 * sin(time * 0.6 + f * 2.3);
+        d = min(d, length(p - vec2(cx, cy)) - r);
+    }
+    return d;
 }
 
 // One jagged bolt arcing across the label between x0..x1 around base_y.
@@ -86,6 +124,11 @@ float spark_field(vec2 uv, float seed, float time)
 
 void fragment()
 {
+    // StormWarn fades the whole sign by tweening the CanvasItem's
+    // modulate alpha — Godot delivers that chain in COLOR, so multiply
+    // it into the result or every fade is a silent no-op (the sign
+    // holds, then hard-cuts when hidden).
+    vec4 modulate = COLOR;
     vec2 uv = UV;
     float t = TIME;
     vec2 p = vec2(uv.x * aspect, uv.y);
@@ -116,15 +159,14 @@ void fragment()
     float neon_on = step(0.05, hash11(floor(t * 13.0) * 1.37));
     float flick = neon_on * (0.82 + 0.12 * sin(t * 53.0) + 0.06 * sin(t * 131.0 + 1.7));
 
-    // Bolts: two arc around the lettering, one crosses through it, one
-    // tall-arc crashes mid-sign. Each re-jitters on its own 10Hz
+    // Bolts: one crosses through the lettering, one tall-arc crashes
+    // mid-sign (the arc-around top/bottom pairs were cut — they boxed the
+    // sign in). Each re-jitters on its own 10Hz
     // clock and blacks out at its own rate.
-    float c1, c2, c3, c4;
-    float glow = bolt(p, t, 0.20, 0.11, 1.3, -0.05, 1.05, 0.72, c1)
-        + bolt(p, t, 0.80, 0.11, 7.9, -0.05, 1.05, 0.72, c2)
-        + bolt(p, t, 0.50, 0.17, 4.2, -0.05, 1.05, 0.55, c3) * 0.7
+    float c3, c4;
+    float glow = bolt(p, t, 0.50, 0.17, 4.2, -0.05, 1.05, 0.55, c3) * 0.7
         + bolt(p, t, 0.50, 0.38, 9.4, 0.30, 0.70, 0.35, c4) * 0.8;
-    float core = c1 + c2 + c3 * 0.7 + c4 * 0.8;
+    float core = c3 * 0.7 + c4 * 0.8;
 
     // An energy pulse racing along the text line.
     float pulse = exp(-abs(uv.x - fract(t * 0.33)) * 13.0)
@@ -138,7 +180,26 @@ void fragment()
     vec3 aura_col = vec3(0.13, 0.26, 0.80);
     vec3 hot = vec3(0.95, 0.98, 1.0);
 
-    vec3 col = aura_col * halo * 1.1 * flick;
+    // Storm-cloud backdrop — a breathing, churning cloud body instead of a
+    // dark card, so the lettering rides inside an actual storm cloud.
+    float cd = cloud_sd(p, t);
+    float cloud = smoothstep(0.020, -0.012, cd);
+    // Flat, raining underside: classic cumulonimbus base.
+    cloud *= 1.0 - smoothstep(0.74, 0.88, uv.y);
+    // Interior churn drifting downwind (+x, same wind as the storm overlay).
+    vec2 qq = vec2(p.x - t * 0.05, p.y) * 2.0;
+    float churn = fbm(qq + fbm(qq * 1.9 + vec2(t * 0.04, 0.0)));
+    vec3 cloud_col = vec3(0.08, 0.10, 0.16) + vec3(0.16, 0.19, 0.28) * churn;
+    // Faint moonlit crest on the top bumps (edge band reused from below);
+    // deliberately NO dark rim or outer mist — both read as a vignette
+    // hugging the rectangular panel bounds.
+    float edge = smoothstep(-0.10, -0.005, cd);
+    cloud_col += vec3(0.42, 0.50, 0.64) * smoothstep(0.58, 0.26, uv.y) * edge * 0.55;
+    // Lightning simmering inside the belly, on the neon flicker's clock.
+    cloud_col += electric * (0.04 + 0.10 * churn) * flick;
+
+    vec3 col = cloud_col * cloud;
+    col += aura_col * halo * 1.1 * flick;
     col += electric * rim * 2.2 * flick;
     col += electric * glow * boost;
     col += hot * core * boost;
@@ -149,6 +210,6 @@ void fragment()
     vec3 text_col = vec3(0.90, 0.96, 1.0) * (0.82 + 0.13 * flick + 0.05 * pulse);
     col = mix(col, text_col, m);
 
-    float a = halo * 0.9 + rim * 1.35 + glow * 0.85 + core * 0.9 + sparks + m;
-    COLOR = vec4(col, clamp(a, 0.0, 1.0));
+    float a = cloud * 0.96 + halo * 0.9 + rim * 1.35 + glow * 0.85 + core * 0.9 + sparks + m;
+    COLOR = vec4(col, clamp(a, 0.0, 1.0)) * modulate;
 }

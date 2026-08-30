@@ -522,6 +522,42 @@ public partial class Main : Node2D
 				 $"spawned={_coins.Count} expected={stormExpected} ok={stormCoinsOk}");
 		ok &= stormCoinsOk;
 
+		// Storm warn linger: starting the warned-for round holds the sign
+		// up for 2s, then dissolves it over 4s. Replays the StartLevel
+		// path directly and awaits real frames — touches nothing the
+		// checks above read, so it can run before the final prints. The
+		// mid-fade alpha check exists because the sign is painted wholly
+		// by warn_sparks.gdshader: if the shader ever stops multiplying
+		// the tweened modulate into its output, the fade silently turns
+		// back into a hard cut while Visible still behaves.
+		_warn.ShowWarning();
+		_warn.LingerThenFade();
+		bool lingerUp = _warn.Visible;
+		double lingerT = 0;
+		while (lingerT < 1.2) // inside the 2s hold: must still be up
+		{
+			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+			lingerT += GetProcessDeltaTime();
+		}
+		bool lingerHeld = _warn.Visible;
+		while (lingerT < 3.0 && _warn.Visible) // fade starts at 2s: wait into it
+		{
+			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+			lingerT += GetProcessDeltaTime();
+		}
+		bool lingerFading = _warn.Visible && _warn.FadeAlpha < 1f;
+		float lingerAlpha = _warn.FadeAlpha;
+		while (_warn.Visible && lingerT < 7.5) // hold 2s + fade 4s + slack
+		{
+			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+			lingerT += GetProcessDeltaTime();
+		}
+		bool lingerGone = !_warn.Visible;
+		bool lingerOk = lingerUp && lingerHeld && lingerFading && lingerGone;
+		GD.Print($"AUTOPLAY warn-linger: held={lingerHeld} fading={lingerFading} " +
+				 $"alpha={lingerAlpha:F2} gone={lingerGone} ok={lingerOk}");
+		ok &= lingerOk;
+
 		GD.Print($"AUTOPLAY save: level={_save.CurrentLevel} cleared={_save.LevelsCleared} " +
 				 $"sweeps={_save.TotalSweeps} gusts={_save.TotalGusts} " +
 				 $"bugs={_save.BugFindCounts.Count} hist={_save.History.Count}");
@@ -1137,9 +1173,22 @@ public partial class Main : Node2D
 
 		_hud.ShowLevel(level);
 		_hud.ShowSweeps(0);
+		// INITIAL_GUSTS=<n> testing hook: top the persistent gust power up
+		// to <n> at every round start, so manual playtests can spend gusts
+		// freely without first banking gust coins (spends still write the
+		// save — the top-up simply re-applies each round).
+		if (int.TryParse(OS.GetEnvironment("INITIAL_GUSTS"), out int forcedGusts)
+			&& forcedGusts > 0)
+			_save.GustPower = forcedGusts;
 		_hud.ShowGustPower(_save.GustPower);
 		_hud.HideWin();
-		_warn.HideWarning();
+		// The sign warned about THIS round starting: let it ride the storm
+		// round's opening (2s hold + 4s dissolve) instead of vanishing at
+		// once. Normal rounds and menu returns hide it immediately.
+		if (_warn.Visible && RoundConfig.IsStormLevel(level))
+			_warn.LingerThenFade();
+		else
+			_warn.HideWarning();
 		SetState(GameState.Playing);
 	}
 
@@ -1181,6 +1230,13 @@ public partial class Main : Node2D
 
 		_stats.Start(_activeLevel);
 		_rustleCountdown = _rng.RandfRange(RustleIntervalMin, RustleIntervalMax);
+
+		// INSTANT_WIN=1 testing hook: win the moment the floor is dressed,
+		// so the whole win flow (wind, warn sign, win card, next round)
+		// can be replayed without sweeping — rapid cycles also walk the
+		// level counter up to the storm rounds quickly.
+		if (OS.GetEnvironment("INSTANT_WIN") == "1")
+			WinLevel();
 	}
 
 	/// <summary>

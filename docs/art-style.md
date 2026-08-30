@@ -49,8 +49,10 @@ wisps that flare in and dissipate on their own cycles,
 and a ~7s lightning double-flash. The round before a storm round shows the
 "Storm Round" warning sign: `warn_sparks.gdshader` repaints the lettering
 (from its SubViewport glyph mask) as living electricity — a neon rim hugging
-every glyph, jagged bolts arcing around and through the letters, sparks and
-failing-neon flicker — over a soft borderless dark card. All shaders are driven by a
+every glyph, jagged bolts arcing through the letters, sparks and
+failing-neon flicker — set into a roiling storm cloud the same shader paints
+behind the lettering (breathing puffs over a flat raining underside, fbm
+churn, lightning simmering in the belly). All shaders are driven by a
 single 0–1 intensity uniform (or just TIME) and stay alpha-composited over
 the scene (no screen texture) to keep them cheap on mobile.
 

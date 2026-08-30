@@ -7,13 +7,13 @@
 | Compile | `dotnet build` | 0 errors |
 | Asset import | `godot --headless --import` | exits 0, no script errors |
 | Boot smoke | `godot --headless --quit-after 180` | no errors in output |
-| Save round-trip | `LEAF_AUTOPLAY=1 godot --headless --quit-after 4000` | `ok=True`, exit 0 |
+| Save round-trip | `LEAF_AUTOPLAY=1 godot --headless --quit-after 4700` | `ok=True`, exit 0 |
 
 One-liner for a quick pass — build error count, then autoplay with output
 filtered to what matters:
 
 ```sh
-dotnet build 2>&1 | grep -cE " error "; LEAF_AUTOPLAY=1 godot --headless --quit-after 4000 2>&1 | grep -E "AUTOPLAY|SCRIPT ERROR"
+dotnet build 2>&1 | grep -cE " error "; LEAF_AUTOPLAY=1 godot --headless --quit-after 4700 2>&1 | grep -E "AUTOPLAY|SCRIPT ERROR"
 ```
 
 `0` from the first command means a clean build; pass means `AUTOPLAY …
@@ -27,7 +27,10 @@ match `Debris.Covers` for a positive and a negative case, printed as
 7 sweeps → gust spend → **storm drops land on recorded cleared spots and
 shrink the cleared-spot pool** → **flood clusters grow the litter and stop
 dead at the 3× starting-litter cap** → win → **"Storm Round" warning sign
-is up** → save → reload) and verifies
+is up** → save → reload) and the **warn-linger probe** (a fresh storm-round
+start holds the sign up for 2s, then dissolves it over 4s — the probe also
+checks the alpha is caught mid-fade below full, since the sign is painted
+wholly by a shader that must respect the tweened modulate) and verifies
 `currentLevel`, `levelsCleared`, `totalSweeps`, `totalGusts`, `gustPower`,
 bug find counts and history round-trip correctly. It is `async void` and
 awaits in-game signals, so `--quit-after` must outlast the animations it
@@ -44,6 +47,8 @@ them working:
 | `LEAF_AUTOPLAY=1` | Headless self-test: plays a level end-to-end, one `AUTOPLAY …` assertion line per check |
 | `LEAF_STORM=1` | Forces the storm weather on any level (normally every 10th level) |
 | `LEAF_PRISMATIC=1` | Forces the 5% prismatic bug roll |
+| `INSTANT_WIN=1` | Wins each round the moment the settle finishes — replays the win flow (wind, warn sign, win card, next round) without sweeping, and walks the level counter up to the storm rounds quickly |
+| `INITIAL_GUSTS=<n>` | Tops the persistent gust power up to `<n>` at every round start, so gusts can be spent freely without first banking gust coins |
 
 **Fresh checkout/worktree?** Run `--headless --import` once before the
 autoplay, or nothing boots and it **silently exits 0 with no `AUTOPLAY`
@@ -141,7 +146,9 @@ adb logcat | grep -iE "LeafSweeper|godot|mono|FATAL|AndroidRuntime"
 	and the litter visibly thickens, until it reaches 3× the round's
 	starting count and the flood stops (swept patches keep
 	re-littering); the round before a storm round ends with the
-	electrical "Storm Round" warning sign; on win/menu the weather
+	electrical "Storm Round" warning sign, which lingers two seconds
+	into the storm round's opening and then fades out over four more
+	seconds; on win/menu the weather
 	fades back out.
 
 Useful adb helpers while testing:
