@@ -3,47 +3,50 @@ using Godot;
 namespace LeafSweeper;
 
 /// <summary>
-/// The "Storm Round" warning sign: shown during the end-of-round wind of
-/// the round BEFORE a storm level. The label renders alone into a
-/// SubViewport, and warn_sparks.gdshader repaints it as living
-/// electricity — a neon rim hugging every glyph, lightning bolts arcing
-/// around and through the lettering, sparks and flicker — set into a
-/// roiling storm cloud the same shader paints behind the lettering.
-/// Fades in with the crackle, fades out when the next round begins. Own
-/// canvas layer above the HUD — explicit ladder: world 0 → storm 1 →
-/// menu 2 → hud 3 → warn 4 → prismatic 5 → bug book 90.
+/// The "Prismatic" banner: shown during the end-of-round of a round whose
+/// critter rolled the rare prismatic look — the mirror image of the storm
+/// crawling through the lettering, bright specular bands sweeping through
+/// it like light over foil, star glints, a soft pastel aura. Fades in with
+/// the win card, holds over the next round's opening, then fades out. Own
+/// canvas layer above the storm warn — explicit ladder: world 0 → storm 1 →
+/// menu 2 → hud 3 → warn 4 → prismatic 5 → bug book 90. Solo finds perch
+/// high above the win card; when the storm sign shares the end-round the
+/// banner yields and slots in just below the storm cloud.
 /// </summary>
-public partial class StormWarn : CanvasLayer
+public partial class PrismaticSign : CanvasLayer
 {
-    private const string ShaderPath = "res://assets/shaders/warn_sparks.gdshader";
+    private const string ShaderPath = "res://assets/shaders/prismatic_sign.gdshader";
 
-    // A quick dramatic entrance — the sign snaps on like failing neon.
+    // A quick celebratory entrance alongside the win card's fade-in.
     private const float FadeSeconds = 0.45f;
 
-    // Once the storm round begins the sign rides the round's opening: a
-    // two-second hold over the settle so the mood lands, then a slow
-    // four-second dissolve that yields the screen to gameplay.
+    // Once the next round begins the banner rides its opening: a
+    // two-second hold so the mood lands, then a slow four-second
+    // dissolve that yields the screen to gameplay (same pacing as the
+    // storm sign's linger).
     private const float LingerSeconds = 2f;
     private const float LingerFadeSeconds = 4f;
 
-    // Sign geometry as fractions of the viewport: centered horizontally,
-    // sitting in the upper quarter so it never covers the win card that
-    // owns the screen center during the end-round. Wider than the text
-    // needs so the cloud puffs keep padding left/right instead of running
-    // flush off the panel edges.
-    private const float WidthFraction = 0.54f;
+    // Banner geometry as fractions of the viewport: centered horizontally,
+    // riding high in the upper quarter — well clear of the centered win
+    // card below it, so the label never sits inside the "Bug found!" modal
+    // even when the card is tall.
+    private const float WidthFraction = 0.50f;
 
-    // The text keeps the size it had at the old, narrower panel: extra
-    // panel width is cloud padding around it, not lettering room.
+    // The text keeps the sizing logic of the storm sign: extra panel width
+    // is aura padding around the lettering, not lettering room.
     private const float TextWidthFraction = 0.83f;
-    private const float HeightFraction = 0.155f;
-    private const float TopAnchor = 0.12f;
+    private const float HeightFraction = 0.085f;
+    private const float TopAnchor = 0.13f;
 
-    // Where the sign's box bottom sits, as a viewport fraction — the
-    // Prismatic banner reads this to slot itself just below the cloud
-    // when both signs share an end-round (prismatic find right before
-    // a storm round).
-    public const float BoxBottomFraction = TopAnchor + HeightFraction / 2f;
+    // When the storm sign shares the end-round (a prismatic find right
+    // before a storm round) the banner yields the upper quarter and slots
+    // in just below the storm sign's cloud instead of beside it — the
+    // cloud's puffs bleed past the sign's box bottom, so the gap can even
+    // dip slightly negative and still read as a clean stack.
+    private const float StormGapFraction = -0.003f;
+    private const float StormFollowTopAnchor =
+        StormWarn.BoxBottomFraction + StormGapFraction + HeightFraction / 2f;
 
     private Control _root = null!;
     private Panel _panel = null!;
@@ -53,14 +56,18 @@ public partial class StormWarn : CanvasLayer
     private Tween _fade = null!;
     private Tween _linger = null!;
 
+    // Set at ShowSign time: true when the storm sign is up for the same
+    // end-round, dropping the banner just below the storm cloud.
+    private bool _belowStorm;
+
     // Autoplay reads the tweened alpha to prove the fade is actually
-    // visible — the sign's pixels are painted by the shader, which must
+    // visible — the banner's pixels are painted by the shader, which must
     // respect modulate or every fade silently becomes a hard cut.
     public float FadeAlpha => _root.Modulate.A;
 
-    public StormWarn()
+    public PrismaticSign()
     {
-        Layer = 4;
+        Layer = 5;
         Visible = false;
     }
 
@@ -78,31 +85,27 @@ public partial class StormWarn : CanvasLayer
         AddChild(_root);
 
         _panel = new Panel { MouseFilter = Control.MouseFilterEnum.Ignore };
-        // No card: the shader paints a storm cloud as the sign's
-        // background, so the panel is purely a layout rect.
+        // No card: the shader paints the pastel aura as the banner's
+        // backdrop, so the panel is purely a layout rect.
         _panel.AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
         _panel.AnchorLeft = 0.5f;
-        _panel.AnchorTop = TopAnchor;
         _panel.AnchorRight = 0.5f;
-        _panel.AnchorBottom = TopAnchor;
         _root.AddChild(_panel);
 
         // The label lives inside its own viewport; its texture is the
-        // glyph mask the shader wraps its bolts around.
+        // glyph mask the shader wraps its shine around.
         _vp = new SubViewport
         {
             Disable3D = true,
             TransparentBg = true,
-            // Only updated while the sign is on screen — costs nothing
+            // Only updated while the banner is on screen — costs nothing
             // when hidden.
             RenderTargetUpdateMode = SubViewport.UpdateMode.Disabled,
         };
         _panel.AddChild(_vp);
 
-        _label = Hud.MakeLabel(64, true, new Color(0.90f, 0.96f, 1.0f));
-        _label.Text = "Storm Round";
-        // Storm-blue outline instead of the HUD's earthy brown.
-        _label.LabelSettings.OutlineColor = new Color(0.02f, 0.09f, 0.18f, 0.95f);
+        _label = Hud.MakeLabel(64, true, new Color(1f, 0.98f, 0.9f));
+        _label.Text = "Prismatic";
         _label.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         _label.HorizontalAlignment = HorizontalAlignment.Center;
         _label.VerticalAlignment = VerticalAlignment.Center;
@@ -116,13 +119,16 @@ public partial class StormWarn : CanvasLayer
         LayoutPanel();
     }
 
-    // Offsets are pixels, so the fractional sign geometry is resolved
-    // against the live viewport (re-run on show — the sign is transient
+    // Offsets are pixels, so the fractional banner geometry is resolved
+    // against the live viewport (re-run on show — the banner is transient
     // and follows window resizes lazily). The viewport size IS the fx
     // rect size, so shader UVs and mask UVs line up pixel for pixel.
     private void LayoutPanel()
     {
         Vector2 view = GetViewport().GetVisibleRect().Size;
+        float anchor = _belowStorm ? StormFollowTopAnchor : TopAnchor;
+        _panel.AnchorTop = anchor;
+        _panel.AnchorBottom = anchor;
         float w = view.X * WidthFraction;
         float h = view.Y * HeightFraction;
         _panel.OffsetLeft = -w / 2f;
@@ -132,10 +138,7 @@ public partial class StormWarn : CanvasLayer
         _vp.Size = new Vector2I((int)w, (int)h);
         // Start from the height-scaled size, then shrink by measurement
         // until the rendered text fits its slice of the panel width with
-        // margin — real font metrics beat any constant divisor ("Storm
-        // Round" was still clipping its trailing "d" at w/6.0). The text
-        // budget stays a fixed fraction of the panel, so widening the
-        // panel buys the cloud padding rather than bigger letters.
+        // margin — real font metrics beat any constant divisor.
         _label.LabelSettings.FontSize = Mathf.Max(28, (int)(h * 0.56f));
         while (_label.LabelSettings.FontSize > 28 && _label.GetMinimumSize().X > w * TextWidthFraction)
         {
@@ -145,23 +148,31 @@ public partial class StormWarn : CanvasLayer
         {
             mat.SetShaderParameter("text_mask", _vp.GetTexture());
             mat.SetShaderParameter("texel", new Vector2(1f / w, 1f / h));
-            mat.SetShaderParameter("aspect", w / h);
         }
     }
 
-    /// <summary>Crackles the warning sign on for the coming storm round.</summary>
-    public void ShowWarning()
+    /// <summary>
+    /// Rides the banner in over the prismatic round's end. When the storm
+    /// sign is up for the same end-round (a prismatic find right before a
+    /// storm round), pass <paramref name="belowStormSign"/> so the banner
+    /// slots in just below the storm cloud instead of beside it.
+    /// </summary>
+    public void ShowSign(bool belowStormSign = false)
     {
+        _belowStorm = belowStormSign;
         if (Visible && _root.Modulate.A >= 1f)
+        {
+            LayoutPanel();
             return;
+        }
         LayoutPanel();
         _vp.RenderTargetUpdateMode = SubViewport.UpdateMode.Always;
         Visible = true;
         FadeTo(1f);
     }
 
-    /// <summary>Fades the sign out once the storm round has begun.</summary>
-    public void HideWarning()
+    /// <summary>Fades the banner out at once (menu returns, non-follow-ups).</summary>
+    public void HideSign()
     {
         if (!Visible)
             return;
@@ -169,11 +180,11 @@ public partial class StormWarn : CanvasLayer
     }
 
     /// <summary>
-    /// Holds the sign over the storm round's opening for
+    /// Holds the banner over the next round's opening for
     /// <see cref="LingerSeconds"/>, then dissolves it out over
     /// <see cref="LingerFadeSeconds"/>. StartLevel calls this instead of
-    /// <see cref="HideWarning"/> when the round being started is the storm
-    /// round the sign warned about.
+    /// <see cref="HideSign"/> when the round being started follows a
+    /// prismatic find.
     /// </summary>
     public void LingerThenFade()
     {
@@ -207,7 +218,7 @@ public partial class StormWarn : CanvasLayer
     private void FinishHide()
     {
         Visible = false;
-        // Sign gone → stop paying for the label viewport.
+        // Banner gone → stop paying for the label viewport.
         _vp.RenderTargetUpdateMode = SubViewport.UpdateMode.Disabled;
     }
 }
