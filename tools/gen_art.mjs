@@ -851,6 +851,801 @@ function fly(p = {}, name = "fly") {
   write(join(BUGS, name + ".svg"), svg);
 }
 
+// ---- New species (slice: 22 additional bugs, 4 variants each) ----
+function aphid(p = {}, name = "aphid") {
+  // Tiny teardrop with two splayed legs and twin cornicles on the rear.
+  const {
+    b1 = "#a4c464", b2 = "#6e8a3c", outline = "#42551c",
+    hi = "#c2d88a", cornicle = "#3e5218", eye = "#26201c",
+  } = p;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <ellipse cx="46" cy="78" rx="20" ry="4" fill="#000" opacity="0.12"/>
+  <g stroke="${outline}" stroke-width="2.4" fill="none" stroke-linecap="round">
+    <path d="M40 64 L28 74 M46 66 L42 78"/>
+  </g>
+  <path d="M46 30 C64 30 72 48 68 62 C64 72 30 72 26 60 C22 46 32 30 46 30 Z"
+        fill="url(#a)" stroke="${outline}" stroke-width="3"/>
+  <ellipse cx="42" cy="42" rx="9" ry="6" fill="${hi}" opacity="0.7"
+           transform="rotate(-22 42 42)"/>
+  <path d="M60 54 L64 46 M66 56 L71 49" stroke="${cornicle}"
+        stroke-width="2.4" fill="none" stroke-linecap="round"/>
+  <circle cx="38" cy="36" r="2.4" fill="${eye}"/>
+  <path d="M34 30 C30 24 26 21 22 20 M40 28 C40 22 42 17 45 14"
+        fill="none" stroke="${outline}" stroke-width="1.8" stroke-linecap="round"/>
+  <defs>
+    <radialGradient id="a" cx="0.35" cy="0.3" r="0.95">
+      <stop offset="0" stop-color="${b1}"/>
+      <stop offset="1" stop-color="${b2}"/>
+    </radialGradient>
+  </defs>
+</svg>`;
+  write(join(BUGS, name + ".svg"), svg);
+}
+
+function barklice(p = {}, name = "barklice") {
+  // Small oval with roof-like patterned wings folded flat over the back.
+  const {
+    b1 = "#c9ab7c", b2 = "#96794e", outline = "#5c4628",
+    wingMark = "#7a6240", hi = "#e0c8a0", eye = "#26201c",
+  } = p;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <radialGradient id="bk" cx="0.4" cy="0.3" r="0.95">
+      <stop offset="0" stop-color="${b1}"/>
+      <stop offset="1" stop-color="${b2}"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="50" cy="72" rx="24" ry="4.4" fill="#000" opacity="0.12"/>
+  <g stroke="${outline}" stroke-width="2.2" fill="none" stroke-linecap="round">
+    <path d="M36 58 L26 68 M46 62 L42 72 M58 60 L64 70 M64 54 L74 62"/>
+  </g>
+  <path d="M50 34 C68 34 78 46 76 58 C74 66 26 66 24 58 C22 46 32 34 50 34 Z"
+        fill="url(#bk)" stroke="${outline}" stroke-width="2.8"/>
+  <path d="M50 34 L50 64" stroke="${outline}" stroke-width="1.8"/>
+  <g stroke="${wingMark}" stroke-width="1.8" fill="none" opacity="0.8">
+    <path d="M38 42 C34 50 34 56 38 62 M62 42 C66 50 66 56 62 62"/>
+    <path d="M44 38 C42 46 42 56 44 64 M56 38 C58 46 58 56 56 64"/>
+  </g>
+  <ellipse cx="42" cy="42" rx="8" ry="4" fill="${hi}" opacity="0.6"
+           transform="rotate(-16 42 42)"/>
+  <circle cx="40" cy="38" r="2.2" fill="${eye}"/>
+  <circle cx="46" cy="37" r="2.2" fill="${eye}"/>
+  <path d="M37 34 C34 29 31 26 28 25 M43 33 C44 28 47 24 51 22"
+        fill="none" stroke="${outline}" stroke-width="1.6" stroke-linecap="round"/>
+</svg>`;
+  write(join(BUGS, name + ".svg"), svg);
+}
+
+function cicada(p = {}, name = "cicada") {
+  // Wide blunt body, stubby clear wings angled back, two big wide-set eyes.
+  const {
+    b1 = "#a8823c", b2 = "#6e521e", outline = "#42300e",
+    wingFill = "#e2e8d8", wingStroke = "#9aa884",
+    hi = "#c4a058", eye = "#2a2418", eyeHi = "#e8d9c0",
+  } = p;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <radialGradient id="cc" cx="0.4" cy="0.3" r="0.95">
+      <stop offset="0" stop-color="${b1}"/>
+      <stop offset="1" stop-color="${b2}"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="50" cy="82" rx="26" ry="4.6" fill="#000" opacity="0.13"/>
+  <path d="M30 42 C36 34 64 34 70 42 L80 64 C74 72 26 72 20 64 Z"
+        fill="${wingFill}" fill-opacity="0.8" stroke="${wingStroke}" stroke-width="2.4"/>
+  <path d="M40 44 L46 66 M50 42 L50 68 M60 44 L54 66"
+        stroke="${wingStroke}" stroke-width="1.4" fill="none" opacity="0.7"/>
+  <path d="M32 38 C34 26 44 22 50 22 C56 22 66 26 68 38 C70 52 64 66 50 68
+           C36 66 30 52 32 38 Z"
+        fill="url(#cc)" stroke="${outline}" stroke-width="3"/>
+  <path d="M36 44 L34 62 M44 46 L43 66 M56 46 L57 66 M64 44 L66 62"
+        stroke="${outline}" stroke-width="1.6" opacity="0.65" fill="none"/>
+  <ellipse cx="42" cy="34" rx="9" ry="4.6" fill="${hi}" opacity="0.7"
+           transform="rotate(-14 42 34)"/>
+  <path d="M38 68 L30 78 M46 70 L44 80 M58 70 L60 80 M64 68 L72 78"
+        stroke="${outline}" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+  <circle cx="30" cy="34" r="6.4" fill="${eye}" stroke="${outline}" stroke-width="1.8"/>
+  <circle cx="70" cy="34" r="6.4" fill="${eye}" stroke="${outline}" stroke-width="1.8"/>
+  <circle cx="28" cy="32" r="1.8" fill="${eyeHi}"/>
+  <circle cx="68" cy="32" r="1.8" fill="${eyeHi}"/>
+  <path d="M44 24 C46 20 54 20 56 24" stroke="${outline}" stroke-width="2"
+        fill="none" stroke-linecap="round"/>
+</svg>`;
+  write(join(BUGS, name + ".svg"), svg);
+}
+
+function clickBeetle(p = {}, name = "click_beetle") {
+  // Elongated flat body, squared pronotum with pinched rear corners, tiny head.
+  const {
+    b1 = "#8a6a3c", b2 = "#54401e", outline = "#33250e",
+    hi = "#a8895a", eye = "#26201c", feathery = "#33250e",
+  } = p;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="ck" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="${b1}"/>
+      <stop offset="1" stop-color="${b2}"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="50" cy="82" rx="24" ry="4.4" fill="#000" opacity="0.12"/>
+  <g stroke="${outline}" stroke-width="2.4" fill="none" stroke-linecap="round">
+    <path d="M34 56 L24 68 M38 60 L30 72 M48 62 L46 74 M58 62 L60 74 M66 58 L74 70"/>
+  </g>
+  <ellipse cx="50" cy="50" rx="17" ry="27" fill="url(#ck)"
+           stroke="${outline}" stroke-width="3"/>
+  <path d="M50 26 L50 76" stroke="${outline}" stroke-width="2"/>
+  <path d="M35 32 C40 24 60 24 65 32 L64 38 C56 34 44 34 36 38 Z"
+        fill="${b1}" stroke="${outline}" stroke-width="2.6" stroke-linejoin="round"/>
+  <ellipse cx="43" cy="44" rx="7" ry="9" fill="${hi}" opacity="0.5"
+           transform="rotate(14 43 44)"/>
+  <g stroke="${feathery}" stroke-width="1.4" opacity="0.5" fill="none">
+    <path d="M38 66 C40 62 44 60 48 60"/>
+  </g>
+  <circle cx="50" cy="19" r="5" fill="${b1}" stroke="${outline}" stroke-width="2.4"/>
+  <g fill="${eye}"><circle cx="48" cy="18" r="1.4"/><circle cx="52" cy="18" r="1.4"/></g>
+  <path d="M46 15 C44 11 41 9 38 8 M54 15 C56 11 59 9 62 8"
+        fill="none" stroke="${outline}" stroke-width="1.6" stroke-linecap="round"/>
+</svg>`;
+  write(join(BUGS, name + ".svg"), svg);
+}
+
+function damselfly(p = {}, name = "damselfly") {
+  // Slender percher: narrow wings held together over the back, thin long tail.
+  const {
+    b1 = "#5aa8b8", b2 = "#2e7488", outline = "#1c4a58",
+    wingFill = "#dcecf4", wingStroke = "#8ab4c8",
+    hi = "#84c8d4", eye = "#1e3444", eyeHi = "#dfeaf2",
+  } = p;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <ellipse cx="48" cy="80" rx="24" ry="4" fill="#000" opacity="0.12"/>
+  <ellipse cx="58" cy="34" rx="24" ry="5" fill="${wingFill}" fill-opacity="0.85"
+           stroke="${wingStroke}" stroke-width="2" transform="rotate(-24 58 34)"/>
+  <ellipse cx="60" cy="42" rx="22" ry="4.6" fill="${wingFill}" fill-opacity="0.85"
+           stroke="${wingStroke}" stroke-width="2" transform="rotate(-12 60 42)"/>
+  <path d="M48 34 L74 28 M50 42 L74 39" stroke="${wingStroke}" stroke-width="1"
+        opacity="0.6"/>
+  <g stroke="${outline}" stroke-width="2.2" fill="none" stroke-linecap="round">
+    <path d="M38 50 L26 62 M42 52 L36 66"/>
+  </g>
+  <path d="M30 56 C34 50 42 46 48 48 L76 64 C78 66 76 70 72 69 L44 58
+           C38 58 34 60 30 60 Z"
+        fill="url(#dm)" stroke="${outline}" stroke-width="2.6" stroke-linejoin="round"/>
+  <circle cx="30" cy="50" r="8" fill="${b1}" stroke="${outline}" stroke-width="2.4"/>
+  <circle cx="26" cy="48" r="4.6" fill="${eye}"/>
+  <circle cx="34" cy="47" r="4.6" fill="${eye}"/>
+  <circle cx="24.6" cy="46.6" r="1.4" fill="${eyeHi}"/>
+  <circle cx="32.6" cy="45.6" r="1.4" fill="${eyeHi}"/>
+  <ellipse cx="42" cy="50" rx="7" ry="3.4" fill="${hi}" opacity="0.7"
+           transform="rotate(16 42 50)"/>
+  <defs>
+    <linearGradient id="dm" x1="0" y1="0" x2="1" y2="0.4">
+      <stop offset="0" stop-color="${b1}"/>
+      <stop offset="1" stop-color="${b2}"/>
+    </linearGradient>
+  </defs>
+</svg>`;
+  write(join(BUGS, name + ".svg"), svg);
+}
+
+function earwig(p = {}, name = "earwig") {
+  // Elongated dark body with folded wings and pincer forceps at the rear.
+  const {
+    b1 = "#8a6238", b2 = "#5c3e1e", outline = "#33220e",
+    hi = "#a8804e", pincer = "#4a3216", eye = "#26201c", eyeHi = "#f5e8cd",
+  } = p;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="ew" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="${b1}"/>
+      <stop offset="1" stop-color="${b2}"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="50" cy="78" rx="28" ry="4" fill="#000" opacity="0.12"/>
+  <g stroke="${outline}" stroke-width="2" fill="none" stroke-linecap="round">
+    <path d="M40 58 L30 66 M46 62 L40 72 M56 62 L62 72 M64 56 L74 64"/>
+  </g>
+  <path d="M28 46 C28 38 72 38 72 46 L70 58 C66 64 34 64 30 58 Z"
+        fill="url(#ew)" stroke="${outline}" stroke-width="2.6" stroke-linejoin="round"/>
+  <path d="M28 46 C34 56 40 60 46 62 C54 64 62 62 70 54"
+        fill="none" stroke="${outline}" stroke-width="1.8" opacity="0.6"/>
+  <ellipse cx="28" cy="42" rx="12" ry="9" fill="${b1}" stroke="${outline}" stroke-width="2.6"/>
+  <ellipse cx="25" cy="40" rx="5" ry="3.4" fill="${hi}" opacity="0.6"
+           transform="rotate(-18 25 40)"/>
+  <path d="M46 60 L36 74 M52 61 L48 76 M58 60 L62 74"
+        stroke="${outline}" stroke-width="1.8" fill="none" stroke-linecap="round" opacity="0.8"/>
+  <path d="M70 56 C80 58 86 64 84 72" fill="none" stroke="${pincer}"
+        stroke-width="3.4" stroke-linecap="round"/>
+  <path d="M74 54 C82 50 90 52 93 58" fill="none" stroke="${pincer}"
+        stroke-width="3.4" stroke-linecap="round"/>
+  <circle cx="21" cy="40" r="1.8" fill="${eyeHi}"/>
+  <path d="M18 34 C14 28 10 25 6 24 M22 33 C22 27 24 21 28 17"
+        fill="none" stroke="${outline}" stroke-width="1.6" stroke-linecap="round"/>
+</svg>`;
+  write(join(BUGS, name + ".svg"), svg);
+}
+
+function earthworm(p = {}, name = "earthworm") {
+  // Legless segmented tube in an S-curve; clitellum as a pale saddle band.
+  const {
+    b1 = "#d99a8a", b2 = "#a86458", outline = "#6e3a34",
+    hi = "#eab8a8", saddle = "#c47a6e", seg = "#8a4c42",
+  } = p;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="wm" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="${b1}"/>
+      <stop offset="1" stop-color="${b2}"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="50" cy="82" rx="32" ry="4.4" fill="#000" opacity="0.11"/>
+  <path d="M12 66 C20 52 40 50 50 60 C60 70 76 68 84 56 L88 60 C82 74 62 78 48 70
+           C36 64 24 66 16 72 Z"
+        fill="url(#wm)" stroke="${outline}" stroke-width="2.8" stroke-linejoin="round"/>
+  <path d="M28 63 C30 58 36 55 42 56 L40 64 C36 64 31 64 28 63 Z" fill="${saddle}" opacity="0.9"/>
+  <g stroke="${seg}" stroke-width="1.5" opacity="0.55" fill="none">
+    <path d="M50 62 L52 70 M58 66 L60 72 M66 66 L68 72 M74 64 L76 70"/>
+  </g>
+  <path d="M14 64 C18 58 24 55 30 56" stroke="${hi}" stroke-width="2"
+        fill="none" stroke-linecap="round" opacity="0.7"/>
+  <circle cx="13" cy="64" r="1.4" fill="${outline}"/>
+</svg>`;
+  write(join(BUGS, name + ".svg"), svg);
+}
+
+function froghopper(p = {}, name = "froghopper") {
+  // Wide squat hopper: blunt frog-like face, folded wings, chunky hind legs.
+  const {
+    b1 = "#8a9455", b2 = "#57622c", outline = "#33400f",
+    hi = "#a8b06e", eye = "#26201c", eyeHi = "#f5e8cd",
+  } = p;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <radialGradient id="fh" cx="0.4" cy="0.3" r="0.95">
+      <stop offset="0" stop-color="${b1}"/>
+      <stop offset="1" stop-color="${b2}"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="50" cy="72" rx="26" ry="4.4" fill="#000" opacity="0.12"/>
+  <g stroke="${outline}" stroke-width="2.2" fill="none" stroke-linecap="round">
+    <path d="M32 56 L22 64 M68 56 L78 64"/>
+    <path d="M42 64 C50 68 60 66 66 58 C72 48 66 40 58 42 C52 28 34 30 34 42
+             C26 42 22 52 28 58 C32 62 38 62 42 64 Z" fill="none" stroke-width="0"/>
+  </g>
+  <path d="M42 64 C50 68 60 66 66 58 C72 48 66 40 58 42 C56 30 36 28 34 42
+           C26 42 22 52 28 58 C34 63 38 62 42 64 Z"
+        fill="url(#fh)" stroke="${outline}" stroke-width="2.8" stroke-linejoin="round"/>
+  <path d="M34 46 L66 46 L64 58 C56 62 44 62 36 58 Z" fill="${b2}" opacity="0.55"/>
+  <path d="M36 42 C40 38 46 38 50 42" stroke="${hi}" stroke-width="2"
+        fill="none" stroke-linecap="round" opacity="0.7"/>
+  <g stroke="${outline}" stroke-width="3" fill="none" stroke-linecap="round">
+    <path d="M30 58 C24 62 22 68 24 72 M70 58 C76 62 78 68 76 72"/>
+  </g>
+  <circle cx="34" cy="36" r="4.4" fill="${eye}" stroke="${outline}" stroke-width="1.4"/>
+  <circle cx="48" cy="33" r="4.4" fill="${eye}" stroke="${outline}" stroke-width="1.4"/>
+  <circle cx="32.8" cy="34.6" r="1.4" fill="${eyeHi}"/>
+  <circle cx="46.8" cy="31.6" r="1.4" fill="${eyeHi}"/>
+</svg>`;
+  write(join(BUGS, name + ".svg"), svg);
+}
+
+function glowworm(p = {}, name = "glowworm") {
+  // Dark segmented larva whose rear segments carry a soft glow.
+  const {
+    b1 = "#6a5a44", b2 = "#3e3226", outline = "#241c12",
+    hi = "#8a7658", glow1 = "#d8f0a0", glow2 = "#a8d858", eye = "#26201c",
+  } = p;
+  const segs = [
+    [26, 58, 9], [38, 60, 9.5], [50, 61, 9.5], [62, 61, 9], [73, 59, 8],
+  ];
+  const segEls = segs
+    .map(([x, y, r]) => `<circle cx="${x}" cy="${y}" r="${r}"/>`)
+    .join(" ");
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="gw" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="${b1}"/>
+      <stop offset="1" stop-color="${b2}"/>
+    </linearGradient>
+    <radialGradient id="gwglow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="${glow1}" stop-opacity="0.9"/>
+      <stop offset="0.6" stop-color="${glow2}" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="${glow2}" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="48" cy="74" rx="30" ry="4.4" fill="#000" opacity="0.12"/>
+  <circle cx="76" cy="59" r="22" fill="url(#gwglow)"/>
+  <g fill="url(#gw)" stroke="${outline}" stroke-width="2.6">${segEls}</g>
+  <g fill="${glow2}" opacity="0.85">
+    <circle cx="62" cy="61" r="3.4"/><circle cx="73" cy="59" r="3.8"/>
+  </g>
+  <ellipse cx="24" cy="55" rx="4" ry="2.4" fill="${hi}" opacity="0.7"
+           transform="rotate(-24 24 55)"/>
+  <g stroke="${outline}" stroke-width="1.8" fill="none" stroke-linecap="round">
+    <path d="M30 67 L26 72 M46 70 L44 74 M60 70 L62 74"/>
+  </g>
+  <circle cx="18" cy="55" r="6.4" fill="${b1}" stroke="${outline}" stroke-width="2.4"/>
+  <circle cx="15.6" cy="53.6" r="1.7" fill="${eye}"/>
+  <path d="M13 50 C10 45 7 42 4 41 M16 49 C15 44 16 39 19 35"
+        fill="none" stroke="${outline}" stroke-width="1.6" stroke-linecap="round"/>
+</svg>`;
+  write(join(BUGS, name + ".svg"), svg);
+}
+
+function jewelBeetle(p = {}, name = "jewel_beetle") {
+  // Streamlined metallic body tapering to a point; pronotum wider than head.
+  const {
+    b1 = "#3ca88a", b2 = "#166a54", outline = "#0c3a2c",
+    hi = "#7ad8b8", limb = "#0e4234", legHi = "#5ab898", head = "#1a5a46",
+    eye = "#26201c",
+  } = p;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="jb" x1="0" y1="0" x2="0.35" y2="1">
+      <stop offset="0" stop-color="${b1}"/>
+      <stop offset="1" stop-color="${b2}"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="48" cy="84" rx="24" ry="4.4" fill="#000" opacity="0.13"/>
+  <g stroke="${limb}" stroke-width="2.4" fill="none" stroke-linecap="round">
+    <path d="M36 52 L24 62 M40 56 L32 68 M52 58 L56 70 M60 54 L70 66 M64 48 L76 56"/>
+  </g>
+  <path d="M48 18 C64 18 72 32 70 48 C68 64 58 78 48 82 C38 78 28 64 26 48
+           C24 32 32 18 48 18 Z"
+        fill="url(#jb)" stroke="${outline}" stroke-width="3"/>
+  <path d="M48 22 L48 78" stroke="${outline}" stroke-width="1.8"/>
+  <path d="M32 30 C36 24 42 22 48 22 C54 22 60 24 64 30 C60 26 54 24 48 24
+           C42 24 36 26 32 30 Z" fill="${hi}" opacity="0.55"/>
+  <ellipse cx="40" cy="40" rx="6" ry="12" fill="${hi}" opacity="0.4"
+           transform="rotate(12 40 40)"/>
+  <path d="M36 30 C40 27 44 26 48 26 C52 26 56 27 60 30 L58 34 C54 31 51 30 48 30
+           C45 30 42 31 38 34 Z"
+        fill="${head}" stroke="${outline}" stroke-width="2.2" stroke-linejoin="round"/>
+  <g fill="${eye}"><circle cx="35" cy="27" r="1.8"/><circle cx="61" cy="27" r="1.8"/></g>
+  <ellipse cx="52" cy="46" rx="4" ry="10" fill="${legHi}" opacity="0.35"
+           transform="rotate(-10 52 46)"/>
+</svg>`;
+  write(join(BUGS, name + ".svg"), svg);
+}
+
+function lacewing(p = {}, name = "lacewing") {
+  // Pale green body under broad rounded net-veined wings.
+  const {
+    b1 = "#a8c46e", b2 = "#6e8a3c", outline = "#42551c",
+    wingFill = "#eef4e0", wingStroke = "#a8b888",
+    vein = "#8aa066", eye = "#e8b84a", eyeStroke = "#8a651c",
+  } = p;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="lw" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="${b1}"/>
+      <stop offset="1" stop-color="${b2}"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="50" cy="80" rx="24" ry="4.2" fill="#000" opacity="0.11"/>
+  <ellipse cx="34" cy="40" rx="22" ry="13" fill="${wingFill}" fill-opacity="0.92"
+           stroke="${wingStroke}" stroke-width="2" transform="rotate(-34 34 40)"/>
+  <ellipse cx="66" cy="40" rx="22" ry="13" fill="${wingFill}" fill-opacity="0.92"
+           stroke="${wingStroke}" stroke-width="2" transform="rotate(34 66 40)"/>
+  <g stroke="${vein}" stroke-width="1.1" opacity="0.8" fill="none">
+    <path d="M22 52 L44 30 M28 56 L50 32 M36 58 L58 34"/>
+    <path d="M78 52 L56 30 M72 56 L50 32 M64 58 L42 34"/>
+  </g>
+  <g stroke="${outline}" stroke-width="2" fill="none" stroke-linecap="round">
+    <path d="M38 58 L28 68 M46 62 L40 72 M56 62 L62 72 M62 58 L72 66"/>
+  </g>
+  <ellipse cx="50" cy="52" rx="9" ry="17" fill="url(#lw)" stroke="${outline}" stroke-width="2.6"/>
+  <circle cx="50" cy="32" r="8" fill="${b1}" stroke="${outline}" stroke-width="2.6"/>
+  <circle cx="46.4" cy="30" r="3" fill="${eye}" stroke="${eyeStroke}" stroke-width="1.4"/>
+  <circle cx="53.6" cy="30" r="3" fill="${eye}" stroke="${eyeStroke}" stroke-width="1.4"/>
+  <path d="M46 25 C42 19 38 16 33 15 M54 25 C58 19 62 16 67 15"
+        fill="none" stroke="${outline}" stroke-width="1.8" stroke-linecap="round"/>
+</svg>`;
+  write(join(BUGS, name + ".svg"), svg);
+}
+
+function lanternfly(p = {}, name = "lanternfly") {
+  // Moth-like hopper with a long up-curled snout and spotted wings.
+  const {
+    b1 = "#d9c9a0", b2 = "#a8905c", outline = "#5c4a24",
+    wingSpot = "#8a6a34", snout = "#c9a86a", hi = "#ece0c0",
+    eye = "#26201c", eyeHi = "#f5e8cd",
+  } = p;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <radialGradient id="lf" cx="0.4" cy="0.3" r="0.95">
+      <stop offset="0" stop-color="${b1}"/>
+      <stop offset="1" stop-color="${b2}"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="50" cy="76" rx="26" ry="4.4" fill="#000" opacity="0.12"/>
+  <path d="M42 40 C30 34 18 36 12 46 C20 48 34 50 44 48 Z" fill="${b2}"
+        stroke="${outline}" stroke-width="2.2" stroke-linejoin="round"/>
+  <path d="M58 40 C70 34 82 36 88 46 C80 48 66 50 56 48 Z" fill="${b2}"
+        stroke="${outline}" stroke-width="2.2" stroke-linejoin="round"/>
+  <path d="M44 42 C48 34 52 34 56 42 L62 62 C58 68 42 68 38 62 Z"
+        fill="url(#lf)" stroke="${outline}" stroke-width="2.6" stroke-linejoin="round"/>
+  <g fill="${wingSpot}" opacity="0.85">
+    <circle cx="46" cy="50" r="2.6"/><circle cx="55" cy="52" r="2.2"/>
+    <circle cx="50" cy="59" r="2.2"/>
+  </g>
+  <ellipse cx="47" cy="44" rx="4" ry="3" fill="${hi}" opacity="0.8"/>
+  <path d="M34 44 C26 42 18 38 14 30 C20 28 28 32 36 40 Z" fill="${snout}"
+        stroke="${outline}" stroke-width="2.4" stroke-linejoin="round"/>
+  <circle cx="15" cy="30" r="1.6" fill="${outline}"/>
+  <g stroke="${outline}" stroke-width="2" fill="none" stroke-linecap="round">
+    <path d="M40 66 L34 74 M48 68 L46 76 M56 66 L62 74"/>
+  </g>
+  <circle cx="40" cy="41" r="3" fill="${eye}" stroke="${outline}" stroke-width="1.2"/>
+  <circle cx="60" cy="41" r="3" fill="${eye}" stroke="${outline}" stroke-width="1.2"/>
+  <circle cx="39" cy="40" r="1" fill="${eyeHi}"/>
+  <circle cx="59" cy="40" r="1" fill="${eyeHi}"/>
+</svg>`;
+  write(join(BUGS, name + ".svg"), svg);
+}
+
+function leafhopper(p = {}, name = "leafhopper") {
+  // Wedge-shaped hopper tilted forward on its hind legs.
+  const {
+    b1 = "#8ab86a", b2 = "#4e7a34", outline = "#2c4a18",
+    hi = "#a8d088", wingMark = "#5e8a40", eye = "#26201c", eyeHi = "#f5e8cd",
+  } = p;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="lh" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="${b1}"/>
+      <stop offset="1" stop-color="${b2}"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="48" cy="74" rx="24" ry="4.2" fill="#000" opacity="0.12"/>
+  <g stroke="${outline}" stroke-width="2.4" fill="none" stroke-linecap="round">
+    <path d="M30 58 C24 62 22 68 23 72 M70 44 C76 44 80 48 80 52"/>
+  </g>
+  <path d="M14 46 C22 40 36 34 48 34 C62 34 76 40 84 50 C76 56 62 60 48 60
+           C36 60 24 56 14 46 Z"
+        fill="url(#lh)" stroke="${outline}" stroke-width="2.8" stroke-linejoin="round"/>
+  <path d="M40 38 C50 42 62 44 74 46 M34 44 C46 48 58 50 70 52"
+        stroke="${wingMark}" stroke-width="1.8" fill="none" opacity="0.75"/>
+  <ellipse cx="30" cy="44" rx="8" ry="3.4" fill="${hi}" opacity="0.7"
+           transform="rotate(-14 30 44)"/>
+  <g stroke="${outline}" stroke-width="2" fill="none" stroke-linecap="round">
+    <path d="M34 60 L28 70 M42 62 L40 72 M50 61 L54 72"/>
+  </g>
+  <circle cx="18" cy="46" r="4.4" fill="${eye}" stroke="${outline}" stroke-width="1.4"/>
+  <circle cx="16.6" cy="44.6" r="1.4" fill="${eyeHi}"/>
+</svg>`;
+  write(join(BUGS, name + ".svg"), svg);
+}
+
+function mayfly(p = {}, name = "mayfly") {
+  // Dainty upwinger: tiny body, sail wings, two long thread tails.
+  const {
+    b1 = "#b8a888", b2 = "#7e6e50", outline = "#4a3e28",
+    wingFill = "#f0ece0", wingStroke = "#b0a888",
+    eye = "#3a3226", eyeHi = "#f5e8cd",
+  } = p;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="mf" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="${b1}"/>
+      <stop offset="1" stop-color="${b2}"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="46" cy="70" rx="18" ry="3.6" fill="#000" opacity="0.1"/>
+  <path d="M42 40 C34 22 40 14 52 14 C64 14 68 24 60 42 C66 26 76 22 82 28
+           C86 34 80 44 62 48 Z"
+        fill="${wingFill}" fill-opacity="0.9" stroke="${wingStroke}" stroke-width="2"
+        stroke-linejoin="round"/>
+  <path d="M50 18 L48 40 M66 28 L58 44" stroke="${wingStroke}" stroke-width="1"
+        opacity="0.7"/>
+  <ellipse cx="46" cy="44" rx="10" ry="6.4" fill="url(#mf)" stroke="${outline}" stroke-width="2.4"/>
+  <path d="M54 46 C64 50 72 58 78 70 M55 48 C62 56 66 64 68 74"
+        fill="none" stroke="${outline}" stroke-width="1.4" stroke-linecap="round"/>
+  <g stroke="${outline}" stroke-width="1.8" fill="none" stroke-linecap="round">
+    <path d="M38 48 L30 56 M42 50 L36 58 M46 50 L44 58"/>
+  </g>
+  <circle cx="38" cy="42" r="5" fill="${b1}" stroke="${outline}" stroke-width="2.2"/>
+  <g fill="${eye}"><circle cx="35.6" cy="41" r="1.7"/><circle cx="41.4" cy="41" r="1.7"/></g>
+  <circle cx="35" cy="40.2" r="0.8" fill="${eyeHi}"/>
+  <path d="M34 38 C30 34 26 32 22 32 M39 37 C38 33 38 29 40 25"
+        fill="none" stroke="${outline}" stroke-width="1.4" stroke-linecap="round"/>
+</svg>`;
+  write(join(BUGS, name + ".svg"), svg);
+}
+
+function rhinocerosBeetle(p = {}, name = "rhinoceros_beetle") {
+  // Heavy rounded tank with a big forward horn and deep gloss.
+  const {
+    b1 = "#5c4630", b2 = "#2e2010", outline = "#1a1006",
+    hi = "#8a6e4a", limb = "#241608", legHi = "#6a5236",
+    eye = "#0e0a04", head = "#42321e",
+  } = p;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <radialGradient id="rb" cx="0.35" cy="0.25" r="1">
+      <stop offset="0" stop-color="${b1}"/>
+      <stop offset="1" stop-color="${b2}"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="52" cy="82" rx="30" ry="5" fill="#000" opacity="0.14"/>
+  <g stroke="${limb}" stroke-width="3.4" fill="none" stroke-linecap="round">
+    <path d="M32 58 L20 68 M36 64 L28 76 M60 66 L62 78 M70 60 L82 70"/>
+  </g>
+  <path d="M54 40 C76 40 84 54 82 66 C80 76 66 82 52 82 C38 82 24 76 22 66
+           C20 54 32 40 54 40 Z"
+        fill="url(#rb)" stroke="${outline}" stroke-width="3"/>
+  <path d="M54 40 L54 82" stroke="${outline}" stroke-width="2"/>
+  <ellipse cx="40" cy="52" rx="10" ry="4.6" fill="${hi}" opacity="0.45"
+           transform="rotate(-18 40 52)"/>
+  <path d="M30 44 C34 38 44 34 54 34 C64 34 74 38 78 44 C74 40 66 38 54 38
+           C44 38 36 40 30 44 Z" fill="${head}" stroke="${outline}" stroke-width="2.4"/>
+  <path d="M34 40 C28 32 24 22 26 12 C30 14 34 20 38 28 L42 38 Z"
+        fill="${head}" stroke="${outline}" stroke-width="2.6" stroke-linejoin="round"/>
+  <path d="M30 16 C33 17 36 20 37 24" fill="none" stroke="${hi}" stroke-width="1.6"
+        opacity="0.6" stroke-linecap="round"/>
+  <g fill="${eye}"><circle cx="40" cy="38" r="1.8"/><circle cx="66" cy="40" r="1.8"/></g>
+  <ellipse cx="48" cy="56" rx="6" ry="12" fill="${legHi}" opacity="0.3"
+           transform="rotate(8 48 56)"/>
+</svg>`;
+  write(join(BUGS, name + ".svg"), svg);
+}
+
+function shieldBug(p = {}, name = "shield_bug") {
+  // Classic pentagonal shield with a big central scutellum triangle.
+  const {
+    b1 = "#7aa84e", b2 = "#4a7a2c", outline = "#2c4a18",
+    scutellum = "#5e8a38", hi = "#a8d078", band = "#3e6a24",
+    eye = "#26201c", eyeHi = "#f5e8cd",
+  } = p;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <radialGradient id="sb" cx="0.4" cy="0.3" r="0.95">
+      <stop offset="0" stop-color="${b1}"/>
+      <stop offset="1" stop-color="${b2}"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="50" cy="78" rx="26" ry="4.4" fill="#000" opacity="0.12"/>
+  <g stroke="${outline}" stroke-width="2.2" fill="none" stroke-linecap="round">
+    <path d="M28 54 L18 64 M34 60 L28 72 M50 64 L50 76 M66 60 L72 72 M72 54 L82 64"/>
+  </g>
+  <path d="M50 22 L70 38 L66 66 C58 72 42 72 34 66 L30 38 Z"
+        fill="url(#sb)" stroke="${outline}" stroke-width="2.8" stroke-linejoin="round"/>
+  <path d="M50 34 L62 44 L58 62 C55 64 45 64 42 62 L38 44 Z"
+        fill="${scutellum}" stroke="${outline}" stroke-width="2.2" stroke-linejoin="round"/>
+  <path d="M50 22 L50 34" stroke="${outline}" stroke-width="2"/>
+  <path d="M36 40 L64 40" stroke="${band}" stroke-width="2.2" opacity="0.7"/>
+  <path d="M38 60 L62 60" stroke="${band}" stroke-width="2.2" opacity="0.7"/>
+  <ellipse cx="42" cy="30" rx="7" ry="3.4" fill="${hi}" opacity="0.7"
+           transform="rotate(-24 42 30)"/>
+  <g fill="${eye}"><circle cx="40" cy="27" r="1.9"/><circle cx="60" cy="27" r="1.9"/></g>
+  <circle cx="39.2" cy="26.2" r="0.8" fill="${eyeHi}"/>
+  <circle cx="59.2" cy="26.2" r="0.8" fill="${eyeHi}"/>
+  <path d="M42 22 C44 18 56 18 58 22" fill="none" stroke="${outline}" stroke-width="1.8"
+        stroke-linecap="round"/>
+</svg>`;
+  write(join(BUGS, name + ".svg"), svg);
+}
+
+function silverfish(p = {}, name = "silverfish") {
+  // Wingless tapering teardrop, long antennae, three bristle tails.
+  const {
+    b1 = "#c2c8cc", b2 = "#8a949c", outline = "#4e565e",
+    hi = "#e4e9ec", bristle = "#6a747c", eye = "#26201c",
+  } = p;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="sf" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="${b1}"/>
+      <stop offset="1" stop-color="${b2}"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="48" cy="72" rx="24" ry="4" fill="#000" opacity="0.1"/>
+  <g stroke="${outline}" stroke-width="1.8" fill="none" stroke-linecap="round">
+    <path d="M36 62 L26 68 M44 64 L40 72 M54 63 L58 71"/>
+  </g>
+  <path d="M28 40 C36 32 56 32 62 40 C70 50 74 58 76 66 C68 66 60 62 54 62
+           C46 62 36 60 30 54 C26 50 25 44 28 40 Z"
+        fill="url(#sf)" stroke="${outline}" stroke-width="2.6" stroke-linejoin="round"/>
+  <g stroke="${outline}" stroke-width="1.2" opacity="0.5" fill="none">
+    <path d="M38 38 L40 56 M46 34 L48 60 M54 36 L56 62"/>
+  </g>
+  <path d="M76 66 C84 64 90 68 92 74 M76 66 C82 70 84 76 83 82 M76 66 C74 74 76 80 80 84"
+        fill="none" stroke="${bristle}" stroke-width="1.8" stroke-linecap="round"/>
+  <ellipse cx="36" cy="44" rx="7" ry="3" fill="${hi}" opacity="0.75"
+           transform="rotate(-18 36 44)"/>
+  <circle cx="30" cy="42" r="2" fill="${eye}"/>
+  <path d="M24 38 C16 32 10 28 4 27 M26 36 C22 29 20 24 20 18"
+        fill="none" stroke="${outline}" stroke-width="1.6" stroke-linecap="round"/>
+</svg>`;
+  write(join(BUGS, name + ".svg"), svg);
+}
+
+function slug(p = {}, name = "slug") {
+  // Soft blob: mantle saddle over a tail, two eyestalks, feeler low front.
+  const {
+    b1 = "#c9a86e", b2 = "#967444", outline = "#5e4626",
+    mantle = "#b0945c", hi = "#e0c898", eye = "#26201c",
+  } = p;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="sl" x1="0" y1="0" x2="0.25" y2="1">
+      <stop offset="0" stop-color="${b1}"/>
+      <stop offset="1" stop-color="${b2}"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="52" cy="80" rx="32" ry="5" fill="#000" opacity="0.12"/>
+  <path d="M18 76 C16 66 26 58 40 58 L64 58 C76 58 84 66 84 74 C84 78 80 80 74 80
+           L24 80 C20 80 18 78 18 76 Z"
+        fill="url(#sl)" stroke="${outline}" stroke-width="2.8" stroke-linejoin="round"/>
+  <path d="M34 58 C32 48 40 40 50 40 C60 40 66 48 64 58 Z"
+        fill="${mantle}" stroke="${outline}" stroke-width="2.6" stroke-linejoin="round"/>
+  <ellipse cx="46" cy="48" rx="6" ry="3.4" fill="${hi}" opacity="0.65"
+           transform="rotate(-18 46 48)"/>
+  <g stroke="${outline}" stroke-width="2.4" fill="none" stroke-linecap="round">
+    <path d="M28 56 C26 48 27 42 30 38"/>
+    <path d="M36 55 C35 49 36 45 38 42"/>
+  </g>
+  <circle cx="30.6" cy="36.6" r="3" fill="${eye}" stroke="${outline}" stroke-width="1.2"/>
+  <circle cx="38.6" cy="40.6" r="2.4" fill="${eye}" stroke="${outline}" stroke-width="1.2"/>
+  <circle cx="29.6" cy="35.6" r="1" fill="#f5f0e6"/>
+  <circle cx="37.8" cy="39.8" r="0.9" fill="#f5f0e6"/>
+  <path d="M22 62 C20 60 18 59 16 59" fill="none" stroke="${outline}" stroke-width="1.8"
+        stroke-linecap="round"/>
+  <path d="M20 74 C34 77 62 77 78 74" stroke="${hi}" stroke-width="1.6"
+        fill="none" opacity="0.5" stroke-linecap="round"/>
+</svg>`;
+  write(join(BUGS, name + ".svg"), svg);
+}
+
+function stagBeetle(p = {}, name = "stag_beetle") {
+  // Broad dark beetle whose mandibles fork like antlers.
+  const {
+    b1 = "#4e3a26", b2 = "#2a1c0e", outline = "#150d04",
+    hi = "#7a5e3e", mandible = "#3a2a16", limb = "#201406",
+    eye = "#0e0a04", eyeHi = "#c9b088",
+  } = p;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <radialGradient id="sg" cx="0.35" cy="0.28" r="1">
+      <stop offset="0" stop-color="${b1}"/>
+      <stop offset="1" stop-color="${b2}"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="54" cy="82" rx="28" ry="5" fill="#000" opacity="0.14"/>
+  <g stroke="${limb}" stroke-width="3" fill="none" stroke-linecap="round">
+    <path d="M34 56 L22 64 M38 62 L30 74 M60 62 L66 74 M66 56 L78 64"/>
+  </g>
+  <path d="M56 34 C74 34 82 48 80 62 C78 74 68 80 54 80 C40 80 30 74 28 62
+           C26 48 38 34 56 34 Z"
+        fill="url(#sg)" stroke="${outline}" stroke-width="3"/>
+  <path d="M56 36 L56 80" stroke="${outline}" stroke-width="2"/>
+  <ellipse cx="44" cy="48" rx="9" ry="4.4" fill="${hi}" opacity="0.5"
+           transform="rotate(-16 44 48)"/>
+  <path d="M34 40 C36 34 46 30 56 30 C66 30 76 34 78 40 C72 36 64 34 56 34
+           C48 34 40 36 34 40 Z" fill="${b1}" stroke="${outline}" stroke-width="2.4"/>
+  <path d="M36 38 C28 30 22 20 22 10 C28 12 34 20 38 30 Z"
+        fill="${mandible}" stroke="${outline}" stroke-width="2.4" stroke-linejoin="round"/>
+  <path d="M42 36 C40 26 42 16 48 8 C52 12 52 22 50 34 Z"
+        fill="${mandible}" stroke="${outline}" stroke-width="2.4" stroke-linejoin="round"/>
+  <path d="M28 18 C31 18 34 21 35 24 M46 14 C48 16 49 19 49 23"
+        fill="none" stroke="${hi}" stroke-width="1.4" opacity="0.6" stroke-linecap="round"/>
+  <g fill="${eye}"><circle cx="46" cy="35" r="1.8"/><circle cx="66" cy="36" r="1.8"/></g>
+  <circle cx="45.4" cy="34.4" r="0.7" fill="${eyeHi}"/>
+</svg>`;
+  write(join(BUGS, name + ".svg"), svg);
+}
+
+function tigerBeetle(p = {}, name = "tiger_beetle") {
+  // Long-legged runner: slim body, white spotting, prominent eyes.
+  const {
+    b1 = "#8a9450", b2 = "#545e26", outline = "#2c3410",
+    spot = "#efe8d0", hi = "#a8b06e", limb = "#3a4214", legHi = "#6e7a3c",
+    eye = "#26201c", eyeHi = "#f5e8cd",
+  } = p;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="tb" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="${b1}"/>
+      <stop offset="1" stop-color="${b2}"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="50" cy="80" rx="27" ry="4.4" fill="#000" opacity="0.12"/>
+  <g stroke="${limb}" stroke-width="2.6" fill="none" stroke-linecap="round">
+    <path d="M34 54 L18 60 M36 60 L20 70 M50 62 L50 76 M64 60 L72 72 M68 52 L84 58"/>
+  </g>
+  <path d="M30 42 C30 34 68 32 72 42 C76 52 72 62 62 66 C50 70 36 66 32 58
+           C29 52 29 47 30 42 Z"
+        fill="url(#tb)" stroke="${outline}" stroke-width="2.8"/>
+  <path d="M52 34 L52 68" stroke="${outline}" stroke-width="1.6"/>
+  <g fill="${spot}" opacity="0.9">
+    <ellipse cx="40" cy="46" rx="3.4" ry="2.2" transform="rotate(-20 40 46)"/>
+    <ellipse cx="62" cy="48" rx="3" ry="2" transform="rotate(14 62 48)"/>
+    <ellipse cx="46" cy="58" rx="2.8" ry="1.9"/>
+    <ellipse cx="60" cy="60" rx="2.4" ry="1.7"/>
+  </g>
+  <ellipse cx="38" cy="40" rx="6" ry="3" fill="${hi}" opacity="0.6"
+           transform="rotate(-10 38 40)"/>
+  <circle cx="27" cy="42" r="7.4" fill="${b1}" stroke="${outline}" stroke-width="2.4"/>
+  <circle cx="24" cy="40" r="3.4" fill="${eye}" stroke="${outline}" stroke-width="1.2"/>
+  <circle cx="23" cy="38.8" r="1.1" fill="${eyeHi}"/>
+  <path d="M22 36 C18 30 14 27 10 26 M28 35 C28 29 30 23 34 19"
+        fill="none" stroke="${outline}" stroke-width="1.8" stroke-linecap="round"/>
+  <ellipse cx="52" cy="50" rx="5" ry="9" fill="${legHi}" opacity="0.25"/>
+</svg>`;
+  write(join(BUGS, name + ".svg"), svg);
+}
+
+function tortoiseBeetle(p = {}, name = "tortoise_beetle") {
+  // Round flattened body with a flared transparent skirt, like a tiny turtle.
+  const {
+    b1 = "#e0b04c", b2 = "#b07e1e", outline = "#6e4c10",
+    skirt = "#f2d88a", skirtStroke = "#c9a050", hi = "#f4dc98",
+    spot = "#8a5e14", eye = "#26201c", head = "#a8781e",
+  } = p;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <radialGradient id="tb2" cx="0.4" cy="0.3" r="0.95">
+      <stop offset="0" stop-color="${b1}"/>
+      <stop offset="1" stop-color="${b2}"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="50" cy="74" rx="27" ry="4.4" fill="#000" opacity="0.12"/>
+  <g stroke="${outline}" stroke-width="2" fill="none" stroke-linecap="round">
+    <path d="M30 60 L22 66 M38 66 L34 72 M62 66 L66 72 M70 60 L78 66"/>
+  </g>
+  <path d="M50 24 C68 24 80 36 80 52 C80 62 72 68 50 68 C28 68 20 62 20 52
+           C20 36 32 24 50 24 Z"
+        fill="${skirt}" fill-opacity="0.85" stroke="${skirtStroke}" stroke-width="2.4"/>
+  <path d="M50 28 C64 28 74 38 74 50 C74 58 66 64 50 64 C34 64 26 58 26 50
+           C26 38 36 28 50 28 Z"
+        fill="url(#tb2)" stroke="${outline}" stroke-width="2.8"/>
+  <path d="M50 30 L50 62" stroke="${outline}" stroke-width="1.5" opacity="0.6"/>
+  <g fill="${spot}" opacity="0.75">
+    <circle cx="38" cy="42" r="2.4"/><circle cx="62" cy="42" r="2.4"/>
+    <circle cx="44" cy="54" r="2"/><circle cx="56" cy="54" r="2"/>
+  </g>
+  <ellipse cx="40" cy="36" rx="7" ry="3.4" fill="${hi}" opacity="0.8"
+           transform="rotate(-16 40 36)"/>
+  <circle cx="50" cy="24" r="5.6" fill="${head}" stroke="${outline}" stroke-width="2"/>
+  <g fill="${eye}"><circle cx="47.6" cy="23" r="1.3"/><circle cx="52.4" cy="23" r="1.3"/></g>
+</svg>`;
+  write(join(BUGS, name + ".svg"), svg);
+}
+
+function waterStrider(p = {}, name = "water_strider") {
+  // Perched on its ripple: slim body, splayed long legs, dimple shadow.
+  const {
+    b1 = "#6e6258", b2 = "#42382e", outline = "#26201a",
+    hi = "#8a7e70", limb = "#332c24", ripple = "#e8e2d2",
+    eye = "#1a1612", eyeHi = "#f5e8cd",
+  } = p;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <ellipse cx="50" cy="78" rx="26" ry="6" fill="${ripple}" opacity="0.55"/>
+  <ellipse cx="50" cy="78" rx="40" ry="8" fill="none" stroke="${ripple}"
+           stroke-width="1.6" opacity="0.5"/>
+  <g stroke="${limb}" stroke-width="2.2" fill="none" stroke-linecap="round">
+    <path d="M40 52 L14 42 M42 54 L12 58"/>
+    <path d="M52 52 C66 46 78 40 90 42 M54 54 C68 54 82 58 92 64"/>
+    <path d="M48 54 C46 66 42 74 36 80 M50 54 C52 66 56 74 62 80"/>
+  </g>
+  <ellipse cx="52" cy="50" rx="16" ry="5.4" fill="url(#ws)" stroke="${outline}" stroke-width="2.4"
+           transform="rotate(-8 52 50)"/>
+  <ellipse cx="40" cy="48" rx="6.4" ry="4.6" fill="${b1}" stroke="${outline}" stroke-width="2.2"/>
+  <ellipse cx="36" cy="46" rx="3" ry="1.8" fill="${hi}" opacity="0.7"
+           transform="rotate(-16 36 46)"/>
+  <circle cx="33" cy="46" r="2" fill="${eye}"/>
+  <circle cx="32.4" cy="45.4" r="0.7" fill="${eyeHi}"/>
+  <path d="M30 43 C26 39 22 37 18 36" fill="none" stroke="${outline}" stroke-width="1.4"
+        stroke-linecap="round"/>
+  <defs>
+    <linearGradient id="ws" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0" stop-color="${b1}"/>
+      <stop offset="1" stop-color="${b2}"/>
+    </linearGradient>
+  </defs>
+</svg>`;
+  write(join(BUGS, name + ".svg"), svg);
+}
+
 function ground() {
   // Deterministic PRNG (mulberry32) so output is stable across runs.
   let seed = 7;
@@ -1046,3 +1841,180 @@ fly({ f1: "#5a564e", f2: "#343028", outline: "#1e1c18", thorax: "#443e38",
 fly({ f1: "#d9a05c", f2: "#a86e30", outline: "#6a4414", thorax: "#b4814a",
   eye1: "#a8442e", eyeStroke: "#6e2417", wingFill: "#f2e2cc", wingStroke: "#c4a680" },
   "fly_orange");
+
+// ---- New species (base + 3 natural variants each) ----
+aphid();
+aphid({ b1: "#e0a8b8", b2: "#b06a80", outline: "#6e3a4c", hi: "#f0c4d0",
+  cornicle: "#5a2c3c" }, "aphid_pink");
+aphid({ b1: "#b09468", b2: "#7a6238", outline: "#4a3a1c", hi: "#c9b088",
+  cornicle: "#3e3218" }, "aphid_brown");
+aphid({ b1: "#e0cc6a", b2: "#a89434", outline: "#6a5a14", hi: "#f0e090",
+  cornicle: "#4e4210" }, "aphid_yellow");
+
+barklice();
+barklice({ b1: "#b8b4ac", b2: "#84807a", outline: "#4a4640", wingMark: "#6a665e",
+  hi: "#d4d0c8" }, "barklice_grey");
+barklice({ b1: "#6e6455", b2: "#46402f", outline: "#2a2418", wingMark: "#585040",
+  hi: "#8a8070" }, "barklice_dark");
+barklice({ b1: "#c08a5a", b2: "#8a5a30", outline: "#54331a", wingMark: "#6e4423",
+  hi: "#dca878" }, "barklice_rust");
+
+cicada();
+cicada({ b1: "#9aa858", b2: "#5e6e30", outline: "#38421a", wingFill: "#e8ecd8",
+  wingStroke: "#a0ac84", hi: "#b8c478" }, "cicada_green");
+cicada({ b1: "#d9944c", b2: "#96601e", outline: "#5c3a10", hi: "#f0b878" },
+  "cicada_orange");
+cicada({ b1: "#6a5a44", b2: "#3a3022", outline: "#241c12", hi: "#8a7a60" },
+  "cicada_dark");
+
+clickBeetle();
+clickBeetle({ b1: "#55483c", b2: "#2e2620", outline: "#1a1410", hi: "#6e5e4e",
+  feathery: "#1a1410" }, "click_beetle_dark");
+clickBeetle({ b1: "#b06038", b2: "#6e3418", outline: "#421c0a", hi: "#c9825a",
+  feathery: "#421c0a" }, "click_beetle_red");
+clickBeetle({ b1: "#9a958c", b2: "#615c54", outline: "#3a362f", hi: "#b8b3a8",
+  feathery: "#3a362f" }, "click_beetle_grey");
+
+damselfly();
+damselfly({ b1: "#d05a48", b2: "#94281c", outline: "#5c140c", wingFill: "#f4ded8",
+  wingStroke: "#c89890", hi: "#e88878", eye: "#40100a" }, "damselfly_red");
+damselfly({ b1: "#7ab86a", b2: "#3e7a34", outline: "#234a1a", hi: "#9ad088",
+  eye: "#1a3414" }, "damselfly_green");
+damselfly({ b1: "#a88ad0", b2: "#6a4e96", outline: "#3c2a58", hi: "#c8b0e4",
+  eye: "#2c1e42" }, "damselfly_purple");
+
+earwig();
+earwig({ b1: "#55483c", b2: "#2e2620", outline: "#1a1410", hi: "#6e5e4e",
+  pincer: "#241c14" }, "earwig_dark");
+earwig({ b1: "#a85a3c", b2: "#6e3018", outline: "#421a0a", hi: "#c47e5e",
+  pincer: "#4a2010" }, "earwig_red");
+earwig({ b1: "#c9ab88", b2: "#967450", outline: "#54381e", hi: "#e0c8a8",
+  pincer: "#5c3e22" }, "earwig_pale");
+
+earthworm();
+earthworm({ b1: "#e8c8bc", b2: "#c49a8c", outline: "#8a6258", hi: "#f4e0d8",
+  saddle: "#d9ac9e", seg: "#a8786c" }, "earthworm_pale");
+earthworm({ b1: "#c9705e", b2: "#964234", outline: "#64241a", hi: "#e09484",
+  saddle: "#b25a4a", seg: "#7a3226" }, "earthworm_red");
+earthworm({ b1: "#a8b878", b2: "#6e8248", outline: "#44521e", hi: "#c4d494",
+  saddle: "#94a462", seg: "#566430" }, "earthworm_green");
+
+froghopper();
+froghopper({ b1: "#a88a5c", b2: "#6e562e", outline: "#423014", hi: "#c4a878" },
+  "froghopper_brown");
+froghopper({ b1: "#a8a49c", b2: "#6a665e", outline: "#3e3a32", hi: "#c4c0b6" },
+  "froghopper_grey");
+froghopper({ b1: "#e0cc60", b2: "#a8942c", outline: "#665610", hi: "#f0e088" },
+  "froghopper_yellow");
+
+glowworm();
+glowworm({ glow1: "#ffe0b0", glow2: "#f7a848" }, "glowworm_orange");
+glowworm({ glow1: "#c8e8ff", glow2: "#58a8e8" }, "glowworm_blue");
+glowworm({ glow1: "#ffd8ec", glow2: "#e87ab8" }, "glowworm_pink");
+
+jewelBeetle();
+jewelBeetle({ b1: "#4a7ac8", b2: "#1e4488", outline: "#10285a", hi: "#88b0e8",
+  limb: "#122a56", legHi: "#6e98d0", head: "#1c3a72" }, "jewel_beetle_blue");
+jewelBeetle({ b1: "#d08040", b2: "#8a4416", outline: "#54240a", hi: "#f0ac68",
+  limb: "#5e2c0e", legHi: "#d09050", head: "#6e3412" }, "jewel_beetle_copper");
+jewelBeetle({ b1: "#9a5ac0", b2: "#5a2a80", outline: "#341450", hi: "#c898e4",
+  limb: "#3c1858", legHi: "#9668bc", head: "#4a2068" }, "jewel_beetle_purple");
+
+lacewing();
+lacewing({ b1: "#b09468", b2: "#7a5e38", outline: "#4a381c", wingFill: "#f0e8d8",
+  wingStroke: "#bca884", vein: "#9a8458" }, "lacewing_brown");
+lacewing({ b1: "#b0aca4", b2: "#767268", outline: "#444036", wingFill: "#f0efe8",
+  wingStroke: "#b0aca0", vein: "#928e80" }, "lacewing_grey");
+lacewing({ b1: "#d9b860", b2: "#a88830", outline: "#665012", wingFill: "#f6efdc",
+  wingStroke: "#ccb478", vein: "#ab8f4e" }, "lacewing_gold");
+
+lanternfly();
+lanternfly({ b1: "#b8b2a8", b2: "#847e72", outline: "#4a4438", wingSpot: "#6a6458",
+  snout: "#a49e90", hi: "#d4cec2" }, "lanternfly_grey");
+lanternfly({ b1: "#d98868", b2: "#a44c2e", outline: "#5e2410", wingSpot: "#7e3418",
+  snout: "#c47858", hi: "#eeb098" }, "lanternfly_red");
+lanternfly({ b1: "#7a6e5c", b2: "#463c2c", outline: "#2a2418", wingSpot: "#5c5240",
+  snout: "#6a5e4a", hi: "#948872" }, "lanternfly_dark");
+
+leafhopper();
+leafhopper({ b1: "#d07050", b2: "#963e24", outline: "#5a200e", hi: "#e89878",
+  wingMark: "#b05032" }, "leafhopper_red");
+leafhopper({ b1: "#7a9ec8", b2: "#46648e", outline: "#24385a", hi: "#9cbcd8",
+  wingMark: "#567aa4" }, "leafhopper_blue");
+leafhopper({ b1: "#e0c858", b2: "#a8902a", outline: "#665410", hi: "#f0dc80",
+  wingMark: "#c0a83c" }, "leafhopper_yellow");
+
+mayfly();
+mayfly({ b1: "#b0aaa0", b2: "#767066", outline: "#46403a", wingFill: "#f0ece4",
+  wingStroke: "#b0a89c" }, "mayfly_grey");
+mayfly({ b1: "#a8a468", b2: "#6e6a38", outline: "#403e1c", wingFill: "#ececdc",
+  wingStroke: "#aaa678" }, "mayfly_olive");
+mayfly({ b1: "#e8dcc0", b2: "#b8a880", outline: "#6e5e40", wingFill: "#f6f2e6",
+  wingStroke: "#ccbca0" }, "mayfly_cream");
+
+rhinocerosBeetle();
+rhinocerosBeetle({ b1: "#3a3630", b2: "#1c1a16", outline: "#0e0c0a", hi: "#565248",
+  limb: "#12100e", legHi: "#443e36", head: "#2a2723" }, "rhinoceros_beetle_black");
+rhinocerosBeetle({ b1: "#a85038", b2: "#64241a", outline: "#38120a", hi: "#c8785e",
+  limb: "#4a180e", legHi: "#8a4430", head: "#8a3826" }, "rhinoceros_beetle_red");
+rhinocerosBeetle({ b1: "#5e7a44", b2: "#324a20", outline: "#1a2a0e", hi: "#82a062",
+  limb: "#223a12", legHi: "#5a7a3c", head: "#48642e" }, "rhinoceros_beetle_green");
+
+shieldBug();
+shieldBug({ b1: "#a8894e", b2: "#6e5626", outline: "#423012", scutellum: "#8a6e38",
+  hi: "#c4a870", band: "#584520" }, "shield_bug_brown");
+shieldBug({ b1: "#c86848", b2: "#8e3c24", outline: "#56200f", scutellum: "#aa5438",
+  hi: "#e28c70", band: "#722e18" }, "shield_bug_red");
+shieldBug({ b1: "#6a94b8", b2: "#3a6084", outline: "#1e3a52", scutellum: "#50789c",
+  hi: "#8ab4d0", band: "#2c4a66" }, "shield_bug_blue");
+
+silverfish();
+silverfish({ b1: "#c9a878", b2: "#8a6c46", outline: "#4e3c24", hi: "#e0c8a0",
+  bristle: "#6e5636" }, "silverfish_bronze");
+silverfish({ b1: "#8a929c", b2: "#565e68", outline: "#2c343c", hi: "#aab2bc",
+  bristle: "#3e4650" }, "silverfish_slate");
+silverfish({ b1: "#d9c060", b2: "#a08834", outline: "#64520e", hi: "#f0dc8c",
+  bristle: "#7a6420" }, "silverfish_gold");
+
+slug();
+slug({ b1: "#e0c868", b2: "#b09a3c", outline: "#6a5a14", mantle: "#d4bc58",
+  hi: "#f0e090" }, "slug_yellow");
+slug({ b1: "#b0aa9e", b2: "#7a7468", outline: "#46413a", mantle: "#a09a8c",
+  hi: "#ccc6ba" }, "slug_grey");
+slug({ b1: "#55483c", b2: "#2e2620", outline: "#1a1410", mantle: "#463a2e",
+  hi: "#6e5e4e" }, "slug_black");
+
+stagBeetle();
+stagBeetle({ b1: "#35302a", b2: "#191612", outline: "#0c0a08", hi: "#4e463e",
+  mandible: "#211d18", limb: "#12100e" }, "stag_beetle_black");
+stagBeetle({ b1: "#96482e", b2: "#5c2412", outline: "#33120a", hi: "#b46646",
+  mandible: "#4c1e0e", limb: "#381408" }, "stag_beetle_red");
+stagBeetle({ b1: "#6e3a22", b2: "#3e1c0e", outline: "#221006", hi: "#8e5638",
+  mandible: "#36180a", limb: "#260e06" }, "stag_beetle_mahogany");
+
+tigerBeetle();
+tigerBeetle({ b1: "#5a7ac0", b2: "#2c447e", outline: "#16264a", hi: "#82a0d8",
+  limb: "#1c3054", legHi: "#4e6aa4" }, "tiger_beetle_blue");
+tigerBeetle({ b1: "#b08248", b2: "#6e4c22", outline: "#3e2a0e", hi: "#cca266",
+  limb: "#4c3414", legHi: "#8e6a3c" }, "tiger_beetle_bronze");
+tigerBeetle({ b1: "#8a62b0", b2: "#54367e", outline: "#2c1a4a", hi: "#ac86cc",
+  limb: "#3a2458", legHi: "#7a54a0" }, "tiger_beetle_purple");
+
+tortoiseBeetle();
+tortoiseBeetle({ b1: "#8ab050", b2: "#527a24", outline: "#2c4a0e", skirt: "#b8d47c",
+  skirtStroke: "#88a850", hi: "#ccd898", spot: "#3e6414", head: "#6a9430" },
+  "tortoise_beetle_green");
+tortoiseBeetle({ b1: "#d07048", b2: "#963e1e", outline: "#56200c", skirt: "#eeb098",
+  skirtStroke: "#c88060", hi: "#f4ccae", spot: "#6e2a10", head: "#aa4e2c" },
+  "tortoise_beetle_red");
+tortoiseBeetle({ b1: "#b8bec4", b2: "#7e868e", outline: "#464e56", skirt: "#dde2e6",
+  skirtStroke: "#aab2b8", hi: "#eef2f4", spot: "#565e66", head: "#969ea6" },
+  "tortoise_beetle_silver");
+
+waterStrider();
+waterStrider({ b1: "#463e36", b2: "#262019", outline: "#14100c", hi: "#5e564c",
+  limb: "#1a1612" }, "water_strider_dark");
+waterStrider({ b1: "#8e887e", b2: "#5e584e", outline: "#332e26", hi: "#aaa498",
+  limb: "#443e34" }, "water_strider_grey");
+waterStrider({ b1: "#9a6844", b2: "#643e24", outline: "#3a2210", hi: "#b88660",
+  limb: "#4e2e16" }, "water_strider_rust");

@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="gw" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#6a5a44"/>
+      <stop offset="1" stop-color="#3e3226"/>
+    </linearGradient>
+    <radialGradient id="gwglow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffd8ec" stop-opacity="0.9"/>
+      <stop offset="0.6" stop-color="#e87ab8" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#e87ab8" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="48" cy="74" rx="30" ry="4.4" fill="#000" opacity="0.12"/>
+  <circle cx="76" cy="59" r="22" fill="url(#gwglow)"/>
+  <g fill="url(#gw)" stroke="#241c12" stroke-width="2.6"><circle cx="26" cy="58" r="9"/> <circle cx="38" cy="60" r="9.5"/> <circle cx="50" cy="61" r="9.5"/> <circle cx="62" cy="61" r="9"/> <circle cx="73" cy="59" r="8"/></g>
+  <g fill="#e87ab8" opacity="0.85">
+    <circle cx="62" cy="61" r="3.4"/><circle cx="73" cy="59" r="3.8"/>
+  </g>
+  <ellipse cx="24" cy="55" rx="4" ry="2.4" fill="#8a7658" opacity="0.7"
+           transform="rotate(-24 24 55)"/>
+  <g stroke="#241c12" stroke-width="1.8" fill="none" stroke-linecap="round">
+    <path d="M30 67 L26 72 M46 70 L44 74 M60 70 L62 74"/>
+  </g>
+  <circle cx="18" cy="55" r="6.4" fill="#6a5a44" stroke="#241c12" stroke-width="2.4"/>
+  <circle cx="15.6" cy="53.6" r="1.7" fill="#26201c"/>
+  <path d="M13 50 C10 45 7 42 4 41 M16 49 C15 44 16 39 19 35"
+        fill="none" stroke="#241c12" stroke-width="1.6" stroke-linecap="round"/>
+</svg>
