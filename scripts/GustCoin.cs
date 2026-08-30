@@ -17,6 +17,9 @@ public partial class GustCoin : Node2D
     private const float WindIconRatio = 0.62f;
     private const float SpiralTurns = 1.5f;
     private const float SpiralSeconds = 0.8f;
+    // The coin disk fills ~60% of its 100×100 grid, so 0.3 × size hugs the
+    // visible disk: debris only over the empty texture margins doesn't cover.
+    private const float OcclusionRatio = 0.3f;
 
     private Sprite2D _sprite = null!;
 
@@ -26,6 +29,12 @@ public partial class GustCoin : Node2D
 
     /// <summary>World-space radius where taps register: half the drawn coin.</summary>
     public float TapRadius => _sprite.Texture.GetSize().X * _sprite.Scale.X * 0.5f;
+
+    /// <summary>
+    /// World-space radius of the coin's visible disk that debris must clear
+    /// before it counts as uncovered — tighter than the forgiving TapRadius.
+    /// </summary>
+    public float OcclusionRadius { get; private set; }
 
     public void Setup(float size, RandomNumberGenerator rng)
     {
@@ -39,6 +48,7 @@ public partial class GustCoin : Node2D
         float texSize = _sprite.Texture.GetSize().X;
         float s = size / Mathf.Max(texSize, 1f);
         _sprite.Scale = new Vector2(s, s);
+        OcclusionRadius = size * OcclusionRatio;
         AddChild(_sprite);
 
         // The gust mark on the coin face, echoing the dock's gust button

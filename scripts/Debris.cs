@@ -1,4 +1,5 @@
 using Godot;
+using System.Collections.Generic;
 
 namespace LeafSweeper;
 
@@ -32,19 +33,167 @@ public partial class Debris : Node2D
     private float _fadeDelay = 0.55f;
     private float _age;
 
+    // Alpha-mask resolution: one cache byte per 4px texture cell. Fine
+    // enough to hug the drawn piece's shape, coarse enough that the mask
+    // scan stays trivially cheap.
+    private const int MaskCellSize = 4;
+    // Texels dimmer than this count as transparent (anti-aliased edges).
+    internal const float AlphaThreshold = 0.1f;
+
+    // Process-wide cache: one AlphaMask per debris texture, built once on
+    // first use and shared by every piece using that texture.
+    private static readonly Dictionary<string, AlphaMask> MaskCache = new();
+
     public bool Swept { get; private set; }
     public DebrisWeight Weight { get; private set; }
 
     /// <summary>
-    /// Approximate world-space radius this piece covers — half its widest
-    /// scaled extent (circle approximation; good enough for overlap tests).
+    /// World-space radius of this piece's bounding circle — half its widest
+    /// scaled extent. A cheap upper bound used for early rejection in
+    /// <see cref="Covers"/>; the real footprint is the alpha mask.
     /// </summary>
-    public float CoverRadius
+    public float ExtentRadius
     {
         get
         {
             Vector2 size = _sprite.Texture.GetSize() * _sprite.Scale.X;
             return Mathf.Max(size.X, size.Y) * 0.5f;
+        }
+    }
+
+    /// <summary>Sprite scale factor, exposed for the autoplay ground-truth check.</summary>
+    public float SpriteScale => _sprite.Scale.X;
+
+    /// <summary>The piece's texture, exposed for the autoplay ground-truth check.</summary>
+    public Texture2D Texture => _sprite.Texture;
+
+    /// <summary>
+    /// True when opaque pixels of this piece fall within <paramref name="radius"/>
+    /// world units of <paramref name="worldPoint"/> — the pixel-accurate
+    /// overlap test behind the covered-bug/coin rule, so debris floating in
+    /// the texture's transparent margins no longer hides things.
+    /// </summary>
+    public bool Covers(Vector2 worldPoint, float radius)
+    {
+        // Early circular rejection: a piece whose bounding circle can't
+        // reach the test circle never overlaps, whatever its shape.
+        if (Position.DistanceTo(worldPoint) > ExtentRadius + radius)
+            return false;
+
+        AlphaMask mask = GetAlphaMask(_sprite);
+        if (mask == null)
+        {
+            // Mask unavailable (unreadable texture): fall back to a
+            // conservative circle test inside the bounding extent.
+            return Position.DistanceTo(worldPoint) <= ExtentRadius * 0.7f + radius;
+        }
+
+        // Map the world point into unscaled texture-pixel space: ToLocal
+        // undoes this node's position and rotation, dividing by the sprite
+        // scale undoes the draw size, and shifting by half the texture size
+        // converts from the centered sprite origin to texture pixels.
+        Vector2 texPoint = ToLocal(worldPoint) / _sprite.Scale.X
+            + new Vector2(mask.Width, mask.Height) * 0.5f;
+
+        // Scan only the mask cells whose rectangle could touch the test
+        // circle (radius converted to texture pixels by the sprite scale).
+        float texRadius = radius / _sprite.Scale.X;
+        int minX = Mathf.Max(0, Mathf.FloorToInt((texPoint.X - texRadius) / MaskCellSize));
+        int maxX = Mathf.Min(mask.Cols - 1, Mathf.FloorToInt((texPoint.X + texRadius) / MaskCellSize));
+        int minY = Mathf.Max(0, Mathf.FloorToInt((texPoint.Y - texRadius) / MaskCellSize));
+        int maxY = Mathf.Min(mask.Rows - 1, Mathf.FloorToInt((texPoint.Y + texRadius) / MaskCellSize));
+
+        float rSq = texRadius * texRadius;
+        for (int cy = minY; cy <= maxY; cy++)
+        {
+            for (int cx = minX; cx <= maxX; cx++)
+            {
+                if (mask.Cells[cy * mask.Cols + cx] == 0)
+                    continue;
+                // Distance from the test point to the nearest point of the
+                // opaque cell's rectangle; at most half a cell off the true
+                // texel distance (≤ ~2.8px at 4px cells).
+                float nx = Mathf.Clamp(texPoint.X, cx * MaskCellSize, (cx + 1) * MaskCellSize);
+                float ny = Mathf.Clamp(texPoint.Y, cy * MaskCellSize, (cy + 1) * MaskCellSize);
+                float dx = texPoint.X - nx;
+                float dy = texPoint.Y - ny;
+                if (dx * dx + dy * dy <= rSq)
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Builds (or fetches from the process-wide cache) the alpha coverage
+    /// mask of the sprite's texture: one byte per 4px cell, 1 when any texel
+    /// in the cell is opaque enough to hide things underneath.
+    /// </summary>
+    private static AlphaMask GetAlphaMask(Sprite2D sprite)
+    {
+        string key = sprite.Texture.ResourcePath;
+        if (MaskCache.TryGetValue(key, out AlphaMask cached))
+            return cached;
+
+        AlphaMask mask = null;
+        Image img = sprite.Texture.GetImage();
+        if (img != null && (!img.IsCompressed() || img.Decompress() == Error.Ok))
+        {
+            int width = img.GetWidth();
+            int height = img.GetHeight();
+            int cols = Mathf.CeilToInt(width / (float)MaskCellSize);
+            int rows = Mathf.CeilToInt(height / (float)MaskCellSize);
+            var cells = new byte[cols * rows];
+            for (int cy = 0; cy < rows; cy++)
+            {
+                for (int cx = 0; cx < cols; cx++)
+                {
+                    int x0 = cx * MaskCellSize;
+                    int y0 = cy * MaskCellSize;
+                    int x1 = Mathf.Min(x0 + MaskCellSize, width);
+                    int y1 = Mathf.Min(y0 + MaskCellSize, height);
+                    for (int y = y0; y < y1; y++)
+                    {
+                        bool opaque = false;
+                        for (int x = x0; x < x1; x++)
+                        {
+                            if (img.GetPixel(x, y).A > AlphaThreshold)
+                            {
+                                opaque = true;
+                                break;
+                            }
+                        }
+                        if (opaque)
+                        {
+                            cells[cy * cols + cx] = 1;
+                            break;
+                        }
+                    }
+                }
+            }
+            mask = new AlphaMask(cells, cols, rows, width, height);
+        }
+        // Cache nulls too, so an unreadable texture doesn't rescan every frame.
+        MaskCache[key] = mask;
+        return mask;
+    }
+
+    /// <summary>Cached alpha coverage grid for one debris texture.</summary>
+    private sealed class AlphaMask
+    {
+        public readonly byte[] Cells;
+        public readonly int Cols;
+        public readonly int Rows;
+        public readonly int Width;
+        public readonly int Height;
+
+        public AlphaMask(byte[] cells, int cols, int rows, int width, int height)
+        {
+            Cells = cells;
+            Cols = cols;
+            Rows = rows;
+            Width = width;
+            Height = height;
         }
     }
 

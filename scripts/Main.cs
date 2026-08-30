@@ -64,20 +64,31 @@ public partial class Main : Node2D
 
 		// Covered-bug rule: debris parked on the bug blocks selection, and
 		// sweeping every overlapping piece away makes it selectable again.
+		// Ground truth recomputes coverage straight from the blocker
+		// texture's alpha channel — no cached mask, no shared mapping code —
+		// so a mask or coordinate-mapping bug fails the run outright.
 		var blocker = _debris.Find(d => IsInstanceValid(d) && !d.Swept);
 		bool blocked = false;
 		bool uncovered = false;
+		bool truthOk = true;
 		if (blocker != null)
 		{
 			blocker.Position = _bug.Position;
 			blocked = BugIsCovered();
+			// Positive: the blocker must cover the bug's occlusion area.
+			// Negative: a far-away test point must not be covered by it.
+			truthOk &= blocker.Covers(_bug.Position, _bug.OcclusionRadius)
+				== CoversByTextureAlpha(blocker, _bug.Position, _bug.OcclusionRadius);
+			Vector2 far = _bug.Position + new Vector2(400f, 0f);
+			truthOk &= blocker.Covers(far, _bug.OcclusionRadius)
+				== CoversByTextureAlpha(blocker, far, _bug.OcclusionRadius);
 			foreach (var d in _debris)
 				if (IsInstanceValid(d) && !d.Swept
-					&& d.Position.DistanceTo(_bug.Position) <= _bug.TapRadius + d.CoverRadius)
+					&& d.Position.DistanceTo(_bug.Position) <= _bug.OcclusionRadius + d.ExtentRadius)
 					d.Fling(Vector2.Right * 2000f, _rng);
 			uncovered = !BugIsCovered();
 		}
-		GD.Print($"AUTOPLAY uncover: blocked={blocked} cleared={uncovered}");
+		GD.Print($"AUTOPLAY uncover: blocked={blocked} cleared={uncovered} truthOk={truthOk}");
 
 		// Gust coins: three hide below the debris each round; collecting one
 		// banks +1 power, spending a gust takes −1.
@@ -104,7 +115,7 @@ public partial class Main : Node2D
 		WinLevel();
 
 		var reloaded = SaveData.Load();
-		bool ok = blocked && uncovered && coinSpawned && coinBanked && gustSpent
+		bool ok = blocked && uncovered && truthOk && coinSpawned && coinBanked && gustSpent
 			&& reloaded.CurrentLevel == 4
 			&& reloaded.LevelsCleared == 1
 			&& reloaded.TotalSwipes == 7
@@ -147,7 +158,7 @@ public partial class Main : Node2D
 					return;
 				}
 				// The bug hides below the debris: while any unswept piece
-				// overlaps its tap area a tap just starts sweeping there.
+				// overlaps its visible body a tap just starts sweeping there.
 				if (_bug.ContainsPoint(world) && !BugIsCovered())
 				{
 					WinLevel();
@@ -180,23 +191,60 @@ public partial class Main : Node2D
 	}
 
 	/// <summary>
-	/// True while any unswept debris overlaps a circular tap area — shared by
-	/// the bug and gust coins, which both hide below the debris.
+	/// Ground truth for the autoplay self-test: recomputes whether a debris
+	/// piece covers a point by sampling the texture's alpha directly along
+	/// rays around the test point — independent of the cached 4px mask and
+	/// of <see cref="Debris.Covers"/>' mapping code.
+	/// </summary>
+	private static bool CoversByTextureAlpha(Debris d, Vector2 point, float radius)
+	{
+		Image img = d.Texture.GetImage();
+		if (img == null || (img.IsCompressed() && img.Decompress() != Error.Ok))
+			return false;
+		float s = d.SpriteScale;
+		// World offset from the piece center → texture-aligned local offset
+		// (undo node rotation, undo sprite scale) → texture pixels via the
+		// half-size origin of the centered sprite.
+		Vector2 texPoint = (point - d.Position).Rotated(-d.Rotation) / s
+			+ new Vector2(img.GetWidth(), img.GetHeight()) * 0.5f;
+		float texRadius = radius / s;
+
+		for (int i = 0; i < 16; i++)
+		{
+			Vector2 dir = Vector2.Right.Rotated(i * Mathf.Tau / 16f);
+			for (float r = 0f; r <= texRadius; r += 2f)
+			{
+				Vector2 p = texPoint + dir * r;
+				int x = (int)p.X;
+				int y = (int)p.Y;
+				if (x < 0 || y < 0 || x >= img.GetWidth() || y >= img.GetHeight())
+					continue;
+				if (img.GetPixel(x, y).A > Debris.AlphaThreshold)
+					return true;
+			}
+		}
+		return false;
+	}
+
+	/// <summary>
+	/// True while any unswept debris's opaque pixels overlap the circular
+	/// area (<see cref="Debris.Covers"/>) — the pixel-accurate covered rule
+	/// shared by the bug and gust coins, which both hide below the debris.
 	/// </summary>
 	private bool DebrisOverlaps(Vector2 pos, float radius)
 	{
 		foreach (var d in _debris)
-			if (IsInstanceValid(d) && !d.Swept
-				&& d.Position.DistanceTo(pos) <= radius + d.CoverRadius)
+			if (IsInstanceValid(d) && !d.Swept && d.Covers(pos, radius))
 				return true;
 		return false;
 	}
 
 	/// <summary>
-	/// True while any unswept debris still overlaps the bug's tap area —
-	/// the bug can only be selected (and the round won) once it's uncovered.
+	/// True while any unswept debris still overlaps the bug's visible body
+	/// (OcclusionRadius — much tighter than the forgiving TapRadius): the
+	/// bug can only be selected (and the round won) once it's uncovered.
 	/// </summary>
-	private bool BugIsCovered() => DebrisOverlaps(_bug.Position, _bug.TapRadius);
+	private bool BugIsCovered() => DebrisOverlaps(_bug.Position, _bug.OcclusionRadius);
 
 	/// <summary>The nearest uncovered gust coin under a tap, or null.</summary>
 	private GustCoin SelectableCoinAt(Vector2 world)
@@ -208,8 +256,9 @@ public partial class Main : Node2D
 			if (!IsInstanceValid(c) || c.Collected || !c.ContainsPoint(world))
 				continue;
 			// A covered coin can't be collected — like a covered bug, the
-			// tap starts sweeping there instead.
-			if (DebrisOverlaps(c.Position, c.TapRadius))
+			// tap starts sweeping there instead. Coverage is judged against
+			// the coin's visible disk (OcclusionRadius), not its tap area.
+			if (DebrisOverlaps(c.Position, c.OcclusionRadius))
 				continue;
 			float dist = c.Position.DistanceSquaredTo(world);
 			if (dist < bestDist)

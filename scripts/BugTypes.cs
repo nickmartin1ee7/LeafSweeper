@@ -14,6 +14,13 @@ public sealed class BugType
     public float RelativeSize { get; }
     public float TapRadius { get; }
 
+    /// <summary>
+    /// Radius of the bug's visible body that debris must clear before it
+    /// counts as uncovered. Deliberately much tighter than TapRadius, which
+    /// exists only to give fingers a forgiving target.
+    /// </summary>
+    public float OcclusionRadius { get; }
+
     public BugType(string id, string displayName, string texturePath,
         float relativeSize, float tapRadius)
     {
@@ -22,6 +29,9 @@ public sealed class BugType
         TexturePath = texturePath;
         RelativeSize = relativeSize;
         TapRadius = tapRadius;
+        // 45% of the tap radius, clamped to 18–36px, keeps the occlusion
+        // area hugging the critter's drawn body across the size range.
+        OcclusionRadius = Mathf.Clamp(tapRadius * 0.45f, 18f, 36f);
     }
 }
 

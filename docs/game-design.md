@@ -40,14 +40,17 @@ Title menu → Play → Round (sweep debris, find bug) → Tap bug
    dock**; swept debris may drift over it while fading away.
 4. Finding the bug and **tapping it** wins the round — but the bug hides
    **below every debris piece**, so it only becomes selectable once
-   **no unswept debris overlaps it**; tapping a covered bug just starts
-   sweeping from that spot. On a winning tap the bug rises **above
+   **no unswept debris overlaps its visible body** — a tight occlusion
+   radius around the drawn critter, far smaller than the tap area, so
+   players never clear empty space around it. Tapping a covered bug just
+   starts sweeping from that spot. On a winning tap the bug rises **above
    all debris**, bathes in a **golden shining outline** and **grows**, then
    **flies to the center of the screen** and seats itself on the win card —
    below the "Bug found!" title, above the stats — as the overlay fades in
    with a friendly comment and the round's numbers (time, swipes, gusts).
 5. **Gold gust coins** — marked with the gust icon — hide below the debris
-   too, **three per round**, and follow the same uncovering rule. Tapping an
+   too, **three per round**, and follow the same uncovering rule (debris is
+   cleared from the coin's visible disk, not its tap area). Tapping an
    uncovered coin doesn't end the round: it shines golden and **grows, then
    spirals into the dock's gust button**, flying **above everything — the
    dock included**. On arrival a **golden burst** fires and the counter

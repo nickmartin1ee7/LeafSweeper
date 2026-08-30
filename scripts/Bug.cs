@@ -51,6 +51,12 @@ public partial class Bug : Node2D
     public float TapRadius => _type.TapRadius * Scale.X;
 
     /// <summary>
+    /// World-space radius of the bug's visible body: type occlusion radius ×
+    /// node scale. Debris must clear this (not the tap area) to uncover it.
+    /// </summary>
+    public float OcclusionRadius => _type.OcclusionRadius * Scale.X;
+
+    /// <summary>
     /// Golden discovery moment: the outline shines in while the bug grows,
     /// holds a beat, then flies to the screen center to await its place on
     /// the win card. Emits <see cref="CelebrationFinished"/> when done.

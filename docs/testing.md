@@ -10,7 +10,10 @@
 | Save round-trip | `LEAF_AUTOPLAY=1 godot --headless --quit-after 300` | `ok=True`, exit 0 |
 
 `LEAF_AUTOPLAY` makes `Main` play a level end-to-end headlessly (covered-bug
-uncover rule → collect a gust coin and **await its arrival animation** →
+uncover rule, **verified against alpha ground truth** — the blocker's
+coverage is recomputed straight from its texture's alpha channel and must
+match `Debris.Covers` for a positive and a negative case, printed as
+`truthOk=True` → collect a gust coin and **await its arrival animation** →
 7 swipes → gust spend → win → save → reload) and verifies `currentLevel`,
 `levelsCleared`, `totalSwipes`, `totalGusts`, `gustPower`, bug find counts
 and history round-trip correctly. It is `async void` and awaits in-game
