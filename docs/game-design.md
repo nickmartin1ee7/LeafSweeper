@@ -53,7 +53,9 @@ Title menu → Play → Round (sweep debris, find bug) → Tap bug
    below the "Bug found!" title, above the stats — as the overlay fades in
    with a friendly comment and the round's numbers (time, sweeps, gusts).
 5. **Gold gust coins** — marked with the gust icon — hide below the debris
-   too, **one per round**, and follow the same uncovering rule (debris is
+   too — **one per round on normal rounds, three on storm rounds** (the
+   storm flood keeps re-burying swept ground, so storms pay in gusts) —
+   and follow the same uncovering rule (debris is
    cleared from the coin's visible disk, not its tap area). Tapping an
    uncovered coin doesn't end the round: it shines golden and **grows, then
    winds up a rising counter-clockwise loop before snapping down onto the

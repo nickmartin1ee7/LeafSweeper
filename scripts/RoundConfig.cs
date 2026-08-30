@@ -22,10 +22,25 @@ public static class RoundConfig
     public const int CamoStartLevel = 60;
     public const float MaxCamo = 0.25f;
 
-    // Gust coins hidden below the debris each round. One coin on every
-    // round type: the gust-coin economy stays identical on storm rounds —
-    // storm difficulty comes from swept-spot re-littering, not extra coins.
-    public const int GustCoinsPerRound = 1;
+    // Storm rounds: from StormFirstLevel on, every StormEveryLevels-th
+    // level is a storm round. Pure function of the level like every curve.
+    public const int StormEveryLevels = 10;
+    public const int StormFirstLevel = 10;
+
+    /// <summary>True on storm levels: every 10th level from level 10 on.</summary>
+    public static bool IsStormLevel(int level) =>
+    	level >= StormFirstLevel && level % StormEveryLevels == 0;
+
+    // Gust coins hidden below the debris each round. Normal rounds keep
+    // the coin scarce — one gust, so spending it is a real decision. Storm
+    // rounds re-bury swept ground constantly, so the player gets a richer
+    // supply (StormGustCoins) to fight the flood.
+    public const int NormalGustCoins = 1;
+    public const int StormGustCoins = 3;
+
+    /// <summary>Gust coins hidden below the debris on this level's round.</summary>
+    public static int GustCoinsForLevel(int level) =>
+    	IsStormLevel(level) ? StormGustCoins : NormalGustCoins;
 
     /// <summary>0..1 ramp that saturates at <see cref="SaturateLevel"/>.</summary>
     public static float Progress(int level)
