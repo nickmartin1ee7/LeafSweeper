@@ -19,6 +19,7 @@ public partial class Main : Node2D
 	private Node2D _debrisTop = null!;
 	private Bug _bug = null!;
 	private Hud _hud = null!;
+	private BugBook _book = null!;
 	private MainMenu _menu = null!;
 
 	// Win overlay copy, stashed until the bug's celebration finishes.
@@ -125,6 +126,13 @@ public partial class Main : Node2D
 		GD.Print($"AUTOPLAY catalog: species={BugTypes.All.Length} " +
 				 $"variants={BugTypes.AllVariants.Length} ok={catalogOk} " +
 				 $"pick={catalogPick.Id}");
+
+		// Book model on a fresh save: all 156 entries present and unknown.
+		var bookBefore = new BugBookModel(_save);
+		bool bookBeforeOk = bookBefore.Entries.Count == 156
+			&& bookBefore.FoundVariants == 0
+			&& bookBefore.TotalBugs == 0
+			&& bookBefore.Favorite == "—";
 
 		StartLevel(3);
 
@@ -323,6 +331,20 @@ public partial class Main : Node2D
 		// on — so every post-win expectation keys off the actually-played
 		// level instead of a constant.
 		int playedLevel = _activeLevel;
+		// The book model must now show exactly one found entry, named like
+		// the variant that was just found and counted once.
+		var bookAfter = new BugBookModel(_save);
+		BugBookModel.Entry? foundEntry = null;
+		foreach (var e in bookAfter.Entries)
+			if (e.Found)
+				foundEntry = e;
+		bool bookAfterOk = bookAfter.FoundVariants == 1
+			&& bookAfter.TotalBugs == 1
+			&& foundEntry != null
+			&& foundEntry.Variant.Id == _bug.Variant.Id
+			&& foundEntry.DisplayName == _bug.Variant.DisplayName
+			&& foundEntry.Label == $"{_bug.Variant.DisplayName} (x1)";
+
 		var reloaded = SaveData.Load();
 		bool ok = blocked && uncovered && truthOk && burstOk && rustleOk
 			&& coinSpawned && coinBanked && gustSpent && restartOk && windOk
@@ -337,13 +359,18 @@ public partial class Main : Node2D
 			&& reloaded.History.Count == 1
 			&& reloaded.History[0].Level == playedLevel
 			&& reloaded.History[0].Gusts == 1
-			&& catalogOk;
+			&& catalogOk
+			&& bookBeforeOk
+			&& bookAfterOk;
 
 		GD.Print($"AUTOPLAY save: level={_save.CurrentLevel} cleared={_save.LevelsCleared} " +
 				 $"sweeps={_save.TotalSweeps} gusts={_save.TotalGusts} " +
 				 $"bugs={_save.BugFindCounts.Count} hist={_save.History.Count}");
 		GD.Print($"AUTOPLAY reload: level={reloaded.CurrentLevel} cleared={reloaded.LevelsCleared} " +
 				 $"sweeps={reloaded.TotalSweeps} gusts={reloaded.TotalGusts} ok={ok}");
+		GD.Print($"AUTOPLAY book: entries={bookAfter.Entries.Count} " +
+				 $"beforeOk={bookBeforeOk} afterOk={bookAfterOk} " +
+				 $"label={(foundEntry?.Label ?? "none")}");
 		GetTree().Quit(ok ? 0 : 1);
 	}
 
@@ -674,6 +701,13 @@ public partial class Main : Node2D
 		_hud.WindPressed += OnWindPressed;
 		_hud.RestartConfirmed += OnRestartConfirmed;
 		AddChild(_hud);
+
+		// The bug book sits on its own canvas layer above the HUD; its
+		// overlay swallows every tap while open, so no other input guard
+		// is needed while the player browses their collection.
+		_book = new BugBook { Name = "BugBook" };
+		_hud.BookPressed += () => _book.Open(_save);
+		AddChild(_book);
 
 		_menu = new MainMenu { Name = "Menu" };
 		_menu.PlayPressed += OnPlayPressed;
