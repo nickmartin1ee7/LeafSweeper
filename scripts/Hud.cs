@@ -4,7 +4,7 @@ using Godot;
 namespace LeafSweeper;
 
 /// <summary>
-/// In-game HUD: a wood dock along the bottom (swipe counter + gust/restart
+/// In-game HUD: a wood dock along the bottom (sweep counter + gust/restart
 /// coin buttons), the level label at the top-middle, and the win overlay
 /// with the between-round stats comment and Next/Menu buttons. The dock's
 /// fixed height also defines the playable area — nothing spawns underneath
@@ -20,8 +20,8 @@ public partial class Hud : CanvasLayer
 
     private Control _dock = null!;
     private Label _levelLabel = null!;
-    private Label _swipeLabel = null!;
-    private Label _swipesWordLabel = null!;
+    private Label _sweepLabel = null!;
+    private Label _sweepsWordLabel = null!;
     private Button _windButton = null!;
     private Button _restartButton = null!;
     private Panel _gustBadge = null!;
@@ -82,11 +82,11 @@ public partial class Hud : CanvasLayer
 
     private Control BuildDock()
     {
-        _swipeLabel = MakeLabel(64, true);
-        _swipeLabel.HorizontalAlignment = HorizontalAlignment.Center;
-        _swipesWordLabel = MakeLabel(36, true);
-        _swipesWordLabel.HorizontalAlignment = HorizontalAlignment.Center;
-        _swipesWordLabel.Text = "Swipes";
+        _sweepLabel = MakeLabel(64, true);
+        _sweepLabel.HorizontalAlignment = HorizontalAlignment.Center;
+        _sweepsWordLabel = MakeLabel(36, true);
+        _sweepsWordLabel.HorizontalAlignment = HorizontalAlignment.Center;
+        _sweepsWordLabel.Text = "Sweeps";
 
         _windButton = MakeCoinButton("res://assets/icons/wind.svg");
         _windButton.TooltipText = "Gust: blow away some debris";
@@ -139,16 +139,16 @@ public partial class Hud : CanvasLayer
         row.AnchorRight = 1f;
         row.AnchorBottom = 1f;
 
-        var swipeBox = new VBoxContainer();
-        swipeBox.AddThemeConstantOverride("separation", 0);
-        swipeBox.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
-        swipeBox.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        swipeBox.AddChild(_swipeLabel);
-        swipeBox.AddChild(_swipesWordLabel);
+        var sweepBox = new VBoxContainer();
+        sweepBox.AddThemeConstantOverride("separation", 0);
+        sweepBox.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
+        sweepBox.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        sweepBox.AddChild(_sweepLabel);
+        sweepBox.AddChild(_sweepsWordLabel);
 
         var box = new HBoxContainer();
         box.AddThemeConstantOverride("separation", 28);
-        box.AddChild(swipeBox);
+        box.AddChild(sweepBox);
         box.AddChild(_windButton);
         var rightSlot = new HBoxContainer
         {
@@ -241,7 +241,7 @@ public partial class Hud : CanvasLayer
 
     public void ShowLevel(int level) => _levelLabel.Text = $"Level {level}";
 
-    public void ShowSwipes(int swipes) => _swipeLabel.Text = swipes.ToString();
+    public void ShowSweeps(int sweeps) => _sweepLabel.Text = sweeps.ToString();
 
     /// <summary>
     /// Updates the gust power counter on the dock and greys the gust button
@@ -451,7 +451,7 @@ public partial class Hud : CanvasLayer
 
         var hint = MakeLabel(32, false, new Color("4a3a26"));
         hint.HorizontalAlignment = HorizontalAlignment.Center;
-        hint.Text = "The debris will be re-scattered and your\nswipe count for this round resets.";
+        hint.Text = "The debris will be re-scattered and your\nsweep count for this round resets.";
 
         var restartButton = MakeButton("Restart", new Color("6f9a44"));
         restartButton.Pressed += () =>

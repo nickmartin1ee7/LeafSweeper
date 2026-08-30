@@ -1,7 +1,7 @@
 # LeafSweeper
 
 A cozy, pressure-free 2D mobile puzzle game about tidying up nature's mess.
-Swipe leaves, petals, sticks and stones off a patch of forest floor until you
+Sweep leaves, petals, sticks and stones off a patch of forest floor until you
 reveal the little creature hiding underneath — then tap it to win the round.
 No timers, no fail state; the bug never runs away. Just you, the leaves, and
 a patient ladybug.
@@ -12,13 +12,13 @@ Built with **Godot 4.7 (C# / .NET 8)** for Android phones (FHD+ portrait,
 ## How to play
 
 1. **Play** from the title menu (continues at your current level).
-2. **Drag** your finger across the screen to sweep debris away — each swipe
+2. **Drag** your finger across the screen to sweep debris away — each sweep
    clears at most 12 pieces, so tidy up a little at a time. Heavy things
    (rocks, sticks, moss) need more effort than light petals. Only gestures
-   that actually sweep debris count toward the swipe counter — bare taps
+   that actually sweep debris count toward the sweep counter — bare taps
    are free.
 3. Spot the hidden bug and **tap** it — a petal celebration and a friendly
-   comment about your solve ("Just 18 swipes to find the bug!") appear.
+   comment about your solve ("Just 18 sweeps to find the bug!") appear.
 4. Tap **Next** to keep going. Difficulty rises *very* gently: by level 200
    the litter thickens from ~1365 to ~2123 pieces, the bug is slightly smaller
    and may blend in a little — that's all.
@@ -33,11 +33,11 @@ size and silhouette, so you learn to spot shapes rather than colors.
 - **Endless rounds** with a smooth, casual-tuned difficulty curve
   (`scripts/RoundConfig.cs` — one tunable function).
 - **Local save data** (`user://save.json`, app-private on Android — no
-  permissions): current level, levels cleared, lifetime swipes & play time,
+  permissions): current level, levels cleared, lifetime sweeps & play time,
   per-bug-type find counts, and the last 50 cleared levels. Saved atomically
   after every clear; a corrupt or missing file just starts a fresh save.
 - **Between-round comments** picked from templates by how you played,
-  referencing your history ("Your best is 12 swipes!").
+  referencing your history ("Your best is 12 sweeps!").
 - **Main menu** with lifetime progress and your favorite critter.
 - **Procedurally generated art** — every texture in `assets/textures/` is
   reproducible from `tools/gen_art.mjs` (see `docs/art-style.md`).
