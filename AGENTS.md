@@ -94,24 +94,83 @@ A new script's generated `.cs.uid` is committed together with the script.
 - Keystores, Android SDK and JDK paths stay out of the repo (editor settings
   or `keystore.env`, which is gitignored).
 
-  ## Agentic workflow (operational summary)
+  ## Agentic workflow (mandatory, TODO-tracked)
 
-  The following concise, mandatory workflow complements the repository-specific guidance above. Each step is tracked as a session TODO so adherence is visible and auditable.
+  **CRITICAL: Every workflow step below MUST be tracked in the session SQL todos table. No step is considered complete until its TODO is marked `done`.**
 
-  1) PRE-REQ: Use TODOs to track adherence to this workflow and keep them updated.
-  2) PRE-REQ: Work from a git worktree branch for every agentic slice.
-  3) ORIENT: List project tree and read relevant docs/ to scope the slice.
-  4) ORIENT: Verify local tooling (dotnet, godot, gh, linters, CI runners).
-  5) DESIGN: Write a short implementation plan and test strategy.
-  6) DESIGN: Research authoritative docs; cite and verify claims before relying on them.
-  7) DEVELOP: Implement changes using small, atomic commits; update docs alongside code.
-  8) DEVELOP: Run and pass the tests that exercise the change.
-  9) REVIEW: Run an independent reviewer agent (high reasoning) to produce PASS/FAIL.
-  10) GATE: On FAIL, repeat from #7 and update TODOs (#GATE#).
-  11) GATE: On PASS, proceed to cleanup (#GATE#).
-  12) CLEANUP: Merge changes to main via PR and update changelog/docs.
-  13) CLEANUP: Delete the worktree and clean local artifacts.
-  14) IMPROVE: Record discovered improvements to AGENTS.md or docs/ for next sessions.
+  The following workflow complements the repository-specific guidance above. Each step corresponds to a session TODO that enforces progress tracking and audibility:
 
-  Follow the NixOS git push guidance above when pushing from this machine to avoid libcurl compatibility failures.
+  1) **PRE-REQ: Track todos** — Create a session TODO for every step below. Update todos as work progresses.
+     - TODO id: `agents-01-track-todos`
+     - This step is meta: you are doing it now by reading this file.
+
+  2) **PRE-REQ: Work from worktree** — Create a dedicated git worktree branch before editing.
+     - TODO id: `agents-02-use-worktree`
+     - Never edit the main checkout; commit only in the worktree.
+
+  3) **ORIENT: Inventory & docs** — List the project tree and read docs/ to identify touch points.
+     - TODO id: `agents-03-orient-inventory`
+     - Capture affected files and required doc updates.
+
+  4) **ORIENT: Verify tooling** — Ensure all required tools (dotnet, godot, gh, tests) work.
+     - TODO id: `agents-04-verify-tooling`
+     - Confirm versions and pinning; document any constraints.
+
+  5) **DESIGN: Write a plan** — Commit a short plan and test strategy.
+     - TODO id: `agents-05-plan`
+     - Include acceptance tests and rollback approach.
+
+  6) **DESIGN: Research & verify** — Search authoritative docs; cite and verify all claims.
+     - TODO id: `agents-06-research`
+     - No assumptions; all facts linked to online references.
+
+  7) **DEVELOP: Atomic commits** — Implement changes with small, focused commits; update docs inline.
+     - TODO id: `agents-07-develop-atomic`
+     - One logical change per commit; messages explain the *why*.
+
+  8) **DEVELOP: Run tests** — Execute and pass all tests that exercise the change.
+     - TODO id: `agents-08-test`
+     - Document test commands and outcomes in the PR.
+
+  9) **REVIEW: Subagent review** — Launch a high-reasoning review agent for independent inspection.
+     - TODO id: `agents-09-review-subagent`
+     - Reviewer reports PASS/FAIL with summary of critical findings.
+
+  10) **GATE: Iterate on FAIL** — If reviewer returns FAIL, loop back to #7, address issues, update TODOs.
+      - TODO id: `agents-10-gate-on-fail`
+      - Do not proceed until PASS (#GATE#).
+
+  11) **GATE: Proceed on PASS** — If reviewer returns PASS, prepare for merge.
+      - TODO id: `agents-11-gate-on-pass`
+      - Unblock merge actions (#GATE#).
+
+  12) **CLEANUP: Merge to main** — Merge the worktree branch to main; update changelog/docs.
+      - TODO id: `agents-12-merge`
+      - PR includes test results and review summary.
+
+  13) **CLEANUP: Delete worktree** — Remove the local worktree and slice branch.
+      - TODO id: `agents-13-delete-worktree`
+      - Clean: `git worktree remove <path> && git branch -d <slice>`.
+
+  14) **IMPROVE: Update docs** — Capture improvements back into AGENTS.md or docs/.
+      - TODO id: `agents-14-improve-docs`
+      - Share lessons with future agentic sessions.
+
+  ### Subtasks and discoveries
+
+  As work progresses, new TODOs may be discovered and added to the session todos table under the guided workflow. All subtasks must:
+  - Be linked to a parent workflow step (via todo_deps if dependencies exist).
+  - Use clear, actionable titles (gerund form: "Fixing authentication").
+  - Include enough detail that the task can be executed without external context.
+
+  ### NixOS git push guidance
+
+  When pushing from this machine, inject the gh auth token into the URL to avoid libcurl compatibility failures:
+
+  ```sh
+  git -c credential.helper= -c http.sslVerify=false push \
+    "https://nickmartin1ee7:$(gh auth token)@github.com/owner/repo.git" branch
+  ```
+
+  Do not commit tokens; use gh CLI at push time.
 
