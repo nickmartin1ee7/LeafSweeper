@@ -111,7 +111,9 @@ what actually spawn and what the collection counts, under names like
   Strider).
 - **4 variants each** — one natural base look plus three natural color
   palettes: 156 book entries in total.
-- Win-card comments stay **per species** (`scripts/BugFlavor.cs`); the
+- Win-card comments stay **per species** (`scripts/BugFlavor.cs`): each pool
+  holds 6+ real, sourced fun facts about the species, and the card shows one
+  at random (variants reuse the species' pool). The
   card's title uses the variant's display name.
 
 ### Prismatic bugs
