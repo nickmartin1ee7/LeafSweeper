@@ -40,7 +40,8 @@ Title menu → Play → Round (sweep debris, find bug) → Tap bug
    dark-gold coin) opens a
    confirmation dialog before re-scattering the same level with a fresh
    sweep count. The dock is the game's only chrome — the **Level label sits
-   at the top-middle** of the screen, and **nothing ever spawns under the
+   at the top-left** and the **sweeps counter ("{x} Sweeps") at the
+   top-right**, both as plain outlined text, and **nothing ever spawns under the
    dock**; swept debris may drift over it while fading away.
 4. Finding the bug and **tapping it** wins the round — but the bug hides
    **below every debris piece**, so it only becomes selectable once
