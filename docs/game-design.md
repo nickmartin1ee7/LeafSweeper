@@ -124,6 +124,44 @@ swaps the win card for a **grandiose** variant — radiant gold panel,
 rotating rays, looping sparkles, prismatic title — and the find is counted
 in the save (`prismaticFinds`) and on the book's stats page.
 
+### Storm levels
+
+Every 10th level from level 10 (`RoundConfig.IsStormLevel`, every
+`StormEveryLevels`-th) is a **storm round**: the weather turns and the floor
+itself fights back — with your memory, not your reflexes.
+
+- **Weather.** A full-screen shader (`assets/shaders/storm.gdshader`, driven
+  by `scripts/StormOverlay.cs`) fades in a cold, darker veil with vignette,
+  three depth layers of rain made of *individual* drops — each with its own
+  length, brightness, x offset and fall speed, all falling down and leaning
+  downwind, so the downpour never reads as a
+  uniform dashed curtain — plus rolling cloud shadows, ground mist, fog
+  wisps that flare in, drift downwind and dissipate, and a lightning
+  double-flash every ~7s. It fades out on win/menu and never appears on the
+  home screen.
+- **Storm Round warning.** The round *before* a storm round ends with a
+  warning: an electrical "Storm Round" sign (`scripts/StormWarn.cs` +
+  `assets/shaders/warn_sparks.gdshader` — lightning bolts that arc around
+  and through the lettering, a neon rim hugging every glyph,
+  stray sparks) crackles on above the win card during the end-of-round wind
+  and fades out when the next round begins.
+- **Falling debris.** While the round is settled, **each swept patch
+  re-litters itself on its own timer**: 4–6 seconds (`StormSpotDelayMin` /
+  `StormSpotDelayMax`) after a spot is vacated, one fresh debris piece
+  tumbles down onto exactly that ground. Spots vacated by sweeps *and* by
+  gusts alike are recorded — a piece swept mid-tumble counts as clearing the
+  ground it was falling toward, never its transient mid-air position. Each
+  spot is consumed when its drop lands, and the newly dropped pieces count
+  as ordinary unswept debris — so they re-hide the bug
+  and gust coins, exactly like the round-start litter.
+- **Anti-hoarding.** Because gust-cleared ground is re-littered the same way
+  as swept ground, banking gust coins can't stockpile permanent clean
+  space — a storm round rewards a mental map of where you've been, and
+  punishes "save everything for later" play.
+- **No pressure, still.** There is no fail state and no timer pressure; the
+  storm only makes the floor harder to *hold in your head*. Restarting
+  reshuffles everything, including the storm drops' future landing spots.
+
 ## The Bug Book
 
 The gold book coin at the dock's bottom-left opens the **Bug Collection

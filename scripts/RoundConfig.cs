@@ -46,4 +46,15 @@ public static class RoundConfig
         float t = (level - (float)CamoStartLevel) / (SaturateLevel - CamoStartLevel);
         return MaxCamo * t;
     }
+
+    // Storm rounds: from StormFirstLevel on, every StormEveryLevels-th level
+    // turns the weather and swept ground forgets itself — every cleared
+    // patch is re-littered a few seconds after it was cleared. Pure
+    // function of the level like every curve.
+    public const int StormEveryLevels = 10;
+    public const int StormFirstLevel = 10;
+
+    /// <summary>True on storm levels: every 10th level from level 10 on.</summary>
+    public static bool IsStormLevel(int level) =>
+        level >= StormFirstLevel && level % StormEveryLevels == 0;
 }

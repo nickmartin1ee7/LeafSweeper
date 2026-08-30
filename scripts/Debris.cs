@@ -146,6 +146,14 @@ public partial class Debris : Node2D
     /// <summary>True while the piece is still falling into place at round start.</summary>
     public bool IsSettling => _settling;
 
+    /// <summary>
+    /// The floor spot a settling piece is falling toward. Sweeping or gusting
+    /// the piece mid-air intercepts it before it lands, which leaves this
+    /// ground clean — so the storm pool records this spot, never the
+    /// transient mid-air position.
+    /// </summary>
+    public Vector2 SettleTarget => _settleTarget;
+
     /// <summary>True while the piece shivers from an ambient rustle.</summary>
     public bool IsRustling => _rustling;
 
@@ -159,6 +167,17 @@ public partial class Debris : Node2D
     {
         if (Swept || _windActive)
             return;
+        if (_settling)
+        {
+            // A storm drop still tumbling when the round is won: land it
+            // instantly on its destined spot so the gyre lane radius comes
+            // from the floor, not from a mid-air position (and no frozen
+            // partial fade-in alpha rides the wind).
+            _settling = false;
+            Position = _settleTarget;
+            RotationDegrees = _settleTargetRot;
+            Modulate = Colors.White;
+        }
         _windActive = true;
         _windCenter = center;
         Vector2 offset = Position - center;

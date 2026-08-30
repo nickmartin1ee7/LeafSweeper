@@ -24,10 +24,25 @@ uncover rule, **verified against alpha ground truth** — the blocker's
 coverage is recomputed straight from its texture's alpha channel and must
 match `Debris.Covers` for a positive and a negative case, printed as
 `truthOk=True` → collect a gust coin and **await its arrival animation** →
-7 sweeps → gust spend → win → save → reload) and verifies `currentLevel`,
-`levelsCleared`, `totalSweeps`, `totalGusts`, `gustPower`, bug find counts
-and history round-trip correctly. It is `async void` and awaits in-game
-signals, so `--quit-after` must outlast the animations it waits on.
+7 sweeps → gust spend → **storm drops land on recorded cleared spots and
+shrink the cleared-spot pool** → win → **"Storm Round" warning sign is up**
+→ save → reload) and verifies
+`currentLevel`, `levelsCleared`, `totalSweeps`, `totalGusts`, `gustPower`,
+bug find counts and history round-trip correctly. It is `async void` and
+awaits in-game signals, so `--quit-after` must outlast the animations it
+waits on.
+
+## Testing env vars (permanent hooks)
+
+These env-gated behaviors live in `Main` **on purpose** — they are
+documented testing surfaces, not temporary debug code; keep them and keep
+them working:
+
+| Var | Effect |
+|-----|--------|
+| `LEAF_AUTOPLAY=1` | Headless self-test: plays a level end-to-end, one `AUTOPLAY …` assertion line per check |
+| `LEAF_STORM=1` | Forces the storm weather on any level (normally every 10th level) |
+| `LEAF_PRISMATIC=1` | Forces the 5% prismatic bug roll |
 
 **Fresh checkout/worktree?** Run `--headless --import` once before the
 autoplay, or nothing boots and it **silently exits 0 with no `AUTOPLAY`
@@ -45,9 +60,13 @@ rendering, capture a real screenshot before handing off:
    mode has no framebuffer to capture.
 3. Inspect the PNG, iterate, remove the hook before committing.
 
-Real catch: the bottom dock was completely invisible (a zero-height rect
-caused by setting anchors without offsets) while every headless check was
-green.
+Real catches: the bottom dock was completely invisible (a zero-height rect
+caused by setting anchors without offsets) and the storm veil rendered
+nothing at all while every headless check was green (`SetAnchorsPreset`
+recomputes offsets to preserve the control's old zero rect — full-screen
+overlays need `SetAnchorsAndOffsetsPreset`; verify with a headless state
+dump of `Size`/offsets, then measure the captured PNG's brightness instead
+of eyeballing it).
 
 ## Device testing
 
@@ -110,6 +129,13 @@ adb logcat | grep -iE "LeafSweeper|godot|mono|FATAL|AndroidRuntime"
 	(`MenuWindSpeedScale` 0.35): a calm backdrop behind the menu card,
 	no bug or coins, touches do nothing. Starting a round tears it
 	down into the settle curtain.
+15. **Storm level** — `LEAF_STORM=1 godot` (or level 10): the sky darkens
+	under individual wind-carried rain drops, cloud shadows, mist and
+	fog wisps that flare in and dissipate, with a lightning flash every
+	~7s; each patch you sweep is re-littered 4–6s later by one fresh
+	piece (gust-cleared ground too), re-hiding the bug/coins; the round
+	before a storm round ends with the electrical "Storm Round" warning
+	sign; on win/menu the weather fades back out.
 
 Useful adb helpers while testing:
 
