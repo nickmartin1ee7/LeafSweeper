@@ -47,6 +47,8 @@ them working:
 | `LEAF_AUTOPLAY=1` | Headless self-test: plays a level end-to-end, one `AUTOPLAY …` assertion line per check |
 | `LEAF_STORM=1` | Forces the storm weather on any level (normally every 10th level) |
 | `LEAF_PRISMATIC=1` | Forces the 5% prismatic bug roll |
+| `INSTANT_WIN=1` | Wins each round the moment the settle finishes — replays the win flow (wind, warn sign, win card, next round) without sweeping, and walks the level counter up to the storm rounds quickly |
+| `INITIAL_GUSTS=<n>` | Tops the persistent gust power up to `<n>` at every round start, so gusts can be spent freely without first banking gust coins |
 
 **Fresh checkout/worktree?** Run `--headless --import` once before the
 autoplay, or nothing boots and it **silently exits 0 with no `AUTOPLAY`

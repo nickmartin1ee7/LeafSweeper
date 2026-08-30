@@ -1173,6 +1173,13 @@ public partial class Main : Node2D
 
 		_hud.ShowLevel(level);
 		_hud.ShowSweeps(0);
+		// INITIAL_GUSTS=<n> testing hook: top the persistent gust power up
+		// to <n> at every round start, so manual playtests can spend gusts
+		// freely without first banking gust coins (spends still write the
+		// save — the top-up simply re-applies each round).
+		if (int.TryParse(OS.GetEnvironment("INITIAL_GUSTS"), out int forcedGusts)
+			&& forcedGusts > 0)
+			_save.GustPower = forcedGusts;
 		_hud.ShowGustPower(_save.GustPower);
 		_hud.HideWin();
 		// The sign warned about THIS round starting: let it ride the storm
@@ -1223,6 +1230,13 @@ public partial class Main : Node2D
 
 		_stats.Start(_activeLevel);
 		_rustleCountdown = _rng.RandfRange(RustleIntervalMin, RustleIntervalMax);
+
+		// INSTANT_WIN=1 testing hook: win the moment the floor is dressed,
+		// so the whole win flow (wind, warn sign, win card, next round)
+		// can be replayed without sweeping — rapid cycles also walk the
+		// level counter up to the storm rounds quickly.
+		if (OS.GetEnvironment("INSTANT_WIN") == "1")
+			WinLevel();
 	}
 
 	/// <summary>
