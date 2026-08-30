@@ -42,7 +42,8 @@ before the grandiose golden win card appears.
 - **Bug Collection Book** — the gold book coin at the dock's bottom-left
   opens a full-screen, single-page book: it opens on the cover, turns
   itself to your game stats, and dog-eared page corners (fold + shadow +
-  arrow, top-right forward / bottom-right back) page through the whole
+  arrow, top-right forward / bottom-right back) or a horizontal swipe on
+  the page (an even spine flip either way) page through the whole
   collection. Bugs you haven't met yet are drifting black mist silhouettes
   marked "??? (x0)"; found ones show their art and count ("Firefly (x3)").
   Tap anywhere off the page to close it.
