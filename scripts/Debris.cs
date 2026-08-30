@@ -28,6 +28,9 @@ public partial class Debris : Node2D
     private static readonly float[] Friction = { 3.4f, 2.3f, 1.5f };
     // Heavier debris lingers before fading so its longer slide is visible.
     private static readonly float[] FadeDelayScale = { 1.0f, 1.35f, 1.7f };
+    // Ambient rustle reach shrinks with weight: leaves flick visibly in a
+    // stray draft, rocks barely shiver (see Rustle in Main.cs's scheduler).
+    private static readonly float[] RustleAmp = { 5f, 3f, 1.6f };
 
     private Sprite2D _sprite = null!;
     private Vector2 _velocity;
@@ -60,6 +63,15 @@ public partial class Debris : Node2D
     private const float SettleJitter = 0.25f;      // seconds of random stagger on top of the sweep
     private const float SettleSpinTurns = 2.2f;    // max full turns while tumbling down
 
+    // Ambient rustle feel: a stray draft brushes the piece for a fraction
+    // of a second and it settles back onto its spot. The wobble lives on
+    // the child sprite only, so the node transform — everything gameplay
+    // reads (coverage, sweeping, the wind gyre) — never moves.
+    private const float RustleSeconds = 0.55f;     // shiver duration (±20% jitter)
+    private const float RustleWobbleRate = 26f;    // rad/s of the shiver oscillation
+    private const float RustleWobbleJitter = 0.25f; // ± fraction of the wobble rate
+    private const float RustleTurn = 9f;           // max degrees of rotation wiggle
+
     // End-of-round wind state: when active the piece orbits/rotates without
     // fading. Initialized by StartEndRoundWind().
     private bool _windActive;
@@ -84,6 +96,15 @@ public partial class Debris : Node2D
     private Vector2 _settleTarget;
     private float _settleFromRot;
     private float _settleTargetRot;
+
+    // Ambient rustle state: initialized by Rustle().
+    private bool _rustling;
+    private float _rustleAge;
+    private float _rustleSeconds;
+    private Vector2 _rustleDir;
+    private float _rustleAmp;
+    private float _rustleWobbleRate;
+    private float _rustleTurn;
 
     // Alpha-mask resolution: one cache byte per 4px texture cell. Fine
     // enough to hug the drawn piece's shape, coarse enough that the mask
@@ -124,6 +145,9 @@ public partial class Debris : Node2D
 
     /// <summary>True while the piece is still falling into place at round start.</summary>
     public bool IsSettling => _settling;
+
+    /// <summary>True while the piece shivers from an ambient rustle.</summary>
+    public bool IsRustling => _rustling;
 
     /// <summary>
     /// Picks the piece up into the end-of-round wind: it orbits clockwise
@@ -187,6 +211,45 @@ public partial class Debris : Node2D
         Position = _settleFrom;
         RotationDegrees = _settleFromRot;
         Modulate = new Color(1f, 1f, 1f, 0f);
+    }
+
+    /// <summary>
+    /// A stray draft brushes past: the piece shivers in place for a
+    /// fraction of a second. Purely cosmetic — the wobble lives on the
+    /// child sprite, so the node transform behind the gameplay math
+    /// (coverage, sweeping, the wind gyre) never moves. Ignored while the
+    /// piece is mid-fling, falling into place or riding the gyre.
+    /// </summary>
+    public void Rustle(Vector2 dir, float falloff, RandomNumberGenerator rng)
+    {
+        if (Swept || _settling || _windActive)
+            return;
+        _rustling = true;
+        _rustleAge = 0f;
+        _rustleSeconds = RustleSeconds * rng.RandfRange(0.8f, 1.2f);
+        _rustleDir = dir.Normalized();
+        _rustleAmp = RustleAmp[(int)Weight] * falloff * rng.RandfRange(0.7f, 1.3f);
+        _rustleWobbleRate = RustleWobbleRate
+            * rng.RandfRange(1f - RustleWobbleJitter, 1f + RustleWobbleJitter);
+        _rustleTurn = rng.RandfRange(-RustleTurn, RustleTurn);
+    }
+
+    private void UpdateRustle(float dt)
+    {
+        _rustleAge += dt;
+        float t = Mathf.Clamp(_rustleAge / _rustleSeconds, 0f, 1f);
+        // Quick flick, dying tail: the draft kicks the piece and it
+        // eases back exactly onto its spot.
+        float envelope = Mathf.Sin(Mathf.Pi * Mathf.Min(t * 2.5f, 1f)) * (1f - t);
+        float wobble = Mathf.Sin(_rustleAge * _rustleWobbleRate);
+        _sprite.Position = _rustleDir * _rustleAmp * wobble * envelope;
+        _sprite.RotationDegrees = _rustleTurn * wobble * envelope;
+        if (t >= 1f)
+        {
+            _rustling = false;
+            _sprite.Position = Vector2.Zero;
+            _sprite.RotationDegrees = 0f;
+        }
     }
 
     private void UpdateEndRoundWind(float dt)
@@ -389,6 +452,12 @@ public partial class Debris : Node2D
         _velocity = dir * fling;
         _angularVel = rng.RandfRange(-7f, 7f) * Mathf.Clamp(fling / 400f, 0.3f, 1.6f);
         _fadeDelay = rng.RandfRange(0.35f, 0.6f) * FadeDelayScale[w];
+
+        // A fling overrides any ambient rustle: snap the sprite back onto
+        // its spot so the slide owns the whole piece.
+        _rustling = false;
+        _sprite.Position = Vector2.Zero;
+        _sprite.RotationDegrees = 0f;
     }
 
     public override void _Process(double delta)
@@ -404,6 +473,11 @@ public partial class Debris : Node2D
         if (_settling && !Swept)
         {
             UpdateSettle(dt);
+            return;
+        }
+        if (_rustling && !Swept)
+        {
+            UpdateRustle(dt);
             return;
         }
         if (!Swept)
