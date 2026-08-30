@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Godot;
 
@@ -138,6 +139,19 @@ public partial class Main : Node2D
 
 		if (OS.GetEnvironment("LEAF_AUTOPLAY") == "1")
 			RunHeadlessAutoplay();
+	}
+
+	/// <summary>
+	/// Flushes C#-side wrappers before the engine's ObjectDB leak check:
+	/// managed GodotObjects that dropped out of scope (transient Images,
+	/// StyleBoxes) still pin native references until the GC finalizes
+	/// them, which otherwise reads as leaked instances at exit.
+	/// </summary>
+	public override void _ExitTree()
+	{
+		GC.Collect();
+		GC.WaitForPendingFinalizers();
+		GC.Collect();
 	}
 
 	/// <summary>Headless self-test: plays a level end-to-end and verifies the save round-trip.</summary>
@@ -900,7 +914,9 @@ public partial class Main : Node2D
 	/// </summary>
 	private static bool CoversByTextureAlpha(Debris d, Vector2 point, float radius)
 	{
-		Image img = d.Texture.GetImage();
+		// GetImage allocates a fresh native Image per call; dispose it when
+		// the probe is done so it can't read as a leak at engine exit.
+		using Image img = d.Texture.GetImage();
 		if (img == null || (img.IsCompressed() && img.Decompress() != Error.Ok))
 			return false;
 		float s = d.SpriteScale;

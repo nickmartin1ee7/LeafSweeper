@@ -172,6 +172,14 @@ Start each dev task here; the *why* behind every step lives in
      - Review focus: code quality, maintainability, and reliability only —
        correctness of logic, readability, structure, edge cases, and error
        handling as visible in the diff and surrounding code.
+          - Object-lifetime review (part of the gate): flag every diff line that
+       can leak a Godot object or rendering resource — native objects handed
+       back by calls like `Texture2D.GetImage()` without `using`/dispose,
+       nodes removed with `RemoveChild` (or `Reparent` off a container) but
+       never re-parented or freed, render targets (`SubViewport` size or
+       `GetTexture`) allocated eagerly instead of on first use, and
+       duplicate field reassignment that orphans the originally built
+       node. See *Godot object lifetime* in `docs/agentic-development.md`.
      - Reviewer reports PASS/FAIL with summary of critical findings.
 
   11) **GATE: Iterate on FAIL** — If reviewer returns FAIL, loop back to #7, address issues, update TODOs.

@@ -71,6 +71,7 @@ Cheapest check first; escalate only when needed:
 | 1 | `dotnet build` | compile errors, API misuse |
 | 2 | `godot --headless --import` | bad scenes/textures/import errors |
 | 3 | `godot --headless --quit-after 180` | boot-time script crashes |
+| 3b | `godot --headless --quit-after 180 --verbose` \| grep `leaked\|Leaked` | object/RID leaks at exit (see the leak check below) |
 | 4 | `LEAF_AUTOPLAY=1 godot --headless --quit-after 2000` | gameplay logic + persistence |
 | 5 | windowed run + screenshot hook (visual slices) | rendered pixels: layout, layering, fonts |
 | 6 | render generated SVGs + visual checklist (art slices) | silhouette errors: detached/overlapping appendages, legs through the body |
@@ -108,6 +109,17 @@ pass, `1` on failure, so it can gate commits or CI. Lessons baked in:
   type) settles a *new* bug variant and new coins — run such probes after
   the aggregate `ok` is computed (or capture the found variant id first),
   or the run fails with every printed component `True`.
+
+**The leak check.** Level 3b re-runs the boot smoke test with `--verbose`
+and greps for `leaked`/`Leaked instance`/`RID`; a clean run prints *no*
+leak lines at all (the exit code is meaningless here — Godot exits 0 even
+with leaks). Run the same grep on a level-4 autoplay run. The exit-time
+report names every leaked class and its reference count, which points
+straight at the owning code. Four leak classes found and fixed in this
+codebase (see *Godot object lifetime* under Patterns and practices):
+orphaned labels from duplicate field assignment, an eagerly-allocated
+SubViewport render target, undisposed `GetImage()` results, and managed
+wrappers unreached by the GC at engine exit.
 - **Pixel-accurate logic needs independent ground truth.** When a hot
   path uses a cached or approximated structure (`Debris.Covers` scans a
   cached 4px alpha mask), verify it in the autoplay against a brute-force
@@ -204,6 +216,37 @@ visible bug, while the jitter hides the lattice.
 adding new ones. A real bug: `Bug.Setup` added a sprite each level, so
 level 8 drew eight bugs stacked. Rule of thumb: `Setup()` = teardown +
 build, never build-only.
+
+**Godot object lifetime.** Godot frees nodes with the tree, but resources
+and native allocations don't follow the GC — four leak shapes to avoid
+(the review gate checks for these; see the leak check in the validation
+ladder):
+
+- **Unparented nodes leak.** A node built into a field and then reassigned
+  (`_sweepLabel = MakeLabel(...)` twice, or `RemoveChild` without a
+  re-parent or `QueueFree`) is never in the tree and never freed. The
+  Hud's sweep counter once created its label pair in two different build
+  methods — the orphaned pair leaked two `Label`s and two `LabelSettings`
+  every session *and* desynced the visible counter from the code updating
+  it. Assign a field to a node exactly once, and wherever `RemoveChild`
+  appears, a `QueueFree` (or an immediate re-parent) must follow.
+- **Native returns want `using`.** Calls like `Texture2D.GetImage()`
+  allocate a fresh native object per call; the C# wrapper only releases
+  it when disposed. Wrap every such result in `using` (`Debris.GetAlphaMask`,
+  `Main.CoversByTextureAlpha`) so it dies with the scope instead of
+  lingering until a GC that engine exit doesn't wait for.
+- **Allocate render targets on first use, not at boot.** A `SubViewport`
+  allocates its render target as soon as it gets a nonzero `Size` (the
+  `GetTexture()` call is merely the first consumer of it). `StormWarn`
+  used to lay out in `_Ready` — which both sized the viewport and fetched
+  the texture — leaking a texture RID in every session that never showed
+  the sign; the whole layout now runs lazily on `ShowWarning()`.
+- **Flush the GC before the engine's leak check.** Managed
+  `GodotObject` wrappers that dropped out of scope still pin native
+  references until finalized. `Main._ExitTree` runs
+  `GC.Collect()` → `GC.WaitForPendingFinalizers()` → `GC.Collect()` so
+  transient wrappers (StyleBoxes, images) don't read as leaked
+  ObjectDB instances at exit.
 
 **Layering encodes visibility.** Z-order is a gameplay statement, not a
 styling detail. Keep it an explicit ladder (declared in `Main.BuildTree`),
