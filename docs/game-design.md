@@ -56,8 +56,11 @@ Title menu → Play → Round (sweep debris, find bug) → Tap bug
    too, **three per round**, and follow the same uncovering rule (debris is
    cleared from the coin's visible disk, not its tap area). Tapping an
    uncovered coin doesn't end the round: it shines golden and **grows, then
-   spirals into the dock's gust button**, flying **above everything — the
-   dock included**. On arrival a **golden burst** fires and the counter
+   winds up a rising counter-clockwise loop before snapping down onto the
+   dock's gust button**, flying **above everything — the dock included**.
+   The flight path is clamped to the visible screen, so the loop hugs the
+   screen edges instead of leaving the view. On arrival a **golden burst**
+   fires and the counter
    **pulses as it banks +1 gust power**. The balance **persists across
    rounds** (new games start with 3).
 6. **Next** starts the following level. **Menu** returns to the title screen.
