@@ -44,6 +44,16 @@ public partial class Main : Node2D
 	private bool _isStormRound;
 	private readonly List<StormSpot> _clearedSpots = new();
 
+	// Storm flood state: on top of the per-spot restoration, every 4–6s a
+	// cluster of fresh debris tumbles onto random floor spots — the storm
+	// doesn't just re-litter swept ground, it piles new litter on. The
+	// flood abates for the round once the floor holds the cap (see
+	// StormFloodCapMultiplier).
+	private int _roundStartDebris;          // live pieces when the round began
+	private float _clusterCountdown;        // seconds to the next cluster drop
+	private bool _floodDone;                // cap reached: clusters stop
+	private int _clusterPiecesDropped;      // diagnostic total for the self-test
+
 	/// <summary>A cleared patch of floor and when its storm replacement comes due.</summary>
 	private readonly record struct StormSpot(Vector2 Pos, float DueAt);
 
@@ -68,6 +78,18 @@ public partial class Main : Node2D
 	private const float StormSpotDelayMin = 4f; // clean-patch lifetime (s, min)
 	private const float StormSpotDelayMax = 6f; // clean-patch lifetime (s, max)
 	private const int StormSpotsCap = 400;      // remembered cleared spots (max)
+
+	// Storm flood: independent of the swept-ground restoration, each 4–6s
+	// gust dumps a whole cluster (6–12 pieces) of brand-new litter onto
+	// random spots — swept ground starts *growing*, not just returning.
+	// StormFloodCapMultiplier is how much litter the storm piles up before
+	// it relents: 3× the round's starting litter makes a long storm round
+	// feel like the floor is actively drowning you without ever becoming
+	// infinite; spot restoration keeps going after the cap so swept
+	// patches never stay clean.
+	private const int StormClusterMin = 6;         // pieces per cluster (min)
+	private const int StormClusterMax = 12;        // pieces per cluster (max)
+	private const int StormFloodCapMultiplier = 3; // cap = this × round start
 
 	// Menu gyre density (pieces per px²): a mid-round litter so the home
 	// screen reads as "the floor, alive" without competing with the card.
@@ -320,7 +342,9 @@ public partial class Main : Node2D
 		// Storm rounds: the weather must be on, and the gust above recorded
 		// the spots it vacated through the real sweep path. Every cleared
 		// patch must re-litter itself when its own 4–6s timer comes due,
-		// and be consumed from the pool.
+		// and be consumed from the pool. On the same cadence the flood
+		// dumps cluster drops of brand-new debris onto random spots —
+		// those pieces land off the recorded ground on purpose.
 		bool stormEngaged = _storm.Active && _storm.Intensity > 0f;
 		int spotsBefore = _clearedSpots.Count;
 		var spotPool = new List<Vector2>();
@@ -331,31 +355,69 @@ public partial class Main : Node2D
 			if (IsInstanceValid(d))
 				knownPieces.Add(d);
 		// Wait out the patch timers (4–6s) plus the tumble-in so every due
-		// drop has landed before the judgment.
+		// drop has landed before the judgment; the flood fires at least
+		// once in that window too (its cadence is the same 4–6s).
 		await ToSignal(GetTree().CreateTimer(8.0), SceneTreeTimer.SignalName.Timeout);
 		int stormDrops = 0;
-		bool dropsOnClearedGround = true;
+		int floodPieces = 0;
 		foreach (var d in _debris)
 		{
 			if (!IsInstanceValid(d) || knownPieces.Contains(d) || d.Swept)
 				continue;
-			stormDrops++;
-			bool matched = false;
+			// Spot restorations land exactly on their remembered ground;
+			// flood pieces land on random spots. The tight tolerance keeps
+			// the two apart — a random spot never reproduces a recorded
+			// position, a restoration always does.
+			bool onClearedSpot = false;
 			for (int i = 0; i < spotPool.Count; i++)
-				if (spotPool[i].DistanceTo(d.Position) <= 2f)
+				if (spotPool[i].DistanceTo(d.Position) <= 0.5f)
 				{
 					spotPool.RemoveAt(i);
-					matched = true;
+					onClearedSpot = true;
 					break;
 				}
-			if (!matched)
-				dropsOnClearedGround = false;
+			if (onClearedSpot) stormDrops++;
+			else floodPieces++;
 		}
-		bool stormOk = stormEngaged && stormDrops > 0 && dropsOnClearedGround
+		bool stormOk = stormEngaged && stormDrops > 0
 			&& _clearedSpots.Count == spotsBefore - stormDrops;
 		GD.Print($"AUTOPLAY storm: engaged={stormEngaged} drops={stormDrops} " +
-				 $"onCleared={dropsOnClearedGround} " +
+				 $"onCleared={stormDrops == spotsBefore - _clearedSpots.Count} " +
 				 $"spots={spotsBefore}->{_clearedSpots.Count}");
+
+		// The flood must be engaged: at least one full cluster of fresh
+		// debris landed during the window, growing the litter.
+		bool floodOk = floodPieces >= StormClusterMin;
+		GD.Print($"AUTOPLAY flood: pieces={floodPieces} " +
+				 $"min={StormClusterMin} live={LiveDebrisCount()} ok={floodOk}");
+
+		// The cap: shrink the round's remembered starting litter so the 3×
+		// cap sits just under the live count, re-arm one cluster event, and
+		// prove the flood stops — not one fresh piece may appear (the
+		// spot pool is empty here, so any new unswept piece would be flood).
+		// The flood must still be armed when the poke happens and end up
+		// latched after it, so the probe proves the cap branch itself ran
+		// instead of sliding through on an earlier latch.
+		var knownPiecesAfterFlood = new HashSet<Debris>();
+		foreach (var d in _debris)
+			if (IsInstanceValid(d))
+				knownPiecesAfterFlood.Add(d);
+		int floodPiecesBeforeCap = _clusterPiecesDropped;
+		bool floodWasArmed = !_floodDone;
+		_roundStartDebris = Mathf.Max(1,
+			(LiveDebrisCount() - 1) / StormFloodCapMultiplier);
+		_clusterCountdown = StormSpotDelayMin;
+		await ToSignal(GetTree().CreateTimer(7.0), SceneTreeTimer.SignalName.Timeout);
+		int cappedFlood = 0;
+		foreach (var d in _debris)
+			if (IsInstanceValid(d) && !knownPiecesAfterFlood.Contains(d) && !d.Swept)
+				cappedFlood++;
+		bool capOk = floodWasArmed && _floodDone
+			&& cappedFlood == 0
+			&& _clusterPiecesDropped == floodPiecesBeforeCap;
+		GD.Print($"AUTOPLAY flood cap: extra={cappedFlood} " +
+				 $"dropped={floodPiecesBeforeCap}->{_clusterPiecesDropped} " +
+				 $"armed={floodWasArmed} latched={_floodDone} ok={capOk}");
 
 		WinLevel();
 
@@ -426,7 +488,7 @@ public partial class Main : Node2D
 		var reloaded = SaveData.Load();
 		bool ok = blocked && uncovered && truthOk && burstOk && rustleOk
 			&& coinSpawned && coinBanked && gustSpent && restartOk && windOk
-			&& menuOk && stormOk
+			&& menuOk && stormOk && floodOk && capOk
 			&& reloaded.CurrentLevel == playedLevel + 1
 			&& reloaded.LevelsCleared == 1
 			&& reloaded.TotalSweeps == 8
@@ -460,6 +522,30 @@ public partial class Main : Node2D
 				 $"spawned={_coins.Count} expected={stormExpected} ok={stormCoinsOk}");
 		ok &= stormCoinsOk;
 
+		// Storm warn linger: starting the warned-for round holds the sign
+		// up for 2s, then dissolves it over 1s. Replays the StartLevel
+		// path directly and awaits real frames — touches nothing the
+		// checks above read, so it can run before the final prints.
+		_warn.ShowWarning();
+		_warn.LingerThenFade();
+		bool lingerUp = _warn.Visible;
+		double lingerT = 0;
+		while (lingerT < 1.2) // inside the 2s hold: must still be up
+		{
+			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+			lingerT += GetProcessDeltaTime();
+		}
+		bool lingerHeld = _warn.Visible;
+		while (_warn.Visible && lingerT < 4.5) // hold 2s + fade 1s + slack
+		{
+			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+			lingerT += GetProcessDeltaTime();
+		}
+		bool lingerGone = !_warn.Visible;
+		bool lingerOk = lingerUp && lingerHeld && lingerGone;
+		GD.Print($"AUTOPLAY warn-linger: held={lingerHeld} gone={lingerGone} ok={lingerOk}");
+		ok &= lingerOk;
+
 		GD.Print($"AUTOPLAY save: level={_save.CurrentLevel} cleared={_save.LevelsCleared} " +
 				 $"sweeps={_save.TotalSweeps} gusts={_save.TotalGusts} " +
 				 $"bugs={_save.BugFindCounts.Count} hist={_save.History.Count}");
@@ -480,7 +566,10 @@ public partial class Main : Node2D
 			CheckSettleFinished();
 		TickAmbientRustle(delta);
 		if (_isStormRound && _state == GameState.Playing && !_awaitingSettle)
+		{
 			TickStormDrops(delta);
+			TickClusterDrops(delta);
+		}
 	}
 
 	/// <summary>
@@ -581,10 +670,76 @@ public partial class Main : Node2D
 			Mathf.Clamp(spot.X, 14f, floor.Size.X - 14f),
 			Mathf.Clamp(spot.Y, 14f, floor.Size.Y - 14f));
 
+		SpawnStormDebris(pos);
+	}
+
+	/// <summary>
+	/// The shared storm spawn path: one fresh unswept piece tumbles down
+	/// onto <paramref name="pos"/> (SettleIn) and lands wherever it may —
+	/// fresh debris follows the normal overlap rules, so it can re-cover
+	/// the bug and the gust coins.
+	/// </summary>
+	private void SpawnStormDebris(Vector2 pos)
+	{
 		Debris debris = CreateDebris(pos);
 		debris.SettleIn(_rng, _rng.RandfRange(0f, 0.3f));
 		_debris.Add(debris);
 		(_rng.Randf() < 0.35f ? _debrisTop : _debrisBottom).AddChild(debris);
+	}
+
+	/// <summary>
+	/// Storm flood rhythm: every 4–6s a gust dumps a whole cluster (6–12
+	/// pieces) of brand-new litter onto random floor spots — debris that
+	/// was never swept, so the storm escalates instead of just undoing
+	/// progress. Once the live debris count reaches the cap (3× the
+	/// round's starting litter) the flood abates for the round; the
+	/// per-spot restoration above keeps going regardless. Gated to live,
+	/// settled rounds like the spot drops.
+	/// </summary>
+	private void TickClusterDrops(double delta)
+	{
+		if (_floodDone)
+			return;
+		_clusterCountdown -= (float)delta;
+		if (_clusterCountdown > 0f)
+			return;
+		_clusterCountdown = _rng.RandfRange(StormSpotDelayMin, StormSpotDelayMax);
+
+		int cap = _roundStartDebris * StormFloodCapMultiplier;
+		int room = cap - LiveDebrisCount();
+		if (room <= 0)
+		{
+			_floodDone = true; // the floor is as flooded as it gets
+			return;
+		}
+		// The final cluster is truncated to the room left, so the cap is
+		// exact and the flood tapers out instead of overshooting.
+		DropStormCluster(Mathf.Min(
+			_rng.RandiRange(StormClusterMin, StormClusterMax), room));
+	}
+
+	/// <summary>One cluster drop: <paramref name="count"/> fresh pieces tumble onto random floor spots.</summary>
+	private void DropStormCluster(int count)
+	{
+		Rect2 floor = PlayableArea();
+		for (int i = 0; i < count; i++)
+		{
+			Vector2 pos = new(
+				_rng.RandfRange(14f, floor.Size.X - 14f),
+				_rng.RandfRange(14f, floor.Size.Y - 14f));
+			SpawnStormDebris(pos);
+			_clusterPiecesDropped++;
+		}
+	}
+
+	/// <summary>Pieces actually on the floor: swept ones fly away and freed ones are gone.</summary>
+	private int LiveDebrisCount()
+	{
+		int count = 0;
+		foreach (var d in _debris)
+			if (IsInstanceValid(d) && !d.Swept)
+				count++;
+		return count;
 	}
 
 	/// <summary>
@@ -999,13 +1154,22 @@ public partial class Main : Node2D
 		else
 			_storm.FadeOut();
 		SpawnDebris(level, floor);
+		_roundStartDebris = _debris.Count;
+		_clusterCountdown = _rng.RandfRange(StormSpotDelayMin, StormSpotDelayMax);
+		_floodDone = false;
 		_awaitingSettle = true;
 
 		_hud.ShowLevel(level);
 		_hud.ShowSweeps(0);
 		_hud.ShowGustPower(_save.GustPower);
 		_hud.HideWin();
-		_warn.HideWarning();
+		// The sign warned about THIS round starting: let it ride the storm
+		// round's opening (2s hold + 1s dissolve) instead of vanishing at
+		// once. Normal rounds and menu returns hide it immediately.
+		if (_warn.Visible && RoundConfig.IsStormLevel(level))
+			_warn.LingerThenFade();
+		else
+			_warn.HideWarning();
 		SetState(GameState.Playing);
 	}
 

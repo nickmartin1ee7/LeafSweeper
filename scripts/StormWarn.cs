@@ -20,6 +20,12 @@ public partial class StormWarn : CanvasLayer
     // A quick dramatic entrance — the sign snaps on like failing neon.
     private const float FadeSeconds = 0.45f;
 
+    // Once the storm round begins the sign rides the round's opening: a
+    // two-second hold over the settle so the mood lands, then a slow
+    // one-second dissolve that yields the screen to gameplay.
+    private const float LingerSeconds = 2f;
+    private const float LingerFadeSeconds = 1f;
+
     // Sign geometry as fractions of the viewport: centered horizontally,
     // sitting in the upper quarter so it never covers the win card that
     // owns the screen center during the end-round. Wider than the text
@@ -39,6 +45,7 @@ public partial class StormWarn : CanvasLayer
     private SubViewport _vp = null!;
     private Label _label = null!;
     private Tween _fade = null!;
+    private Tween _linger = null!;
 
     public StormWarn()
     {
@@ -150,18 +157,46 @@ public partial class StormWarn : CanvasLayer
         FadeTo(0f);
     }
 
+    /// <summary>
+    /// Holds the sign over the storm round's opening for
+    /// <see cref="LingerSeconds"/>, then dissolves it out over
+    /// <see cref="LingerFadeSeconds"/>. StartLevel calls this instead of
+    /// <see cref="HideWarning"/> when the round being started is the storm
+    /// round the sign warned about.
+    /// </summary>
+    public void LingerThenFade()
+    {
+        if (!Visible)
+            return;
+        KillFades();
+        _root.Modulate = new Color(1f, 1f, 1f, 1f);
+        _linger = CreateTween();
+        _linger.TweenInterval(LingerSeconds);
+        _linger.TweenProperty(_root, "modulate:a", 0f, LingerFadeSeconds);
+        _linger.TweenCallback(Callable.From(FinishHide));
+    }
+
     private void FadeTo(float target)
     {
-        if (_fade != null && _fade.IsValid())
-            _fade.Kill();
+        KillFades();
         _fade = CreateTween();
         _fade.TweenProperty(_root, "modulate:a", target, FadeSeconds);
         if (target == 0f)
-            _fade.TweenCallback(Callable.From(() =>
-            {
-                Visible = false;
-                // Sign gone → stop paying for the label viewport.
-                _vp.RenderTargetUpdateMode = SubViewport.UpdateMode.Disabled;
-            }));
+            _fade.TweenCallback(Callable.From(FinishHide));
+    }
+
+    private void KillFades()
+    {
+        if (_fade != null && _fade.IsValid())
+            _fade.Kill();
+        if (_linger != null && _linger.IsValid())
+            _linger.Kill();
+    }
+
+    private void FinishHide()
+    {
+        Visible = false;
+        // Sign gone → stop paying for the label viewport.
+        _vp.RenderTargetUpdateMode = SubViewport.UpdateMode.Disabled;
     }
 }
