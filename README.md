@@ -23,19 +23,37 @@ Built with **Godot 4.7 (C# / .NET 8)** for Android phones (FHD+ portrait,
    the litter thickens from ~1365 to ~2123 pieces, the bug is slightly smaller
    and may blend in a little — that's all.
 
-Seventeen bug types hide in the leaves: ladybug, butterfly, centipede, moth,
-grasshopper, dragonfly, beetle, snail, firefly, bumblebee, caterpillar,
-mantis, stick insect, weevil, pill bug, ant and fly — each with its own
-size and silhouette, so you learn to spot shapes rather than colors.
+Thirty-nine bug species hide in the leaves — ladybug, butterfly, centipede,
+moth, grasshopper, dragonfly, beetle, snail, firefly, bumblebee, caterpillar,
+mantis, stick insect, weevil, pill bug, ant, fly, aphid, barklouse, cicada,
+click beetle, damselfly, earwig, earthworm, froghopper, glowworm, jewel
+beetle, lacewing, lanternfly, leafhopper, mayfly, rhinoceros beetle, shield
+bug, silverfish, slug, stag beetle, tiger beetle, tortoise beetle and water
+strider — each with four natural color variants (156 collectible looks,
+named like "Yellow Ladybug"), so you learn to spot shapes rather than
+colors. And 1 round in 20 hides a **prismatic** bug wearing a shifting
+rainbow sheen: find it and a yellow-sun lens flare erupts at your tap
+before the grandiose golden win card appears.
 
 ## Features
 
 - **Endless rounds** with a smooth, casual-tuned difficulty curve
   (`scripts/RoundConfig.cs` — one tunable function).
+- **Bug Collection Book** — the gold book coin at the dock's bottom-left
+  opens a full-screen, single-page book: it opens on the cover, turns
+  itself to your game stats, and dog-eared page corners (fold + shadow +
+  arrow, top-right forward / bottom-right back) page through the whole
+  collection. Bugs you haven't met yet are drifting black mist silhouettes
+  marked "??? (x0)"; found ones show their art and count ("Firefly (x3)").
+  Tap anywhere off the page to close it.
+- **Rare prismatic bugs** — a 5% chance per round (test with
+  `LEAF_PRISMATIC=1`): rainbow-sheened critter, sun-flare discovery, and a
+  grandiose golden win card.
 - **Local save data** (`user://save.json`, app-private on Android — no
   permissions): current level, levels cleared, lifetime sweeps & play time,
-  per-bug-type find counts, and the last 50 cleared levels. Saved atomically
-  after every clear; a corrupt or missing file just starts a fresh save.
+  per-bug-variant find counts, prismatic finds, and the last 50 cleared
+  levels. Saved atomically after every clear; a corrupt or missing file
+  just starts a fresh save.
 - **Between-round comments** picked from templates by how you played,
   referencing your history ("Your best is 12 sweeps!").
 - **Main menu** with lifetime progress and your favorite critter.
@@ -54,7 +72,7 @@ Requirements: .NET SDK 8+ (project targets `Godot.NET.Sdk/4.7.1`), Godot 4.7.1 m
 dotnet build                    # compile C#
 godot --headless --import       # import assets/scenes
 godot --headless --quit-after 180   # boot the game headless (smoke test)
-LEAF_AUTOPLAY=1 godot --headless --quit-after 2000   # self-test: plays a level, verifies save round-trip, exit code 0 on pass
+LEAF_AUTOPLAY=1 godot --headless --quit-after 2000   # self-test: plays a level (with a forced prismatic bug), verifies catalog/book/save round-trip, exit code 0 on pass
 ```
 
 For desktop testing, just open the project in the Godot editor and press

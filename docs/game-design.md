@@ -89,11 +89,58 @@ extra challenge in late levels, never a color hunt.
 
 ## Bug catalog
 
-Each round picks a random bug type (`scripts/BugTypes.cs`). Types differ in
-texture, relative size (0.6–1.15×) and tap radius so players learn
-**silhouettes**:
+Each round picks a random species, then a random color variant of it
+(`scripts/BugTypes.cs`). Species differ in texture, relative size
+(0.55–1.15×) and tap radius so players learn **silhouettes**; variants are
+what actually spawn and what the collection counts, under names like
+"Yellow Ladybug" or "Mahogany Stag Beetle":
 
-Ladybug · Butterfly · Centipede · Moth · Grasshopper · Dragonfly · Beetle · Snail · Firefly · Bumblebee · Caterpillar · Mantis · Stick Insect · Weevil · Pill Bug · Ant · Fly
+- **39 species** — the original seventeen (Ladybug · Butterfly · Centipede ·
+  Moth · Grasshopper · Dragonfly · Beetle · Snail · Firefly · Bumblebee ·
+  Caterpillar · Mantis · Stick Insect · Weevil · Pill Bug · Ant · Fly) plus
+  twenty-two more (Aphid · Barklouse · Cicada · Click Beetle · Damselfly ·
+  Earwig · Earthworm · Froghopper · Glowworm · Jewel Beetle · Lacewing ·
+  Lanternfly · Leafhopper · Mayfly · Rhinoceros Beetle · Shield Bug ·
+  Silverfish · Slug · Stag Beetle · Tiger Beetle · Tortoise Beetle · Water
+  Strider).
+- **4 variants each** — one natural base look plus three natural color
+  palettes: 156 book entries in total.
+- Win-card comments stay **per species** (`scripts/BugFlavor.cs`); the
+  card's title uses the variant's display name.
+
+### Prismatic bugs
+
+Every fresh round rolls a **5% chance** (`LEAF_PRISMATIC=1` forces it for
+testing) that the bug is *prismatic*: an overlay state on whatever variant
+spawned, not a catalog entry. The bug's sprite wears a hue-crawling rainbow
+shader with sparkle glints — applied to the bug's sprite only, and the bug
+sits below every debris layer, so the effect can never show through the
+leaves. Camouflage is bypassed so the rare find always reads clearly.
+Finding one erupts a **yellow-sun lens flare** at the winning tap and
+swaps the win card for a **grandiose** variant — radiant gold panel,
+rotating rays, looping sparkles, prismatic title — and the find is counted
+in the save (`prismaticFinds`) and on the book's stats page.
+
+## The Bug Book
+
+The gold book coin at the dock's bottom-left opens the **Bug Collection
+Book**: a full-screen, single-page book (everything sized for a phone —
+no squinting at a two-page spread).
+
+- **Opening states**: the leather cover rises with the dim, holds a beat,
+  then turns itself to the **stats page**.
+- **Paging**: dog-eared page corners — top-right (folded paper, drop
+  shadow, ▶) turns forward; bottom-right (same convention, ◀) turns back.
+- **Collection pages**: 3×5 grids (5×4 in landscape) of every variant.
+  Found bugs show their art and a count ("Firefly (x3)"); unfound bugs are
+  entirely black silhouettes wrapped in subtly drifting off-black mist,
+  named "??? (x0)".
+- **Closing**: tap anywhere off the page border — the book sinks away, and
+  the dim swallows every tap while open so nothing underneath (dock
+  buttons) reacts.
+- **Stats page**: bugs found, variants & species discovered, best round,
+  total sweeps, gusts blown, time in the leaves, prismatic finds, favorite
+  critter.
 
 ## Debris taxonomy
 
@@ -143,9 +190,12 @@ app-private storage on Android — no Android permissions needed):
   aggregates.
 - `gustPower` — current gust power balance (starts at 3; coins add +1,
   each gust spent takes −1; missing on old saves → 3).
-- `bugFindCounts` — finds per bug type (drives "favorite critter").
+- `bugFindCounts` — finds per bug **variant** (drives "favorite critter"
+  and the book's counts; the 17 original base variants keep their bare
+  species ids so older saves migrate seamlessly).
+- `prismaticFinds` — lifetime count of prismatic bugs found.
 - `history` — last 50 cleared levels `{level, sweeps, gusts, seconds, bugType,
-  clearedAt}`.
+  clearedAt}` (bugType is the variant id).
 
 Saves are written **atomically** (write temp file, rename over the real one)
 after every clear; a missing or corrupt file silently starts a fresh save.
