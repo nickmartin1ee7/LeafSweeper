@@ -32,8 +32,20 @@ public partial class Main : Node2D
 	private Sweeper _sweeper = null!;
 	private List<Debris> _debris = new();
 	private List<GustCoin> _coins = new();
+	private StormOverlay _storm = null!;
+	private StormWarn _warn = null!;
 	private GameState _state = GameState.Menu;
 	private Vector2 _viewSize;
+
+	// Storm round state: the weather flag follows the level (see StartLevel).
+	// Every cleared patch remembers the moment it comes due — a swept patch
+	// only stays clean until its own timer runs out, then fresh debris
+	// falls back onto it. Oldest spots fall out of memory first.
+	private bool _isStormRound;
+	private readonly List<StormSpot> _clearedSpots = new();
+
+	/// <summary>A cleared patch of floor and when its storm replacement comes due.</summary>
+	private readonly record struct StormSpot(Vector2 Pos, float DueAt);
 
 	// Round-start settle pacing (see Debris.SettleIn): the diagonal sweep
 	// across the floor plus per-piece jitter caps the total at ~2.5s.
@@ -47,6 +59,15 @@ public partial class Main : Node2D
 	private const float RustleGroupRadius = 130f; // px: pieces this close shiver together
 	private const int RustleClusterMin = 4;       // pieces per draft (min)
 	private const int RustleClusterMax = 7;       // pieces per draft (max)
+
+	// Storm pacing: on storm rounds every swept or gust-cleared patch is
+	// re-littered 4–6 seconds after it was cleared, one fresh piece per
+	// cleared piece — from the player's view, swept ground never stays
+	// clean for long and the storm floor never thins out. StormSpotsCap is
+	// how many patches the floor remembers.
+	private const float StormSpotDelayMin = 4f; // clean-patch lifetime (s, min)
+	private const float StormSpotDelayMax = 6f; // clean-patch lifetime (s, max)
+	private const int StormSpotsCap = 400;      // remembered cleared spots (max)
 
 	// Menu gyre density (pieces per px²): a mid-round litter so the home
 	// screen reads as "the floor, alive" without competing with the card.
@@ -87,7 +108,8 @@ public partial class Main : Node2D
 		GetViewport().SizeChanged += OnViewportResized;
 
 		_save = SaveData.Load();
-		_sweeper = new Sweeper(() => _debris, _rng, OnSweepCompleted);
+		_sweeper = new Sweeper(() => _debris, _rng, OnSweepCompleted,
+			RecordClearedSpot);
 
 		_menu.Refresh(_save);
 		SetState(GameState.Menu);
@@ -101,12 +123,16 @@ public partial class Main : Node2D
 	{
 		_save.Reset(); // deterministic: the test assumes a fresh save file
 		_forcePrismatic = true; // this round must roll the rare prismatic bug
+		_forceStorm = true; // this round must run the storm weather too
 
 		// Home screen: the menu spawns a decorative litter lifted straight
-		// into the gyre — it must exist and be riding before play begins.
+		// into the gyre — it must exist and be riding before play begins,
+		// and the storm weather must stay off the menu entirely.
 		bool menuOk = _debris.Count > 0
-			&& _debris.TrueForAll(d => IsInstanceValid(d) && d.IsRidingWind);
-		GD.Print($"AUTOPLAY menu: pieces={_debris.Count} riding={menuOk}");
+			&& _debris.TrueForAll(d => IsInstanceValid(d) && d.IsRidingWind)
+			&& !_storm.Active && _storm.Intensity == 0f;
+		GD.Print($"AUTOPLAY menu: pieces={_debris.Count} riding={menuOk} " +
+				 $"stormIdle={!_storm.Active}");
 
 		// Catalog: 39 species × 4 variants, legacy save keys intact, every
 		// texture resolves, and the id lookup round-trips.
@@ -290,6 +316,47 @@ public partial class Main : Node2D
 		}
 		OnWindPressed(); // spends one gust power and counts the use
 		bool gustSpent = _save.GustPower == SaveData.StartingGustPower;
+
+		// Storm rounds: the weather must be on, and the gust above recorded
+		// the spots it vacated through the real sweep path. Every cleared
+		// patch must re-litter itself when its own 4–6s timer comes due,
+		// and be consumed from the pool.
+		bool stormEngaged = _storm.Active && _storm.Intensity > 0f;
+		int spotsBefore = _clearedSpots.Count;
+		var spotPool = new List<Vector2>();
+		foreach (var s in _clearedSpots)
+			spotPool.Add(s.Pos);
+		var knownPieces = new HashSet<Debris>();
+		foreach (var d in _debris)
+			if (IsInstanceValid(d))
+				knownPieces.Add(d);
+		// Wait out the patch timers (4–6s) plus the tumble-in so every due
+		// drop has landed before the judgment.
+		await ToSignal(GetTree().CreateTimer(8.0), SceneTreeTimer.SignalName.Timeout);
+		int stormDrops = 0;
+		bool dropsOnClearedGround = true;
+		foreach (var d in _debris)
+		{
+			if (!IsInstanceValid(d) || knownPieces.Contains(d) || d.Swept)
+				continue;
+			stormDrops++;
+			bool matched = false;
+			for (int i = 0; i < spotPool.Count; i++)
+				if (spotPool[i].DistanceTo(d.Position) <= 2f)
+				{
+					spotPool.RemoveAt(i);
+					matched = true;
+					break;
+				}
+			if (!matched)
+				dropsOnClearedGround = false;
+		}
+		bool stormOk = stormEngaged && stormDrops > 0 && dropsOnClearedGround
+			&& _clearedSpots.Count == spotsBefore - stormDrops;
+		GD.Print($"AUTOPLAY storm: engaged={stormEngaged} drops={stormDrops} " +
+				 $"onCleared={dropsOnClearedGround} " +
+				 $"spots={spotsBefore}->{_clearedSpots.Count}");
+
 		WinLevel();
 
 		// End-of-round wind: winning must pick up every leftover piece into
@@ -329,8 +396,13 @@ public partial class Main : Node2D
 		}
 		bool windOk = windPieces > 0 && windRiding
 			&& (windChecked == 0 || (windMoving && windClockwise));
+		// The warning sign must be up during this end-round: autoplay
+		// forced the storm, so the round AFTER this one is stormy too.
+		bool warnShown = _warn.Visible;
+		bool warnOk = warnShown == NextRoundIsStorm();
 		GD.Print($"AUTOPLAY wind: pieces={windPieces} riding={windRiding} " +
-				 $"checked={windChecked} moving={windMoving} clockwise={windClockwise}");
+				 $"checked={windChecked} moving={windMoving} clockwise={windClockwise} " +
+				 $"warn={warnShown} warnOk={warnOk}");
 
 		// The restart probe re-runs the handler, which restarts the save's
 		// current level — not the hardcoded probe level 3 the round began
@@ -354,7 +426,7 @@ public partial class Main : Node2D
 		var reloaded = SaveData.Load();
 		bool ok = blocked && uncovered && truthOk && burstOk && rustleOk
 			&& coinSpawned && coinBanked && gustSpent && restartOk && windOk
-			&& menuOk
+			&& menuOk && stormOk
 			&& reloaded.CurrentLevel == playedLevel + 1
 			&& reloaded.LevelsCleared == 1
 			&& reloaded.TotalSweeps == 8
@@ -407,6 +479,8 @@ public partial class Main : Node2D
 		if (_awaitingSettle)
 			CheckSettleFinished();
 		TickAmbientRustle(delta);
+		if (_isStormRound && _state == GameState.Playing && !_awaitingSettle)
+			TickStormDrops(delta);
 	}
 
 	/// <summary>
@@ -468,6 +542,66 @@ public partial class Main : Node2D
 			group[i].Piece.Rustle(
 				draft.Rotated(_rng.RandfRange(-0.35f, 0.35f)), falloff, _rng);
 		}
+	}
+
+	/// <summary>
+	/// Storm weather rhythm: each remembered cleared patch re-litters itself
+	/// the moment its own 4–6s timer runs out — a swept patch only stays
+	/// clean for a few seconds on a storm round. Gated to live, settled
+	/// rounds like the ambient rustle.
+	/// </summary>
+	private void TickStormDrops(double delta)
+	{
+		float now = StormNow;
+		for (int i = _clearedSpots.Count - 1; i >= 0; i--)
+		{
+			if (_clearedSpots[i].DueAt > now)
+				continue;
+			DropStormDebris(_clearedSpots[i].Pos);
+			_clearedSpots.RemoveAt(i);
+		}
+	}
+
+	/// <summary>Monotonic engine clock the patch timers run on (seconds).</summary>
+	private float StormNow => Time.GetTicksMsec() / 1000f;
+
+	/// <summary>
+	/// One storm drop: fresh debris tumbles back down onto a remembered
+	/// cleared patch. The spot is consumed — once debris sits there again
+	/// it is unswept ground, and it can only rejoin the pool by being
+	/// swept once more.
+	/// </summary>
+	private void DropStormDebris(Vector2 spot)
+	{
+		Rect2 floor = PlayableArea();
+
+		// A viewport resize mid-round can leave a remembered spot outside
+		// the new playable rect; clamp it back onto the floor.
+		Vector2 pos = new(
+			Mathf.Clamp(spot.X, 14f, floor.Size.X - 14f),
+			Mathf.Clamp(spot.Y, 14f, floor.Size.Y - 14f));
+
+		Debris debris = CreateDebris(pos);
+		debris.SettleIn(_rng, _rng.RandfRange(0f, 0.3f));
+		_debris.Add(debris);
+		(_rng.Randf() < 0.35f ? _debrisTop : _debrisBottom).AddChild(debris);
+	}
+
+	/// <summary>
+	/// A piece was swept (drag, burst or gust): remember the ground it
+	/// vacated so storm rounds can drop fresh debris back onto it. The pool
+	/// is capped — the oldest spots fall out of memory first.
+	/// </summary>
+	private void RecordClearedSpot(Debris debris)
+	{
+		if (_clearedSpots.Count >= StormSpotsCap)
+			_clearedSpots.RemoveAt(0);
+		// A piece swept mid-tumble was intercepted before it ever landed:
+		// the ground it was falling toward is the clean spot, not wherever
+		// it happened to hang in the air.
+		Vector2 pos = debris.IsSettling ? debris.SettleTarget : debris.Position;
+		_clearedSpots.Add(new StormSpot(pos,
+			StormNow + _rng.RandfRange(StormSpotDelayMin, StormSpotDelayMax)));
 	}
 
 	/// <summary>Unlocks play once every piece has landed from the settle-in.</summary>
@@ -722,7 +856,20 @@ public partial class Main : Node2D
 		_debrisTop.ZIndex = 2;
 		AddChild(_debrisTop);
 
+		// Explicit canvas-layer ladder (Godot draws same-layer CanvasLayers
+		// in non-deterministic order, so each owns a distinct index):
+		// world 0 → storm 1 → menu 2 → hud 3 → bug book 90. The storm veil
+		// and rain sit above the floor but below every UI.
+		_storm = new StormOverlay { Name = "Storm" };
+		AddChild(_storm);
+
+		// The "Storm Round" warning sign lives above the HUD (layer 4) so
+		// its sparks never dim under the storm veil nor sit under UI.
+		_warn = new StormWarn { Name = "StormWarn" };
+		AddChild(_warn);
+
 		_hud = new Hud { Name = "Hud" };
+		_hud.Layer = 3;
 		_hud.NextPressed += OnNextPressed;
 		_hud.MenuPressed += OnMenuPressed;
 		_hud.WindPressed += OnWindPressed;
@@ -737,6 +884,7 @@ public partial class Main : Node2D
 		AddChild(_book);
 
 		_menu = new MainMenu { Name = "Menu" };
+		_menu.Layer = 2;
 		_menu.PlayPressed += OnPlayPressed;
 		_menu.NewGamePressed += OnNewGamePressed;
 		AddChild(_menu);
@@ -821,6 +969,7 @@ public partial class Main : Node2D
 				c.QueueFree();
 		_coins.Clear();
 		_bug.Visible = false;
+		_clearedSpots.Clear();
 	}
 
 	private void StartLevel(int level)
@@ -842,6 +991,13 @@ public partial class Main : Node2D
 		// and the gust coins take their new random spots underneath it
 		// (OnSettleFinished). Touches stay locked until the floor is set.
 		_activeLevel = level;
+		_isStormRound = _forceStorm
+			|| OS.GetEnvironment("LEAF_STORM") == "1"
+			|| RoundConfig.IsStormLevel(level);
+		if (_isStormRound)
+			_storm.FadeIn();
+		else
+			_storm.FadeOut();
 		SpawnDebris(level, floor);
 		_awaitingSettle = true;
 
@@ -849,6 +1005,7 @@ public partial class Main : Node2D
 		_hud.ShowSweeps(0);
 		_hud.ShowGustPower(_save.GustPower);
 		_hud.HideWin();
+		_warn.HideWarning();
 		SetState(GameState.Playing);
 	}
 
@@ -864,6 +1021,7 @@ public partial class Main : Node2D
 	private const float PrismaticChance = 0.05f;
 
 	private bool _forcePrismatic;
+	private bool _forceStorm;
 	private bool _flareSeen;
 	private bool _grandWinShown;
 	private SunFlare? _sunFlare;
@@ -920,28 +1078,52 @@ public partial class Main : Node2D
 		StartEndRoundWind(MenuWindSpeedScale);
 	}
 
+	// Distinct textures with a cozy mix; leaves dominate, heavier stuff sparser.
+	private static readonly (string Path, DebrisWeight Weight, int Freq)[] DebrisPalette =
+	{
+		("res://assets/textures/leaf_red.svg", DebrisWeight.Light, 16),
+		("res://assets/textures/leaf_red2.svg", DebrisWeight.Light, 14),
+		("res://assets/textures/leaf_yellow.svg", DebrisWeight.Light, 14),
+		("res://assets/textures/leaf_green.svg", DebrisWeight.Light, 14),
+		("res://assets/textures/petal_pink.svg", DebrisWeight.Light, 8),
+		("res://assets/textures/petal_white.svg", DebrisWeight.Light, 7),
+		("res://assets/textures/petal_purple.svg", DebrisWeight.Light, 6),
+		("res://assets/textures/moss.svg", DebrisWeight.Medium, 8),
+		("res://assets/textures/stick.svg", DebrisWeight.Heavy, 7),
+		("res://assets/textures/rock.svg", DebrisWeight.Heavy, 3),
+		("res://assets/textures/rock2.svg", DebrisWeight.Heavy, 3),
+	};
+
+	/// <summary>Builds one debris piece of a random palette kind at <paramref name="pos"/>.</summary>
+	private Debris CreateDebris(Vector2 pos)
+	{
+		int total = 0;
+		foreach (var entry in DebrisPalette)
+			total += entry.Freq;
+
+		int roll = _rng.RandiRange(1, total);
+		(string path, DebrisWeight weight, _) = DebrisPalette[0];
+		foreach (var entry in DebrisPalette)
+		{
+			roll -= entry.Freq;
+			if (roll <= 0)
+			{
+				(path, weight, _) = entry;
+				break;
+			}
+		}
+
+		var debris = new Debris();
+		debris.Setup(path, pos,
+			_rng.RandfRange(0f, 360f),
+			_rng.RandfRange(1.25f, 1.9f),
+			weight,
+			_rng);
+		return debris;
+	}
+
 	private void ScatterDebris(Rect2 floor, int count, bool dropIn)
 	{
-		// Distinct textures with a cozy mix; leaves dominate, heavier stuff sparser.
-		(string path, DebrisWeight weight, int freq)[] palette =
-		{
-			("res://assets/textures/leaf_red.svg", DebrisWeight.Light, 16),
-			("res://assets/textures/leaf_red2.svg", DebrisWeight.Light, 14),
-			("res://assets/textures/leaf_yellow.svg", DebrisWeight.Light, 14),
-			("res://assets/textures/leaf_green.svg", DebrisWeight.Light, 14),
-			("res://assets/textures/petal_pink.svg", DebrisWeight.Light, 8),
-			("res://assets/textures/petal_white.svg", DebrisWeight.Light, 7),
-			("res://assets/textures/petal_purple.svg", DebrisWeight.Light, 6),
-			("res://assets/textures/moss.svg", DebrisWeight.Medium, 8),
-			("res://assets/textures/stick.svg", DebrisWeight.Heavy, 7),
-			("res://assets/textures/rock.svg", DebrisWeight.Heavy, 3),
-			("res://assets/textures/rock2.svg", DebrisWeight.Heavy, 3),
-		};
-
-		int total = 0;
-		foreach (var entry in palette)
-			total += entry.freq;
-
 		// Jittered-grid placement: one slot per cell guarantees the whole floor
 		// is covered evenly (no bare patches, no visible bug), while the jitter
 		// keeps it from looking like a lattice.
@@ -957,17 +1139,7 @@ public partial class Main : Node2D
 					Mathf.Clamp(x + _rng.RandfRange(-0.45f, 0.45f) * cell, 14f, floor.Size.X - 14f),
 					Mathf.Clamp(y + _rng.RandfRange(-0.45f, 0.45f) * cell, 14f, floor.Size.Y - 14f));
 
-				int roll = _rng.RandiRange(1, total);
-				(string path, DebrisWeight weight, _) = Pick(palette, roll);
-
-				var debris = new Debris();
-				debris.Setup(
-					path,
-					pos,
-					_rng.RandfRange(0f, 360f),
-					_rng.RandfRange(1.25f, 1.9f),
-					weight,
-					_rng);
+				Debris debris = CreateDebris(pos);
 				// Round-start entrance: drop in with a tumble, staggered
 				// along the top-left → bottom-right diagonal. The menu
 				// skips this — its pieces spawn in place and the gyre
@@ -1024,18 +1196,6 @@ public partial class Main : Node2D
 		return pos; // crowded floor: the last roll is good enough
 	}
 
-	private static (string, DebrisWeight, int) Pick(
-		(string path, DebrisWeight weight, int freq)[] palette, int roll)
-	{
-		foreach (var entry in palette)
-		{
-			roll -= entry.freq;
-			if (roll <= 0)
-				return entry;
-		}
-		return palette[0];
-	}
-
 	// -------------------------------------------------------- game flow ---
 
 	private void WinLevel()
@@ -1082,8 +1242,14 @@ public partial class Main : Node2D
 		_bug.Celebrate(_viewSize / 2f);
 		PetalSparkle();
 		// The round is over: whatever is still on the floor gets picked up
-		// by a clockwise wind and keeps circling while the card is up.
+		// by a clockwise wind and keeps circling while the card is up, and
+		// the storm eases off with the weather that made the round hard.
 		StartEndRoundWind();
+		_storm.FadeOut();
+		// The round BEFORE a storm round: while the wind carries the
+		// litter away, the electrical "Storm Round" sign crackles on.
+		if (NextRoundIsStorm())
+			_warn.ShowWarning();
 		// The win overlay waits for the bug's golden moment.
 		_pendingWinComment = comment;
 		_pendingWinRoundLine = roundLine;
@@ -1113,6 +1279,16 @@ public partial class Main : Node2D
 			if (IsInstanceValid(d) && !d.Swept)
 				d.StartEndRoundWind(center, _rng, speedScale);
 	}
+
+	/// <summary>
+	/// True when the NEXT round will be a storm round and the end-of-round
+	/// warning sign should crackle on. The LEAF_STORM test hook (and the
+	/// autoplay's forced storm) keeps every round stormy, so its warnings
+	/// are always truthful.
+	/// </summary>
+	private bool NextRoundIsStorm() => _forceStorm
+		|| OS.GetEnvironment("LEAF_STORM") == "1"
+		|| RoundConfig.IsStormLevel(_activeLevel + 1);
 
 	/// <summary>
 	/// The gyre's center: the middle of the playable floor during a round
@@ -1158,7 +1334,13 @@ public partial class Main : Node2D
 		int count = Mathf.Max(1, alive.Count / 4);
 		Vector2 dir = Vector2.Right.Rotated(_rng.RandfRange(0f, Mathf.Tau));
 		for (int i = 0; i < count; i++)
+		{
+			// Gust-cleared ground joins the storm pool like swept ground:
+			// on storm rounds fresh debris falls back here too, so hoarding
+			// gust coins can't keep a patch clean for long.
+			RecordClearedSpot(alive[i]);
 			alive[i].Fling(dir * _rng.RandfRange(1500f, 2200f), _rng);
+		}
 
 		WindGust(dir);
 	}
@@ -1232,6 +1414,8 @@ public partial class Main : Node2D
 		if (state == GameState.Menu)
 		{
 			ClearLevel();
+			_storm.FadeOut();
+			_warn.HideWarning();
 			_menu.Refresh(_save);
 			SpawnMenuDebris();
 		}

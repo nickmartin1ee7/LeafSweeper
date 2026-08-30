@@ -50,6 +50,12 @@ before the grandiose golden win card appears.
 - **Rare prismatic bugs** — a 5% chance per round (test with
   `LEAF_PRISMATIC=1`): rainbow-sheened critter, sun-flare discovery, and a
   grandiose golden win card.
+- **Storm levels** — every 10th level (from level 10; test with
+  `LEAF_STORM=1`) the sky darkens under wind-carried rain, drifting fog and
+  lightning, and each patch you sweep is re-littered a few seconds later —
+  memory becomes the difficulty. Gusts don't help hoarders either: debris
+  cleared by a gust is re-littered just like swept ground. The round before
+  a storm round warns you with a sparking "Storm Round" sign.
 - **Local save data** (`user://save.json`, app-private on Android — no
   permissions): current level, levels cleared, lifetime sweeps & play time,
   per-bug-variant find counts, prismatic finds, and the last 50 cleared
@@ -73,7 +79,7 @@ Requirements: .NET SDK 8+ (project targets `Godot.NET.Sdk/4.7.1`), Godot 4.7.1 m
 dotnet build                    # compile C#
 godot --headless --import       # import assets/scenes
 godot --headless --quit-after 180   # boot the game headless (smoke test)
-LEAF_AUTOPLAY=1 godot --headless --quit-after 2000   # self-test: plays a level (with a forced prismatic bug), verifies catalog/book/save round-trip, exit code 0 on pass
+LEAF_AUTOPLAY=1 godot --headless --quit-after 2000   # self-test: plays a level (with a forced prismatic bug and storm weather), verifies catalog/book/save round-trip, exit code 0 on pass
 ```
 
 For desktop testing, just open the project in the Godot editor and press

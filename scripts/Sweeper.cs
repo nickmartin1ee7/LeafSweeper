@@ -30,6 +30,7 @@ public sealed class Sweeper
 	private readonly Func<IEnumerable<Debris>> _debris;
 	private readonly RandomNumberGenerator _rng;
 	private readonly Action _onSweepCompleted;
+	private readonly Action<Debris> _onDebrisSwept;
 
 	private bool _dragging;
 	private Vector2 _lastPos;
@@ -37,11 +38,13 @@ public sealed class Sweeper
 	private int _clearedThisSweep;
 
 	public Sweeper(Func<IEnumerable<Debris>> debris,
-		RandomNumberGenerator rng, Action onSweepCompleted)
+		RandomNumberGenerator rng, Action onSweepCompleted,
+		Action<Debris> onDebrisSwept)
 	{
 		_debris = debris;
 		_rng = rng;
 		_onSweepCompleted = onSweepCompleted;
+		_onDebrisSwept = onDebrisSwept;
 	}
 
 	/// <summary>Handles a screen-drag event in world coordinates.</summary>
@@ -72,6 +75,7 @@ public sealed class Sweeper
 				continue;
 			if (SegmentCircleHit(from, worldPos, d.Position, SweepRadius + 30f))
 			{
+				_onDebrisSwept(d); // record the vacated spot before it flies
 				d.Fling(velocity, _rng);
 				_clearedThisSweep++;
 			}
@@ -135,6 +139,7 @@ public sealed class Sweeper
 			if (cleared >= MaxDebrisPerSweep)
 				break;
 			Vector2 dir = dist > 1f ? (d.Position - center) / dist : Vector2.Right;
+			_onDebrisSwept(d); // record the vacated spot before it flies
 			d.Fling(dir * BurstFlingSpeed, _rng);
 			cleared++;
 		}

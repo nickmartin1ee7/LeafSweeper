@@ -34,6 +34,28 @@ warm autumn palette — reproducible from a single script.
 4. **Camouflage is a tint, not a texture swap** — late levels blend the bug
    toward leaf colors by at most 25%.
 
+## Weather & shaders
+
+Atmosphere beyond textures lives in `assets/shaders/`. Storm levels fade in
+`storm.gdshader` on a full-screen layer: a heavy cold dark veil (~42% alpha)
+with a deep vignette, three depth layers of rain built from *individual*
+drops — each with its own length, brightness, x offset and fall speed, and
+per-column speeds, so the downpour reads as weather, never as a uniform
+dashed curtain (and there is deliberately no global sway: swaying a slanted
+rain pattern reads as drops sliding along their streaks) — all falling
+downward and leaning downwind (screen right, one consistent wind for rain,
+clouds, mist and wisps) — plus rolling cloud shadows, drifting mist, fog
+wisps that flare in and dissipate on their own cycles,
+and a ~7s lightning double-flash. The round before a storm round shows the
+"Storm Round" warning sign: `warn_sparks.gdshader` repaints the lettering
+(from its SubViewport glyph mask) as living electricity — a neon rim hugging
+every glyph, jagged bolts arcing through the letters, sparks and
+failing-neon flicker — set into a roiling storm cloud the same shader paints
+behind the lettering (breathing puffs over a flat raining underside, fbm
+churn, lightning simmering in the belly). All shaders are driven by a
+single 0–1 intensity uniform (or just TIME) and stay alpha-composited over
+the scene (no screen texture) to keep them cheap on mobile.
+
 ## Regenerating assets
 
 All textures are written by one Node.js script into `assets/textures/`:

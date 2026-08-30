@@ -17,11 +17,17 @@ Main (Node2D, scripts/Main.cs)
 ├── DebrisBottom (Node2D)     70% of debris — ZIndex 1, always over the bug
 ├── Bug (Node2D)              hidden until StartLevel — ZIndex 0 (below debris)
 ├── DebrisTop (Node2D)        30% of debris — ZIndex 2, always over the bug
-├── Hud (CanvasLayer)         wood dock + top labels + win overlay
+├── StormOverlay (CanvasLayer 1)  storm veil/rain/mist over the world
+├── StormWarn (CanvasLayer 4)    "Storm Round" electrical warning sign
+├── Hud (CanvasLayer 3)         wood dock + top labels + win overlay
 ├── BugBook (CanvasLayer 90)  full-screen collection book; above the HUD
 │                             so the dim blocks the dock while it's open
-└── Menu (CanvasLayer)        title screen
+└── Menu (CanvasLayer 2)        title screen
 ```
+
+CanvasLayer order is an explicit ladder (storm 1 → menu 2 → hud 3 → warn 4
+→ book 90): same-layer canvases draw in a non-deterministic order, so every
+layer gets its own index.
 
 ## State machine
 
@@ -53,6 +59,9 @@ Main (Node2D, scripts/Main.cs)
 | `scripts/BugBookModel.cs` | Pure (UI-free) book model: the 156 entries in stable catalog order with found state, counts and labels ("Name (xN)" / "??? (x0)"), plus the stats-page numbers (total bugs, variants/species discovered, best round, totals, prismatic finds, favorite). Autoplay asserts against the same model the UI renders. |
 | `scripts/SunFlare.cs` | Yellow-sun lens flare for a prismatic discovery: additive core, streaks, rotating rays and expanding rings at the winning tap, `ZIndex` 101 (above the celebrate's 100), self-freeing after ~1.8s. |
 | `scripts/PrismaticGlow.cs` | Grandiose win-card dressing: a Control behind the card title drawing 14 rotating rays plus 8 looping diamond sparkles in prismatic hues; freed with the win overlay. |
+| `scripts/StormOverlay.cs` | Storm weather: a `CanvasLayer` (Layer 1) holding a full-rect, input-transparent `ColorRect` running `assets/shaders/storm.gdshader`. `FadeIn()`/`FadeOut()` tween the shader's intensity uniform (0↔1); the layer hides itself at zero intensity so non-storm rounds cost nothing. |
+| `assets/shaders/storm.gdshader` | Full-screen weather shader: cold dark veil (~0.42 alpha) + vignette, three depth layers of *individual* rain drops (per-drop length/brightness/x-offset/speed — no uniform curtain, no global sway) falling downward and leaning downwind, rolling cloud shadows, drifting mist and fog wisps that flare in and dissipate, and a ~7s lightning double-flash; alpha-composited over the scene (no screen texture — cheaper on mobile, works headless), driven by one 0–1 `intensity` uniform. |
+| `scripts/StormWarn.cs` | The "Storm Round" warning sign: a `CanvasLayer` (Layer 4) shown during the end-of-round wind of the round before a storm round (`Main.NextRoundIsStorm`), hidden when the next level starts or the menu returns. The label renders into a `SubViewport` whose texture feeds `assets/shaders/warn_sparks.gdshader` on a full-rect ColorRect — the shader knows where every glyph sits and repaints the sign as neon rim + lightning bolts + sparks set into a roiling storm cloud (procedural silhouette + fbm churn, no card behind); the viewport updates only while the sign is visible; the label font is shrunk by measured width until it fits the viewport; fades via root `Modulate`. |
 | `assets/shaders/prismatic.gdshader` | Bug-sprite overlay shader: hue-crawling rainbow wash (time + diagonal UV drift), twinkling sparkle glints on a jittered grid, and the gold outline (shared logic with `gold_outline.gdshader`) so the celebrate intensity tween still works. |
 
 ## Data flow
@@ -66,7 +75,9 @@ touch events → Main._UnhandledInput ─┬→ Sweeper (flings debris) → onSw
 HUD wind button → Main.OnWindPressed → −1 GustPower (persist) + LevelStats.CountGust
 WinLevel → LevelStats.Stop → SaveData.RecordClear → Bug.Celebrate → CelebrationFinished → Hud.ShowWin(comment, stats)
          └→ StartEndRoundWind → every unswept piece rides a clockwise gyre (Debris.StartEndRoundWind) until the round is torn down
+         └→ next round is a storm round → StormWarn.ShowWarning (electrical "Storm Round" sign; hidden when the next level starts)
 StartLevel → SpawnDebris (SettleIn tumble-drop, diagonal stagger) → [touches locked] → OnSettleFinished → bug + gust coins (`GustCoinsForLevel`: 1 normal / 3 storm) hidden at random spots under the settled debris, round clock starts
+Storm round (live + settled) → each recorded cleared spot fires on its own 4–6s timer (Main.TickStormDrops) → one fresh piece tumbles onto that exact ground (SettleIn tumble, spot consumed, pool capped at 400) → fresh unswept debris re-covers the bug/coins via the normal overlap rules
 Dock restart → OnRestartConfirmed → StartLevel (same settle reshuffle: fresh curtain, new hiding spots)
 Main._Process (round live + settled) → every 2–4s → TriggerAmbientRustle → epicenter + the closest 4–7 at-rest pieces shiver along a shared draft (Debris.Rustle, sprite-only wiggle)
 App boot / Menu → SpawnMenuDebris (scatter over the full screen, no drop-in) → StartEndRoundWind(MenuWindSpeedScale) → litter slowly circles behind the menu card
@@ -90,14 +101,17 @@ so UI-anchored touches match world-space debris under stretch/expand.
 
 - `LEAF_AUTOPLAY=1 godot --headless` → plays a level end-to-end and prints
   one `AUTOPLAY ... True` line per assertion (menu, catalog 39/156, restart,
-  rustle, uncover, prismatic spawn, burst, coins, wind, save, reload, book
+  rustle, uncover, prismatic spawn, burst, coins, storm drops landing on
+  recorded cleared spots with the pool shrinking, wind, save, reload, book
   model, prismatic win chain: flare + grand card + `prismaticFinds == 1`
   after a save round-trip). The autoplay round forces the prismatic roll so
-  the rare path is exercised every run.
+  the rare path is exercised every run, and forces the storm weather too.
 
 - `LEAF_AUTOPLAY=1 godot --headless` → verifies the save round-trip and exits
   0/1 (grep for `AUTOPLAY` first — the exit code alone is not trustworthy).
   Used by CI-style smoke checks.
 - `LEAF_PRISMATIC=1 godot` → forces the prismatic roll so the rare spawn can
   be tested by hand (autoplay forces it internally every run).
+- `LEAF_STORM=1 godot` → forces the storm weather on any level (normally
+  every 10th level; autoplay forces it internally every run).
 - `godot --headless --quit-after N` → boot smoke test.
