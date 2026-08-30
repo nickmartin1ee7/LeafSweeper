@@ -14,8 +14,8 @@ uncover rule, **verified against alpha ground truth** — the blocker's
 coverage is recomputed straight from its texture's alpha channel and must
 match `Debris.Covers` for a positive and a negative case, printed as
 `truthOk=True` → collect a gust coin and **await its arrival animation** →
-7 swipes → gust spend → win → save → reload) and verifies `currentLevel`,
-`levelsCleared`, `totalSwipes`, `totalGusts`, `gustPower`, bug find counts
+7 sweeps → gust spend → win → save → reload) and verifies `currentLevel`,
+`levelsCleared`, `totalSweeps`, `totalGusts`, `gustPower`, bug find counts
 and history round-trip correctly. It is `async void` and awaits in-game
 signals, so `--quit-after` must outlast the animations it waits on.
 
@@ -57,18 +57,18 @@ adb logcat | grep -iE "LeafSweeper|godot|mono|FATAL|AndroidRuntime"
 ### Manual checklist (per build)
 
 1. **Boot** — title menu appears with "LeafSweeper", Play button.
-2. **First round** — Play → debris visible, level "Level 1", swipes 0.
+2. **First round** — Play → debris visible, level "Level 1", sweeps 0.
 3. **Sweep** — drag across the pile; leaves/petals fling easily, rocks and
-   sticks resist more; fast swipes don't miss debris (no tunneling).
+   sticks resist more; fast sweeps don't miss debris (no tunneling).
 4. **Find & tap bug** — petal sparkles, celebration pulse, win overlay with
-   comment + stats (time · swipes).
+   comment + stats (time · sweeps).
 5. **Gust coins** — three gold coins (wind icon on the face) hide under the
    debris; uncover one and tap it: it shines golden, grows, spirals **above
    the dock** into the gust button, fires a gold ring-and-spark burst, and
    the ×N badge pulses as it ticks up; pressing Gust spends one (×0 leaves
    the button disabled).
 6. **Dock** — wood tray pinned to the bottom; gust coin centered, restart
-   coin rightmost, swipe counter left, level label top-middle; sweeping
+   coin rightmost, sweep counter left, level label top-middle; sweeping
    can't act through it; debris never *spawns* under it but may drift over
    it while fading.
 7. **Next** — starts next level; level counter increments.
@@ -79,7 +79,7 @@ adb logcat | grep -iE "LeafSweeper|godot|mono|FATAL|AndroidRuntime"
 10. **Rotation/aspect sanity** — HUD stays pinned to edges (portrait lock is
 	the shipped orientation).
 11. **Double-tap burst** — two quick bare taps in one spot fling nearby
-	debris outward (≤12 pieces), swipes counter +1, gust power unchanged;
+	debris outward (≤12 pieces), sweeps counter +1, gust power unchanged;
 	a double-tap on already-clear ground flings nothing and costs nothing;
 	a tap-then-drag never bursts.
 12. **Round-start settle** — each new round the debris tumbles in from
@@ -100,7 +100,7 @@ Useful adb helpers while testing:
 ```sh
 adb shell am force-stop <package>          # test persistence
 adb shell input tap <x> <y>                # synthetic tap (menu buttons)
-adb shell input swipe <x1> <y1> <x2> <y2> <ms>   # synthetic sweep
+adb shell input sweep <x1> <y1> <x2> <y2> <ms>   # synthetic sweep
 adb shell screencap -p /sdcard/ls.png && adb pull /sdcard/ls.png
 ```
 

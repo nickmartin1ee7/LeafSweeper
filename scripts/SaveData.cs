@@ -8,7 +8,7 @@ namespace LeafSweeper;
 public sealed class LevelResult
 {
 	public int Level { get; set; }
-	public int Swipes { get; set; }
+	public int Sweeps { get; set; }
 	public int Gusts { get; set; }
 	public int Seconds { get; set; }
 	public string BugType { get; set; } = "";
@@ -32,7 +32,7 @@ public sealed class SaveData
 
 	public int CurrentLevel { get; set; } = 1;
 	public int LevelsCleared { get; set; }
-	public int TotalSwipes { get; set; }
+	public int TotalSweeps { get; set; }
 	public int TotalGusts { get; set; }
 	public int TotalSeconds { get; set; }
 	/// <summary>Current gust power balance: coins found add +1, each gust spent takes −1.</summary>
@@ -60,7 +60,7 @@ public sealed class SaveData
 
 			data.CurrentLevel = Get(root, "currentLevel", 1).AsInt32();
 			data.LevelsCleared = Get(root, "levelsCleared", 0).AsInt32();
-			data.TotalSwipes = Get(root, "totalSwipes", 0).AsInt32();
+			data.TotalSweeps = Get(root, "totalSweeps", 0).AsInt32();
 			data.TotalGusts = Get(root, "totalGusts", 0).AsInt32();
 			data.TotalSeconds = Get(root, "totalSeconds", 0).AsInt32();
 			data.GustPower = Get(root, "gustPower", StartingGustPower).AsInt32();
@@ -76,7 +76,7 @@ public sealed class SaveData
 					data.History.Add(new LevelResult
 					{
 						Level = Get(d, "level", 0).AsInt32(),
-						Swipes = Get(d, "swipes", 0).AsInt32(),
+						Sweeps = Get(d, "sweeps", 0).AsInt32(),
 						Gusts = Get(d, "gusts", 0).AsInt32(),
 						Seconds = Get(d, "seconds", 0).AsInt32(),
 						BugType = Get(d, "bugType", "").AsString(),
@@ -112,7 +112,7 @@ public sealed class SaveData
 			history.Add(new Godot.Collections.Dictionary
 			{
 				["level"] = r.Level,
-				["swipes"] = r.Swipes,
+				["sweeps"] = r.Sweeps,
 				["gusts"] = r.Gusts,
 				["seconds"] = r.Seconds,
 				["bugType"] = r.BugType,
@@ -125,7 +125,7 @@ public sealed class SaveData
 			["version"] = 1,
 			["currentLevel"] = CurrentLevel,
 			["levelsCleared"] = LevelsCleared,
-			["totalSwipes"] = TotalSwipes,
+			["totalSweeps"] = TotalSweeps,
 			["totalGusts"] = TotalGusts,
 			["totalSeconds"] = TotalSeconds,
 			["gustPower"] = GustPower,
@@ -149,10 +149,10 @@ public sealed class SaveData
 	}
 
 	/// <summary>Records a cleared level, updates aggregates, and saves.</summary>
-	public void RecordClear(int level, int swipes, int seconds, string bugType, int gusts)
+	public void RecordClear(int level, int sweeps, int seconds, string bugType, int gusts)
 	{
 		LevelsCleared++;
-		TotalSwipes += swipes;
+		TotalSweeps += sweeps;
 		TotalGusts += gusts;
 		TotalSeconds += seconds;
 		BugFindCounts.TryGetValue(bugType, out var count);
@@ -161,7 +161,7 @@ public sealed class SaveData
 		History.Add(new LevelResult
 		{
 			Level = level,
-			Swipes = swipes,
+			Sweeps = sweeps,
 			Gusts = gusts,
 			Seconds = seconds,
 			BugType = bugType,
@@ -174,13 +174,13 @@ public sealed class SaveData
 		Save();
 	}
 
-	public int BestSwipes() => History.Count == 0 ? 0 : History.Min(r => r.Swipes);
+	public int BestSweeps() => History.Count == 0 ? 0 : History.Min(r => r.Sweeps);
 
 	public void Reset()
 	{
 		CurrentLevel = 1;
 		LevelsCleared = 0;
-		TotalSwipes = 0;
+		TotalSweeps = 0;
 		TotalGusts = 0;
 		TotalSeconds = 0;
 		GustPower = StartingGustPower;

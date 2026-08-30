@@ -129,7 +129,7 @@ public static class BugFlavor
         {
             "Outmaneuvered at last — what swift sweeping!",
             "Those reflexes dodged everyone but you.",
-            "It saw your swipe coming in slow motion. Impressive.",
+            "It saw your sweep coming in slow motion. Impressive.",
             "The fastest critter on the floor, caught by kindness.",
         },
     };

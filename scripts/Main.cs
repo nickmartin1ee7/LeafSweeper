@@ -48,7 +48,7 @@ public partial class Main : Node2D
 	private bool _awaitingSettle;
 
 	// Double-tap burst tuning: two dead taps inside the window and slop
-	// fire a radial gust burst — a swipe without the drag.
+	// fire a radial gust burst — a sweep without the drag.
 	private const ulong DoubleTapWindowMs = 350;
 	private const float DoubleTapSlop = 65f;
 	private const float TapTravelSlop = 24f;
@@ -69,7 +69,7 @@ public partial class Main : Node2D
 		GetViewport().SizeChanged += OnViewportResized;
 
 		_save = SaveData.Load();
-		_sweeper = new Sweeper(() => _debris, _rng, OnSwipeCompleted);
+		_sweeper = new Sweeper(() => _debris, _rng, OnSweepCompleted);
 
 		_menu.Refresh(_save);
 		SetState(GameState.Menu);
@@ -129,7 +129,7 @@ public partial class Main : Node2D
 		GD.Print($"AUTOPLAY uncover: blocked={blocked} cleared={uncovered} truthOk={truthOk}");
 
 		// Double-tap burst: two dead taps at a cluttered spot fling the
-		// nearby debris radially — swipe semantics (cap, free, counted)
+		// nearby debris radially — sweep semantics (cap, free, counted)
 		// without the drag. The burst center must sit clear of the bug and
 		// the coins so the synthetic taps fall through to sweeping.
 		Vector2? burstAt = null;
@@ -152,7 +152,7 @@ public partial class Main : Node2D
 		if (burstAt != null)
 		{
 			Vector2 center = burstAt.Value;
-			int swipesBefore = _stats.Swipes;
+			int sweepsBefore = _stats.Sweeps;
 			int sweptBefore = 0;
 			int halo = 0;
 			foreach (var d in _debris)
@@ -173,11 +173,11 @@ public partial class Main : Node2D
 				if (IsInstanceValid(d) && d.Swept
 					&& d.Position.DistanceTo(center) <= Sweeper.BurstRadius)
 					sweptAfter++;
-			// Exactly the nearest halo pieces fling (capped like a swipe) and
-			// the burst counts as exactly one swipe.
+			// Exactly the nearest halo pieces fling (capped like a sweep) and
+			// the burst counts as exactly one sweep.
 			burstOk = halo > 0
-				&& sweptAfter == sweptBefore + Mathf.Min(halo, Sweeper.MaxDebrisPerSwipe)
-				&& _stats.Swipes == swipesBefore + 1;
+				&& sweptAfter == sweptBefore + Mathf.Min(halo, Sweeper.MaxDebrisPerSweep)
+				&& _stats.Sweeps == sweepsBefore + 1;
 		}
 		GD.Print($"AUTOPLAY burst: found={burstAt != null} ok={burstOk}");
 
@@ -199,7 +199,7 @@ public partial class Main : Node2D
 		for (int i = 0; i < 7; i++)
 		{
 			_stats.Tick(1.0);
-			_stats.CountSwipe();
+			_stats.CountSweep();
 		}
 		OnWindPressed(); // spends one gust power and counts the use
 		bool gustSpent = _save.GustPower == SaveData.StartingGustPower;
@@ -255,7 +255,7 @@ public partial class Main : Node2D
 			&& coinSpawned && coinBanked && gustSpent && restartOk && windOk
 			&& reloaded.CurrentLevel == playedLevel + 1
 			&& reloaded.LevelsCleared == 1
-			&& reloaded.TotalSwipes == 8
+			&& reloaded.TotalSweeps == 8
 			&& reloaded.TotalGusts == 1
 			&& reloaded.GustPower == SaveData.StartingGustPower
 			&& reloaded.BugFindCounts.Count == 1
@@ -264,10 +264,10 @@ public partial class Main : Node2D
 			&& reloaded.History[0].Gusts == 1;
 
 		GD.Print($"AUTOPLAY save: level={_save.CurrentLevel} cleared={_save.LevelsCleared} " +
-				 $"swipes={_save.TotalSwipes} gusts={_save.TotalGusts} " +
+				 $"sweeps={_save.TotalSweeps} gusts={_save.TotalGusts} " +
 				 $"bugs={_save.BugFindCounts.Count} hist={_save.History.Count}");
 		GD.Print($"AUTOPLAY reload: level={reloaded.CurrentLevel} cleared={reloaded.LevelsCleared} " +
-				 $"swipes={reloaded.TotalSwipes} gusts={reloaded.TotalGusts} ok={ok}");
+				 $"sweeps={reloaded.TotalSweeps} gusts={reloaded.TotalGusts} ok={ok}");
 		GetTree().Quit(ok ? 0 : 1);
 	}
 
@@ -340,7 +340,7 @@ public partial class Main : Node2D
 			case InputEventScreenDrag drag:
 			{
 				Vector2 world = ToWorld(drag.Position);
-				// A gesture that wanders off is a swipe, not a tap: drop it
+				// A gesture that wanders off is a sweep, not a tap: drop it
 				// out of the double-tap chain.
 				if (_awaitingTapEnd && _pressWorld.DistanceTo(world) > TapTravelSlop)
 				{
@@ -356,19 +356,19 @@ public partial class Main : Node2D
 	private Vector2 ToWorld(Vector2 screenPos) =>
 		GetCanvasTransform().AffineInverse() * screenPos;
 
-	private void OnSwipeCompleted()
+	private void OnSweepCompleted()
 	{
 		if (_state != GameState.Playing)
 			return;
-		_stats.CountSwipe();
-		_hud.ShowSwipes(_stats.Swipes);
+		_stats.CountSweep();
+		_hud.ShowSweeps(_stats.Sweeps);
 	}
 
 	/// <summary>
 	/// A touch lifted: a "dead tap" (nothing selected, nothing swept, and it
 	/// never wandered) arms a double-tap window; a second dead tap within
 	/// <see cref="DoubleTapWindowMs"/> and <see cref="DoubleTapSlop"/> fires a
-	/// radial gust burst — a swipe without the drag, for clearing the clutter
+	/// radial gust burst — a sweep without the drag, for clearing the clutter
 	/// around a buried item.
 	/// </summary>
 	private void OnTouchLifted()
@@ -384,7 +384,7 @@ public partial class Main : Node2D
 			&& _lastTapPos.DistanceTo(_pressWorld) <= DoubleTapSlop)
 		{
 			_tapArmed = false;
-			_sweeper.Burst(_pressWorld); // reports via OnSwipeCompleted
+			_sweeper.Burst(_pressWorld); // reports via OnSweepCompleted
 			return;
 		}
 		_tapArmed = deadTap;
@@ -640,7 +640,7 @@ public partial class Main : Node2D
 		_awaitingSettle = true;
 
 		_hud.ShowLevel(level);
-		_hud.ShowSwipes(0);
+		_hud.ShowSweeps(0);
 		_hud.ShowGustPower(_save.GustPower);
 		_hud.HideWin();
 		SetState(GameState.Playing);
@@ -801,19 +801,19 @@ public partial class Main : Node2D
 		SetState(GameState.Won);
 
 		// Copy uses pre-save history so "best" refers to earlier rounds.
-		bool newBest = _save.LevelsCleared > 0 && _stats.Swipes <= _save.BestSwipes();
+		bool newBest = _save.LevelsCleared > 0 && _stats.Sweeps <= _save.BestSweeps();
 		string comment = _stats.Comment(_save, _bug.Type);
-		string roundLine = $"{LevelStats.FormatTime(_stats.Elapsed)} · {_stats.Swipes} swipes";
+		string roundLine = $"{LevelStats.FormatTime(_stats.Elapsed)} · {_stats.Sweeps} sweeps";
 		if (_stats.Gusts > 0)
 			roundLine += $" · {_stats.Gusts} gust{(_stats.Gusts == 1 ? "" : "s")}";
-		_save.RecordClear(_stats.Level, _stats.Swipes, (int)_stats.Elapsed, _bug.Type.Id, _stats.Gusts);
+		_save.RecordClear(_stats.Level, _stats.Sweeps, (int)_stats.Elapsed, _bug.Type.Id, _stats.Gusts);
 
 		// Lifetime cells for the card's stats row (post-save, so this find counts).
 		BugType type = _bug.Type;
 		_save.BugFindCounts.TryGetValue(type.Id, out int speciesFinds);
 		var stats = new[]
 		{
-			new Hud.WinStat(_save.BestSwipes().ToString(),
+			new Hud.WinStat(_save.BestSweeps().ToString(),
 				newBest ? "New best round!" : "Best round", newBest),
 			new Hud.WinStat($"×{speciesFinds}",
 				speciesFinds == 1 ? $"First {type.DisplayName}!" : type.DisplayName,

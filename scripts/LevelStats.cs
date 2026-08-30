@@ -5,14 +5,14 @@ using Godot;
 namespace LeafSweeper;
 
 /// <summary>
-/// Per-level play tracking (elapsed time, swipe gestures, gust powers used)
+/// Per-level play tracking (elapsed time, sweep gestures, gust powers used)
 /// plus the friendly between-round comments shown on the win overlay.
 /// </summary>
 public sealed class LevelStats
 {
     private static readonly RandomNumberGenerator Rng = new();
 
-    // Swipe-efficiency remarks, from quickest to coziest.
+    // Sweep-efficiency remarks, from quickest to coziest.
     private static readonly string[] SwiftRemarks =
     {
         "Quick as a whisker!",
@@ -56,7 +56,7 @@ public sealed class LevelStats
     };
 
     public int Level { get; private set; }
-    public int Swipes { get; private set; }
+    public int Sweeps { get; private set; }
     public int Gusts { get; private set; }
     public float Elapsed { get; private set; }
     public bool Running { get; private set; }
@@ -64,7 +64,7 @@ public sealed class LevelStats
     public void Start(int level)
     {
         Level = level;
-        Swipes = 0;
+        Sweeps = 0;
         Gusts = 0;
         Elapsed = 0f;
         Running = true;
@@ -78,7 +78,7 @@ public sealed class LevelStats
             Elapsed += (float)delta;
     }
 
-    public void CountSwipe() => Swipes++;
+    public void CountSweep() => Sweeps++;
 
     /// <summary>Counts one gust power use for the current round.</summary>
     public void CountGust() => Gusts++;
@@ -91,7 +91,7 @@ public sealed class LevelStats
 
     /// <summary>
     /// Builds the win-overlay comment: a variant of the found bug's own
-    /// celebration line, plus a swipe-efficiency remark with a lifetime-best
+    /// celebration line, plus a sweep-efficiency remark with a lifetime-best
     /// nod when relevant. Round numbers live in the stats row instead, so
     /// the comment stays pure flavor.
     /// </summary>
@@ -99,15 +99,15 @@ public sealed class LevelStats
     {
         var lines = new List<string> { BugFlavor.Pick(bug) };
 
-        int best = save.BestSwipes();
-        if (best > 0 && Swipes <= best)
+        int best = save.BestSweeps();
+        if (best > 0 && Sweeps <= best)
             lines.Add(Pick(BestRemarks));
-        else if (save.LevelsCleared > 3 && Swipes > best * 2)
-            lines.Add($"Your best is {best} swipes — {Pick(StrollRemarks)}");
+        else if (save.LevelsCleared > 3 && Sweeps > best * 2)
+            lines.Add($"Your best is {best} sweeps — {Pick(StrollRemarks)}");
         else
-            lines.Add(Pick(Swipes <= 5 ? SwiftRemarks
-                : Swipes <= 12 ? KeenRemarks
-                : Swipes <= 25 ? SteadyRemarks
+            lines.Add(Pick(Sweeps <= 5 ? SwiftRemarks
+                : Sweeps <= 12 ? KeenRemarks
+                : Sweeps <= 25 ? SteadyRemarks
                 : CozyRemarks));
 
         return string.Join("\n", lines);
