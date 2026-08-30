@@ -99,8 +99,9 @@ adb logcat | grep -iE "LeafSweeper|godot|mono|FATAL|AndroidRuntime"
    gust button, fires a gold ring-and-spark burst, and
    the ×N badge pulses as it ticks up; pressing Gust spends one (×0 leaves
    the button disabled).
-6. **Dock** — wood tray pinned to the bottom; gust coin centered, restart
-   coin rightmost, sweep counter left, level label top-middle; sweeping
+6. **Dock** — wood tray pinned to the bottom; book coin left, gust coin
+   centered, restart coin rightmost; sweeps counter ("{x} Sweeps") plain
+   text top-right, level label plain text top-left; sweeping
    can't act through it; debris never *spawns* under it but may drift over
    it while fading.
 7. **Next** — starts next level; level counter increments.
