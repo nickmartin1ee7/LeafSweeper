@@ -4,11 +4,11 @@ using Godot;
 namespace LeafSweeper;
 
 /// <summary>
-/// In-game HUD: a wood dock along the bottom (sweep counter + gust/restart
-/// coin buttons), the level label at the top-middle, and the win overlay
-/// with the between-round stats comment and Next/Menu buttons. The dock's
-/// fixed height also defines the playable area — nothing spawns underneath
-/// it, though swept debris may drift over it.
+/// In-game HUD: a wood dock along the bottom (bug book + gust/restart coin
+/// buttons), the level label at the top-left, the sweep counter panel at the
+/// top-right, and the win overlay with the between-round stats comment and
+/// Next/Menu buttons. The dock's fixed height also defines the playable
+/// area — nothing spawns underneath it, though swept debris may drift over.
 /// </summary>
 public partial class Hud : CanvasLayer
 {
@@ -20,8 +20,10 @@ public partial class Hud : CanvasLayer
 
     private Control _dock = null!;
     private Label _levelLabel = null!;
+    private Panel _sweepsPanel = null!;
     private Label _sweepLabel = null!;
     private Label _sweepsWordLabel = null!;
+    private Button _bookButton = null!;
     private Button _windButton = null!;
     private Button _restartButton = null!;
     private Panel _gustBadge = null!;
@@ -48,6 +50,10 @@ public partial class Hud : CanvasLayer
         _levelLabel.Visible = false;
         AddChild(_levelLabel);
 
+        _sweepsPanel = BuildSweepsPanel();
+        _sweepsPanel.Visible = false;
+        AddChild(_sweepsPanel);
+
         _dock = BuildDock();
         _dock.Visible = false;
         AddChild(_dock);
@@ -61,23 +67,75 @@ public partial class Hud : CanvasLayer
         AddChild(_restartDialog);
     }
 
-    /// <summary>Level indicator at the top-middle, over the forest floor.</summary>
+    /// <summary>Level indicator at the top-left corner.</summary>
     private Label BuildLevelLabel()
     {
         var label = MakeLabel(60, true);
-        label.HorizontalAlignment = HorizontalAlignment.Center;
-        // Explicit anchors: full width, pinned to the top. (Anchor presets
-        // leave offsets untouched, which silently produced zero-height
-        // rects before.)
+        label.HorizontalAlignment = HorizontalAlignment.Left;
+        // Explicit anchors: full width, pinned to the top, text hugging the
+        // left edge with a notch-safe margin. (Anchor presets leave offsets
+        // untouched, which silently produced zero-height rects before.)
         label.AnchorLeft = 0f;
         label.AnchorTop = 0f;
         label.AnchorRight = 1f;
         label.AnchorBottom = 0f;
-        label.OffsetLeft = 0f;
+        label.OffsetLeft = 36f;
         label.OffsetRight = 0f;
         label.OffsetTop = 24f;
         label.OffsetBottom = 130f;
         return label;
+    }
+
+    /// <summary>
+    /// Compact cream sweep counter pinned to the top-right corner, out of
+    /// the dock's way and clear of the level label on the left.
+    /// </summary>
+    private Panel BuildSweepsPanel()
+    {
+        _sweepLabel = MakeLabel(64, true, new Color("4a3a26"), 0);
+        _sweepLabel.HorizontalAlignment = HorizontalAlignment.Center;
+        _sweepsWordLabel = MakeLabel(36, true, new Color("6b5233"), 0);
+        _sweepsWordLabel.HorizontalAlignment = HorizontalAlignment.Center;
+        _sweepsWordLabel.Text = "Sweeps";
+
+        var box = new VBoxContainer();
+        box.AddThemeConstantOverride("separation", 0);
+        box.AddChild(_sweepLabel);
+        box.AddChild(_sweepsWordLabel);
+
+        var style = new StyleBoxFlat
+        {
+            BgColor = new Color(0.968f, 0.941f, 0.882f, 0.94f),
+            CornerRadiusBottomLeft = 24,
+            CornerRadiusBottomRight = 24,
+            CornerRadiusTopLeft = 24,
+            CornerRadiusTopRight = 24,
+            ContentMarginLeft = 40,
+            ContentMarginRight = 40,
+            ContentMarginTop = 16,
+            ContentMarginBottom = 16,
+            BorderWidthBottom = 4,
+            BorderWidthTop = 4,
+            BorderWidthLeft = 4,
+            BorderWidthRight = 4,
+            BorderColor = new Color("c9a06a"),
+        };
+
+        var panel = new Panel();
+        panel.AddThemeStyleboxOverride("panel", style);
+        // Anchored to the top-right corner, growing leftward as text widens.
+        panel.AnchorLeft = 1f;
+        panel.AnchorTop = 0f;
+        panel.AnchorRight = 1f;
+        panel.AnchorBottom = 0f;
+        panel.OffsetLeft = 0f;
+        panel.OffsetRight = -24f;
+        panel.OffsetTop = 24f;
+        panel.OffsetBottom = 0f;
+        panel.GrowHorizontal = Control.GrowDirection.Begin;
+        panel.GrowVertical = Control.GrowDirection.End;
+        panel.AddChild(box);
+        return panel;
     }
 
     private Control BuildDock()
@@ -87,6 +145,10 @@ public partial class Hud : CanvasLayer
         _sweepsWordLabel = MakeLabel(36, true);
         _sweepsWordLabel.HorizontalAlignment = HorizontalAlignment.Center;
         _sweepsWordLabel.Text = "Sweeps";
+
+        _bookButton = MakeCoinButton("res://assets/icons/book.svg");
+        _bookButton.TooltipText = "Open the bug book";
+        _bookButton.Pressed += () => BookPressed?.Invoke();
 
         _windButton = MakeCoinButton("res://assets/icons/wind.svg");
         _windButton.TooltipText = "Gust: blow away some debris";
@@ -139,17 +201,16 @@ public partial class Hud : CanvasLayer
         row.AnchorRight = 1f;
         row.AnchorBottom = 1f;
 
-        var sweepBox = new VBoxContainer();
-        sweepBox.AddThemeConstantOverride("separation", 0);
-        sweepBox.SizeFlagsVertical = Control.SizeFlags.ShrinkCenter;
-        sweepBox.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        sweepBox.AddChild(_sweepLabel);
-        sweepBox.AddChild(_sweepsWordLabel);
-
         var box = new HBoxContainer();
         box.AddThemeConstantOverride("separation", 28);
-        box.AddChild(sweepBox);
-        box.AddChild(_windButton);
+        box.AddChild(_bookButton);
+        var gustSlot = new CenterContainer
+        {
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+        };
+        gustSlot.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
+        gustSlot.AddChild(_windButton);
+        box.AddChild(gustSlot);
         var rightSlot = new HBoxContainer
         {
             Alignment = BoxContainer.AlignmentMode.End,
@@ -236,6 +297,7 @@ public partial class Hud : CanvasLayer
 
     public event Action? NextPressed;
     public event Action? MenuPressed;
+    public event Action? BookPressed;
     public event Action? WindPressed;
     public event Action? RestartConfirmed;
 
@@ -402,6 +464,7 @@ public partial class Hud : CanvasLayer
     {
         _dock.Visible = visible;
         _levelLabel.Visible = visible;
+        _sweepsPanel.Visible = visible;
     }
 
     public void ShowRestartDialog()
