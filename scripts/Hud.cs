@@ -20,7 +20,7 @@ public partial class Hud : CanvasLayer
 
     private Control _dock = null!;
     private Label _levelLabel = null!;
-    private Panel _sweepsPanel = null!;
+    private PanelContainer _sweepsPanel = null!;
     private Label _sweepLabel = null!;
     private Label _sweepsWordLabel = null!;
     private Button _bookButton = null!;
@@ -95,7 +95,7 @@ public partial class Hud : CanvasLayer
     /// Compact cream sweep counter pinned to the top-right corner, out of
     /// the dock's way and clear of the level label on the left.
     /// </summary>
-    private Panel BuildSweepsPanel()
+    private PanelContainer BuildSweepsPanel()
     {
         _sweepLabel = MakeLabel(64, true, new Color("4a3a26"), 0);
         _sweepLabel.HorizontalAlignment = HorizontalAlignment.Center;
@@ -126,7 +126,12 @@ public partial class Hud : CanvasLayer
             BorderColor = new Color("c9a06a"),
         };
 
-        var panel = new Panel();
+        // PanelContainer, not Panel: a plain Panel is not a container and
+        // never resizes itself for its children, so these corner anchors
+        // (whose derived size is negative, clamped to zero) rendered a
+        // zero-size, invisible panel. A container sizes itself to the
+        // labels and grows leftward/downward from the top-right point.
+        var panel = new PanelContainer();
         panel.AddThemeStyleboxOverride("panel", style);
         // Anchored to the top-right corner, growing leftward as text widens.
         panel.AnchorLeft = 1f;
