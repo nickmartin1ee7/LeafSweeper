@@ -78,6 +78,10 @@ adb logcat | grep -iE "LeafSweeper|godot|mono|FATAL|AndroidRuntime"
    (gust power back to 3).
 10. **Rotation/aspect sanity** — HUD stays pinned to edges (portrait lock is
     the shipped orientation).
+11. **Double-tap burst** — two quick bare taps in one spot fling nearby
+    debris outward (≤12 pieces), swipes counter +1, gust power unchanged;
+    a double-tap on already-clear ground flings nothing and costs nothing;
+    a tap-then-drag never bursts.
 
 Useful adb helpers while testing:
 

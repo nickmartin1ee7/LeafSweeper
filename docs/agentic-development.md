@@ -203,6 +203,7 @@ they produce, so a playtest finding maps to one named knob:
 | "Floor is visible / bug is findable too fast" | `RoundConfig.CoverageStart/End` |
 | "Bug shows stacked sprites" | node lifecycle in `Bug.Setup` |
 | "Sweeps clear too much / too little" | `Sweeper.SweepRadius`, `Sweeper.MaxDebrisPerSwipe`, `Debris.FlingFactor`, `Debris.Friction`, `Debris.FadeDelayScale` |
+| "Burst clears too much / too little, or double-taps misfire" | `Sweeper.BurstRadius`, `Sweeper.BurstFlingSpeed`, `Main.DoubleTapWindowMs`, `Main.DoubleTapSlop`, `Main.TapTravelSlop` |
 | "Must sweep a huge empty radius before a bug/coin is tappable" | occlusion radii — `BugType.OcclusionRadius` (45% of tap, clamped 18–36px), `GustCoin.OcclusionRatio`; mask fidelity — `Debris.MaskCellSize`, `Debris.AlphaThreshold` |
 | "Taps inflate the swipe counter" | `Sweeper.End()` — `onSwipeCompleted` fires only when `_clearedThisSwipe > 0`, so taps and fruitless drags never count |
 | "Menu looks wrong at odd aspects" | fit-on-resize (`Main.FitGround` + `Main.OnViewportResized`) |

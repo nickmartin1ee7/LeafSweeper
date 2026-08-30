@@ -24,6 +24,10 @@ Title menu → Play → Round (sweep debris, find bug) → Tap bug
    A single swipe clears **at most 12 pieces of debris** — sweeps stay
    deliberate rather than screen-wiping. Only gestures that sweep at least
    one piece count toward the swipe counter — bare taps are free.
+   A **double-tap** — two quick bare taps in one spot — fires a radial
+   **gust burst**: the debris nearest the tap (within 130 px) flings
+   outward, capped at the same 12 pieces per burst and counted as a
+   swipe. It's the drag-free way to dig out a buried bug or coin.
    Weight matters: rocks/sticks/moss resist; leaves and petals fly easily —
    but heavier pieces glide farther and fade later, so their long slide
    reads as weight rather than the debris dying where it was swept.

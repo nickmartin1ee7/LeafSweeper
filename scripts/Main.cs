@@ -37,6 +37,18 @@ public partial class Main : Node2D
 	/// <summary>Gold gust coins hidden below the debris each round.</summary>
 	private const int GustCoinsPerLevel = 3;
 
+	// Double-tap burst tuning: two dead taps inside the window and slop
+	// fire a radial gust burst — a swipe without the drag.
+	private const ulong DoubleTapWindowMs = 350;
+	private const float DoubleTapSlop = 65f;
+	private const float TapTravelSlop = 24f;
+
+	private bool _tapArmed;       // last gesture ended as a dead tap
+	private ulong _lastTapTicks;
+	private Vector2 _lastTapPos;
+	private bool _awaitingTapEnd; // a press is on the floor awaiting its lift
+	private Vector2 _pressWorld;
+
 	public override void _Ready()
 	{
 		_rng.Randomize();
@@ -90,6 +102,59 @@ public partial class Main : Node2D
 		}
 		GD.Print($"AUTOPLAY uncover: blocked={blocked} cleared={uncovered} truthOk={truthOk}");
 
+		// Double-tap burst: two dead taps at a cluttered spot fling the
+		// nearby debris radially — swipe semantics (cap, free, counted)
+		// without the drag. The burst center must sit clear of the bug and
+		// the coins so the synthetic taps fall through to sweeping.
+		Vector2? burstAt = null;
+		foreach (var d in _debris)
+		{
+			if (!IsInstanceValid(d) || d.Swept
+				|| d.Position.DistanceTo(_bug.Position) <= 300f)
+				continue;
+			bool nearCoin = false;
+			foreach (var c in _coins)
+				if (IsInstanceValid(c) && c.Position.DistanceTo(d.Position) <= 220f)
+					nearCoin = true;
+			if (!nearCoin)
+			{
+				burstAt = d.Position;
+				break;
+			}
+		}
+		bool burstOk = false;
+		if (burstAt != null)
+		{
+			Vector2 center = burstAt.Value;
+			int swipesBefore = _stats.Swipes;
+			int sweptBefore = 0;
+			int halo = 0;
+			foreach (var d in _debris)
+			{
+				if (!IsInstanceValid(d)
+					|| d.Position.DistanceTo(center) > Sweeper.BurstRadius)
+					continue;
+				if (d.Swept) sweptBefore++;
+				else halo++;
+			}
+			// Tap 1 down+up, then tap 2 down+up at the same spot.
+			_UnhandledInput(SyntheticTouch(true, center));
+			_UnhandledInput(SyntheticTouch(false, center));
+			_UnhandledInput(SyntheticTouch(true, center));
+			_UnhandledInput(SyntheticTouch(false, center));
+			int sweptAfter = 0;
+			foreach (var d in _debris)
+				if (IsInstanceValid(d) && d.Swept
+					&& d.Position.DistanceTo(center) <= Sweeper.BurstRadius)
+					sweptAfter++;
+			// Exactly the nearest halo pieces fling (capped like a swipe) and
+			// the burst counts as exactly one swipe.
+			burstOk = halo > 0
+				&& sweptAfter == sweptBefore + Mathf.Min(halo, Sweeper.MaxDebrisPerSwipe)
+				&& _stats.Swipes == swipesBefore + 1;
+		}
+		GD.Print($"AUTOPLAY burst: found={burstAt != null} ok={burstOk}");
+
 		// Gust coins: three hide below the debris each round; collecting one
 		// banks +1 power, spending a gust takes −1.
 		var coin = _coins.Find(c => IsInstanceValid(c) && !c.Collected);
@@ -115,10 +180,11 @@ public partial class Main : Node2D
 		WinLevel();
 
 		var reloaded = SaveData.Load();
-		bool ok = blocked && uncovered && truthOk && coinSpawned && coinBanked && gustSpent
+		bool ok = blocked && uncovered && truthOk && burstOk
+			&& coinSpawned && coinBanked && gustSpent
 			&& reloaded.CurrentLevel == 4
 			&& reloaded.LevelsCleared == 1
-			&& reloaded.TotalSwipes == 7
+			&& reloaded.TotalSwipes == 8
 			&& reloaded.TotalGusts == 1
 			&& reloaded.GustPower == SaveData.StartingGustPower
 			&& reloaded.BugFindCounts.Count == 1
@@ -154,6 +220,7 @@ public partial class Main : Node2D
 				GustCoin coin = SelectableCoinAt(world);
 				if (coin != null)
 				{
+					_tapArmed = false; // selection taps never chain into a burst
 					CollectCoin(coin);
 					return;
 				}
@@ -161,21 +228,41 @@ public partial class Main : Node2D
 				// overlaps its visible body a tap just starts sweeping there.
 				if (_bug.ContainsPoint(world) && !BugIsCovered())
 				{
+					_tapArmed = false;
 					WinLevel();
 					return;
 				}
+				_awaitingTapEnd = true;
+				_pressWorld = world;
 				_sweeper.Begin(world, Time.GetTicksUsec() * 1000UL);
 				break;
 			}
 			case InputEventScreenTouch { Pressed: false } t:
 				if (t.Canceled)
+				{
 					_sweeper.Cancel();
+					_awaitingTapEnd = false;
+					_tapArmed = false;
+				}
 				else
+				{
 					_sweeper.End();
+					OnTouchLifted();
+				}
 				break;
 			case InputEventScreenDrag drag:
-				_sweeper.Drag(ToWorld(drag.Position), Time.GetTicksUsec() * 1000UL);
+			{
+				Vector2 world = ToWorld(drag.Position);
+				// A gesture that wanders off is a swipe, not a tap: drop it
+				// out of the double-tap chain.
+				if (_awaitingTapEnd && _pressWorld.DistanceTo(world) > TapTravelSlop)
+				{
+					_awaitingTapEnd = false;
+					_tapArmed = false;
+				}
+				_sweeper.Drag(world, Time.GetTicksUsec() * 1000UL);
 				break;
+			}
 		}
 	}
 
@@ -189,6 +276,41 @@ public partial class Main : Node2D
 		_stats.CountSwipe();
 		_hud.ShowSwipes(_stats.Swipes);
 	}
+
+	/// <summary>
+	/// A touch lifted: a "dead tap" (nothing selected, nothing swept, and it
+	/// never wandered) arms a double-tap window; a second dead tap within
+	/// <see cref="DoubleTapWindowMs"/> and <see cref="DoubleTapSlop"/> fires a
+	/// radial gust burst — a swipe without the drag, for clearing the clutter
+	/// around a buried item.
+	/// </summary>
+	private void OnTouchLifted()
+	{
+		if (!_awaitingTapEnd)
+			return;
+		_awaitingTapEnd = false;
+
+		ulong now = Time.GetTicksMsec();
+		bool deadTap = !_sweeper.SweptThisGesture;
+		if (deadTap && _tapArmed
+			&& now - _lastTapTicks <= DoubleTapWindowMs
+			&& _lastTapPos.DistanceTo(_pressWorld) <= DoubleTapSlop)
+		{
+			_tapArmed = false;
+			_sweeper.Burst(_pressWorld); // reports via OnSwipeCompleted
+			return;
+		}
+		_tapArmed = deadTap;
+		_lastTapTicks = now;
+		_lastTapPos = _pressWorld;
+	}
+
+	/// <summary>Synthetic tap for the autoplay self-test (world → screen).</summary>
+	private InputEventScreenTouch SyntheticTouch(bool pressed, Vector2 world) => new()
+	{
+		Pressed = pressed,
+		Position = GetCanvasTransform() * world,
+	};
 
 	/// <summary>
 	/// Ground truth for the autoplay self-test: recomputes whether a debris
