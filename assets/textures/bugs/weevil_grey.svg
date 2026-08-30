@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <radialGradient id="w" cx="0.35" cy="0.3" r="0.95">
+      <stop offset="0" stop-color="#9a9a94"/>
+      <stop offset="1" stop-color="#6a6a64"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="52" cy="80" rx="26" ry="4.5" fill="#000" opacity="0.12"/>
+  <g stroke="#3e3e3a" stroke-width="2.8" fill="none" stroke-linecap="round">
+    <path d="M40 62 L28 72 M44 68 L36 79 M58 68 L60 80 M66 60 L74 70"/>
+  </g>
+  <ellipse cx="58" cy="56" rx="22" ry="19" fill="url(#w)"
+           stroke="#3e3e3a" stroke-width="3.2"/>
+  <path d="M58 38 L58 74" stroke="#3e3e3a" stroke-width="2.2"/>
+  <g fill="#c2c2ba" opacity="0.9">
+    <circle cx="50" cy="48" r="2.2"/><circle cx="66" cy="52" r="2.2"/>
+    <circle cx="56" cy="64" r="2.2"/>
+  </g>
+  <circle cx="32" cy="44" r="7" fill="#7a7a74" stroke="#3e3e3a" stroke-width="2.8"/>
+  <!-- tapered snout: dark under-shape then lighter inner fill -->
+  <path d="M28 42 L11 46 L14 44 Z" fill="#3e3e3a" stroke="none"/>
+  <path d="M28 42 L13 45 L13 44 Z" fill="#9a9a94" stroke="none"/>
+  <!-- tip dot -->
+  <circle cx="11" cy="46" r="1.6" fill="#26201c"/>
+  <!-- small antenna along snout -->
+  <path d="M20 43 C19 41 17 40 16 41" fill="none" stroke="#3e3e3a" stroke-width="1.6" stroke-linecap="round"/>
+  <circle cx="16.2" cy="41.1" r="0.9" fill="#26201c"/>
+</svg>

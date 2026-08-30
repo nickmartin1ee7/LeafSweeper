@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <ellipse cx="50" cy="88" rx="20" ry="3.6" fill="#000" opacity="0.12"/>
+  <g fill="#c8e0f2" fill-opacity="0.75" stroke="#6a9ec4" stroke-width="2">
+    <!-- Forewings anchored to trunk at (50,36), theta=30deg, rx=24, ry=6 -->
+    <ellipse cx="29.2" cy="24" rx="24" ry="6" transform="rotate(30 29.2 24)"/>
+    <ellipse cx="70.8" cy="24" rx="24" ry="6" transform="rotate(-30 70.8 24)"/>
+    <!-- Hindwings anchored to trunk at (50,41), theta=-16deg, rx=21, ry=5.4 -->
+    <ellipse cx="29.8" cy="46.8" rx="21" ry="5.4" transform="rotate(-16 29.8 46.8)"/>
+    <ellipse cx="70.2" cy="46.8" rx="21" ry="5.4" transform="rotate(16 70.2 46.8)"/>
+  </g>
+  <path d="M50 34 L50 84" stroke="#4a78b0" stroke-width="6.4" stroke-linecap="round"/>
+  <path d="M50 34 L50 84" stroke="#7aa8d4" stroke-width="3" stroke-linecap="round"/>
+  <g stroke="#35608e" stroke-width="1.6" opacity="0.8">
+    <path d="M46 58 L54 58 M46 66 L54 66 M46.5 74 L53.5 74"/>
+  </g>
+  <circle cx="50" cy="26" r="9.6" fill="#4a78b0" stroke="#2c4a70" stroke-width="2.8"/>
+  <circle cx="44" cy="24" r="4.6" fill="#26333d"/>
+  <circle cx="56" cy="24" r="4.6" fill="#26333d"/>
+  <circle cx="45" cy="22.6" r="1.4" fill="#dfeaf2"/>
+  <circle cx="57" cy="22.6" r="1.4" fill="#dfeaf2"/>
+</svg>
