@@ -7,13 +7,13 @@
 | Compile | `dotnet build` | 0 errors |
 | Asset import | `godot --headless --import` | exits 0, no script errors |
 | Boot smoke | `godot --headless --quit-after 180` | no errors in output |
-| Save round-trip | `LEAF_AUTOPLAY=1 godot --headless --quit-after 2000` | `ok=True`, exit 0 |
+| Save round-trip | `LEAF_AUTOPLAY=1 godot --headless --quit-after 4000` | `ok=True`, exit 0 |
 
 One-liner for a quick pass — build error count, then autoplay with output
 filtered to what matters:
 
 ```sh
-dotnet build 2>&1 | grep -cE " error "; LEAF_AUTOPLAY=1 godot --headless --quit-after 2000 2>&1 | grep -E "AUTOPLAY|SCRIPT ERROR"
+dotnet build 2>&1 | grep -cE " error "; LEAF_AUTOPLAY=1 godot --headless --quit-after 4000 2>&1 | grep -E "AUTOPLAY|SCRIPT ERROR"
 ```
 
 `0` from the first command means a clean build; pass means `AUTOPLAY …
@@ -25,8 +25,9 @@ coverage is recomputed straight from its texture's alpha channel and must
 match `Debris.Covers` for a positive and a negative case, printed as
 `truthOk=True` → collect a gust coin and **await its arrival animation** →
 7 sweeps → gust spend → **storm drops land on recorded cleared spots and
-shrink the cleared-spot pool** → win → **"Storm Round" warning sign is up**
-→ save → reload) and verifies
+shrink the cleared-spot pool** → **flood clusters grow the litter and stop
+dead at the 3× starting-litter cap** → win → **"Storm Round" warning sign
+is up** → save → reload) and verifies
 `currentLevel`, `levelsCleared`, `totalSweeps`, `totalGusts`, `gustPower`,
 bug find counts and history round-trip correctly. It is `async void` and
 awaits in-game signals, so `--quit-after` must outlast the animations it
@@ -133,9 +134,13 @@ adb logcat | grep -iE "LeafSweeper|godot|mono|FATAL|AndroidRuntime"
 	under individual wind-carried rain drops, cloud shadows, mist and
 	fog wisps that flare in and dissipate, with a lightning flash every
 	~7s; each patch you sweep is re-littered 4–6s later by one fresh
-	piece (gust-cleared ground too), re-hiding the bug/coins; the round
-	before a storm round ends with the electrical "Storm Round" warning
-	sign; on win/menu the weather fades back out.
+	piece (gust-cleared ground too), re-hiding the bug/coins; every
+	4–6s a cluster of 6–12 brand-new pieces tumbles onto random spots
+	and the litter visibly thickens, until it reaches 3× the round's
+	starting count and the flood stops (swept patches keep
+	re-littering); the round before a storm round ends with the
+	electrical "Storm Round" warning sign; on win/menu the weather
+	fades back out.
 
 Useful adb helpers while testing:
 

@@ -53,8 +53,12 @@ before the grandiose golden win card appears.
   `LEAF_STORM=1`) the sky darkens under wind-carried rain, drifting fog and
   lightning, and each patch you sweep is re-littered a few seconds later —
   memory becomes the difficulty. Gusts don't help hoarders either: debris
-  cleared by a gust is re-littered just like swept ground. The round before
-  a storm round warns you with a sparking "Storm Round" sign.
+  cleared by a gust is re-littered just like swept ground. And the storm
+  escalates: every 4–6 seconds a gust dumps a fresh cluster of 6–12 brand-new
+  pieces onto random spots, piling the litter up to 3× the round's starting
+  floor before the flood relents (swept patches keep re-littering after
+  that). The round before a storm round warns you with a sparking "Storm
+  Round" sign.
 - **Local save data** (`user://save.json`, app-private on Android — no
   permissions): current level, levels cleared, lifetime sweeps & play time,
   per-bug-variant find counts, prismatic finds, and the last 50 cleared
@@ -78,7 +82,7 @@ Requirements: .NET SDK 8+ (project targets `Godot.NET.Sdk/4.7.1`), Godot 4.7.1 m
 dotnet build                    # compile C#
 godot --headless --import       # import assets/scenes
 godot --headless --quit-after 180   # boot the game headless (smoke test)
-LEAF_AUTOPLAY=1 godot --headless --quit-after 2000   # self-test: plays a level (with a forced prismatic bug and storm weather), verifies catalog/book/save round-trip, exit code 0 on pass
+LEAF_AUTOPLAY=1 godot --headless --quit-after 4000   # self-test: plays a level (with a forced prismatic bug and storm weather), verifies catalog/book/save round-trip, exit code 0 on pass
 ```
 
 For desktop testing, just open the project in the Godot editor and press

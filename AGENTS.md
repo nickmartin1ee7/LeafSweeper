@@ -13,7 +13,7 @@ first dev task; when the two disagree, this file wins.
 dotnet build                                   # 1. compile
 godot --headless --import                      # 2. import assets/scenes
 godot --headless --quit-after 180              # 3. boot smoke test
-LEAF_AUTOPLAY=1 godot --headless --quit-after 2000   # 4. gameplay self-test
+LEAF_AUTOPLAY=1 godot --headless --quit-after 4000   # 4. gameplay self-test
 ```
 
 - The binary on this machine is `godot-mono` (NixOS wrapper), not plain `godot`.
