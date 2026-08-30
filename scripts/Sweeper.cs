@@ -6,9 +6,9 @@ namespace LeafSweeper;
 
 /// <summary>
 /// Turns drag input into sweep flings. Debris near the pointer (or near the
-/// segment between the last and current pointer position, so fast swipes
+/// segment between the last and current pointer position, so fast sweeps
 /// don't tunnel through) is flung along the pointer's velocity. A single
-/// swipe (touch-down to lift) clears at most <see cref="MaxDebrisPerSwipe"/>
+/// sweep (touch-down to lift) clears at most <see cref="MaxDebrisPerSweep"/>
 /// pieces of debris; the double-tap <see cref="Burst"/> shares that cap.
 /// </summary>
 public sealed class Sweeper
@@ -20,28 +20,28 @@ public sealed class Sweeper
 
 	/// <summary>
 	/// Speed the burst flings with, before weight damping — roughly a brisk
-	/// finger swipe, so burst debris leaves the area the same way.
+	/// finger sweep, so burst debris leaves the area the same way.
 	/// </summary>
 	private const float BurstFlingSpeed = 1800f;
 
-	/// <summary>Max debris one swipe gesture may clear.</summary>
-	public const int MaxDebrisPerSwipe = 12;
+	/// <summary>Max debris one sweep gesture may clear.</summary>
+	public const int MaxDebrisPerSweep = 12;
 
 	private readonly Func<IEnumerable<Debris>> _debris;
 	private readonly RandomNumberGenerator _rng;
-	private readonly Action _onSwipeCompleted;
+	private readonly Action _onSweepCompleted;
 
 	private bool _dragging;
 	private Vector2 _lastPos;
 	private ulong _lastTicks;
-	private int _clearedThisSwipe;
+	private int _clearedThisSweep;
 
 	public Sweeper(Func<IEnumerable<Debris>> debris,
-		RandomNumberGenerator rng, Action onSwipeCompleted)
+		RandomNumberGenerator rng, Action onSweepCompleted)
 	{
 		_debris = debris;
 		_rng = rng;
-		_onSwipeCompleted = onSwipeCompleted;
+		_onSweepCompleted = onSweepCompleted;
 	}
 
 	/// <summary>Handles a screen-drag event in world coordinates.</summary>
@@ -62,18 +62,18 @@ public sealed class Sweeper
 		Vector2 velocity = delta / dt;
 		Vector2 from = _lastPos;
 
-		// A swipe is only strong enough to clear MaxDebrisPerSwipe items;
+		// A sweep is only strong enough to clear MaxDebrisPerSweep items;
 		// once spent, further dragging moves the finger but flings nothing.
 		foreach (var d in _debris())
 		{
-			if (_clearedThisSwipe >= MaxDebrisPerSwipe)
+			if (_clearedThisSweep >= MaxDebrisPerSweep)
 				break;
 			if (!GodotObject.IsInstanceValid(d) || d.Swept)
 				continue;
 			if (SegmentCircleHit(from, worldPos, d.Position, SweepRadius + 30f))
 			{
 				d.Fling(velocity, _rng);
-				_clearedThisSwipe++;
+				_clearedThisSweep++;
 			}
 		}
 
@@ -88,7 +88,7 @@ public sealed class Sweeper
 		_dragging = true;
 		_lastPos = worldPos;
 		_lastTicks = ticks;
-		_clearedThisSwipe = 0;
+		_clearedThisSweep = 0;
 	}
 
 	public void End()
@@ -96,22 +96,22 @@ public sealed class Sweeper
 		if (!_dragging)
 			return;
 		_dragging = false;
-		// A touch-down to lift only counts as a swipe when it actually
+		// A touch-down to lift only counts as a sweep when it actually
 		// swept debris — bare taps (and fruitless drags) stay free.
-		if (_clearedThisSwipe > 0)
-			_onSwipeCompleted();
+		if (_clearedThisSweep > 0)
+			_onSweepCompleted();
 	}
 
 	public void Cancel() => _dragging = false;
 
 	/// <summary>Whether the current (or just-finished) gesture swept anything.</summary>
-	public bool SweptThisGesture => _clearedThisSwipe > 0;
+	public bool SweptThisGesture => _clearedThisSweep > 0;
 
 	/// <summary>
-	/// Double-tap burst: a swipe without the drag. Flings the debris
+	/// Double-tap burst: a sweep without the drag. Flings the debris
 	/// nearest <paramref name="center"/> radially outward, still capped at
-	/// <see cref="MaxDebrisPerSwipe"/> pieces, and reports through
-	/// <see cref="_onSwipeCompleted"/> so it counts like any other swipe.
+	/// <see cref="MaxDebrisPerSweep"/> pieces, and reports through
+	/// <see cref="_onSweepCompleted"/> so it counts like any other sweep.
 	/// Returns how many pieces were flung.
 	/// </summary>
 	public int Burst(Vector2 center)
@@ -132,14 +132,14 @@ public sealed class Sweeper
 		int cleared = 0;
 		foreach (var (d, dist) in hits)
 		{
-			if (cleared >= MaxDebrisPerSwipe)
+			if (cleared >= MaxDebrisPerSweep)
 				break;
 			Vector2 dir = dist > 1f ? (d.Position - center) / dist : Vector2.Right;
 			d.Fling(dir * BurstFlingSpeed, _rng);
 			cleared++;
 		}
 		if (cleared > 0)
-			_onSwipeCompleted();
+			_onSweepCompleted();
 		return cleared;
 	}
 
