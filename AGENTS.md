@@ -79,8 +79,11 @@ Start each dev task here; the *why* behind every step lives in
 4. Docs live with code: behavior changes update `README.md` and `docs/*` in
    the same slice (numbers in prose drift fast).
 5. Stop at "buildable and headlessly verified" and hand off to the human for
-   playtesting; their findings become new todos. Every handoff must end by
-   asking the human whether to open a PR and merge it — don't make them ask.
+   playtesting; their findings become new todos. Feature changes gate on the
+   human's playtest sign-off *before* code review (step 9 of the agentic
+   workflow below), so feel problems never reach review; docs and chore
+   slices may skip straight to review. Every handoff must end by asking the
+   human whether to open a PR and merge it — don't make them ask.
 6. The final steps of every slice are to create a PR and merge it: push the
    slice branch, open a PR against `main` (`gh pr create --base main --head
    <slice>`), and merge that PR on GitHub (`gh pr merge` or the GitHub UI) —
@@ -155,8 +158,14 @@ Start each dev task here; the *why* behind every step lives in
      - TODO id: `agents-08-test`
      - Document test commands and outcomes in the PR.
 
-  9) **REVIEW: Subagent review** — Launch a high-reasoning review agent for independent inspection.
-     - TODO id: `agents-09-review-subagent`
+  9) **PLAYTEST: Human playtest gate** — For feature changes (anything that changes gameplay, visuals, or user-visible behavior), hand off to the human for playtesting after tests pass and *before* code review; findings become new todos and a failed playtest loops back to #7.
+     - TODO id: `agents-09-playtest-gate`
+     - Record the human's verdict (pass / findings) in the session todos;
+       do not proceed to review without an explicit pass.
+     - Docs and chore slices may skip this step with the human's okay.
+
+  10) **REVIEW: Subagent review** — Launch a high-reasoning review agent for independent inspection.
+     - TODO id: `agents-10-review-subagent`
      - The reviewer must NEVER attempt to execute the Godot engine (no
        `godot`/`godot-mono` runs — no import, boot, or autoplay). Runtime and
        build validation is already done by the validating session; trust it.
@@ -165,27 +174,27 @@ Start each dev task here; the *why* behind every step lives in
        handling as visible in the diff and surrounding code.
      - Reviewer reports PASS/FAIL with summary of critical findings.
 
-  10) **GATE: Iterate on FAIL** — If reviewer returns FAIL, loop back to #7, address issues, update TODOs.
-      - TODO id: `agents-10-gate-on-fail`
+  11) **GATE: Iterate on FAIL** — If reviewer returns FAIL, loop back to #7, address issues, update TODOs.
+      - TODO id: `agents-11-gate-on-fail`
       - Do not proceed until PASS (#GATE#).
 
-  11) **GATE: Proceed on PASS** — If reviewer returns PASS, prepare for merge.
-      - TODO id: `agents-11-gate-on-pass`
+  12) **GATE: Proceed on PASS** — If reviewer returns PASS, prepare for merge.
+      - TODO id: `agents-12-gate-on-pass`
       - Unblock merge actions (#GATE#).
 
-  12) **CLEANUP: Create and merge PR** — Open a GitHub PR from the worktree branch and merge via GitHub (not locally).
-      - TODO id: `agents-12-merge`
-      - PR title and description include test results and review summary.
+  13) **CLEANUP: Create and merge PR** — Open a GitHub PR from the worktree branch and merge via GitHub (not locally).
+      - TODO id: `agents-13-merge`
+      - PR title and description include test results, the human playtest verdict (feature slices) and the review summary.
       - **REQUIRED: Merge via GitHub UI or `gh` CLI, never with `git merge` locally.**
       - After GitHub merge, sync the worktree branch locally: `git fetch origin main && git rebase origin/main`.
 
-  13) **CLEANUP: Delete worktree** — Remove the local worktree and slice branch after remote merge is confirmed.
-      - TODO id: `agents-13-delete-worktree`
+  14) **CLEANUP: Delete worktree** — Remove the local worktree and slice branch after remote merge is confirmed.
+      - TODO id: `agents-14-delete-worktree`
       - Clean: `git worktree remove <path> && git branch -d <slice>`.
       - Verify on GitHub that the slice branch is deleted by GitHub's post-merge cleanup, or delete it manually: `git push origin --delete <slice>`.
 
-  14) **IMPROVE: Update docs** — Capture improvements back into AGENTS.md or docs/.
-      - TODO id: `agents-14-improve-docs`
+  15) **IMPROVE: Update docs** — Capture improvements back into AGENTS.md or docs/.
+      - TODO id: `agents-15-improve-docs`
       - Share lessons with future agentic sessions.
 
   ### Subtasks and discoveries

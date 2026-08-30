@@ -49,9 +49,12 @@ Each slice of work went through the same six steps:
    branch — merged branches are never left behind.
 6. **Hand off to the human for playtesting.** The agent stops at "buildable
    and headlessly verified" and the human verifies feel and visuals in the
-   editor or on device. Feedback comes back as concrete findings
-   ("bug is visible without swiping", "quadruple the debris"), which spawn
-   new todos and a new loop iteration.
+   editor or on device. For feature slices this is a hard gate: the human's
+   playtest sign-off comes *before* code review and the PR (see the
+   TODO-tracked workflow in AGENTS.md), so feel problems never reach review;
+   docs and chore slices may skip it. Feedback comes back as concrete
+   findings ("bug is visible without swiping", "quadruple the debris"), which
+   spawn new todos and a new loop iteration.
 
 ```
 plan (approved) ─► todos ─► implement in a worktree ─► headless validate ─► atomic commit
