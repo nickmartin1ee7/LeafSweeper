@@ -52,6 +52,11 @@ them working:
 | `INSTANT_WIN=1` | Wins each round the moment the settle finishes — replays the win flow (wind, warn sign, win card, next round) without sweeping, and walks the level counter up to the storm rounds quickly |
 | `INITIAL_GUSTS=<n>` | Tops the persistent gust power up to `<n>` at every round start, so gusts can be spent freely without first banking gust coins |
 
+**Hooks not working after a pull?** They compile into `LeafSweeper.dll` —
+`godot-mono --path .` never rebuilds C#, so run `dotnet build` first or new
+hooks silently do nothing while older ones (already in the stale DLL) keep
+working.
+
 **Fresh checkout/worktree?** Run `--headless --import` once before the
 autoplay, or nothing boots and it **silently exits 0 with no `AUTOPLAY`
 output** — grep for `AUTOPLAY`, don't trust the exit code alone.
