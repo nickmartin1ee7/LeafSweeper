@@ -16,6 +16,9 @@ config/version="0.1.0"
 run/main_scene="res://scenes/Main.tscn"
 config/features=PackedStringArray("4.7", "C#", "Mobile")
 config/icon="res://assets/icons/app_icon.png"
+; hide the Godot boot logo; fade from the floor brown (#3d3223) straight into the game
+boot_splash/show_image=false
+boot_splash/bg_color=Color(0.239216, 0.196078, 0.137255, 1)
 
 [display]
 
