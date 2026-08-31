@@ -53,6 +53,11 @@ them working:
 | `INITIAL_GUSTS=<n>` | Tops the persistent gust power up to `<n>` at every round start, so gusts can be spent freely without first banking gust coins |
 | `INITIAL_LEVEL=<n>` | Starts every save-driven round (Play, Next, Restart) at level `<n>` instead of the save's current level — jump straight to a difficulty tier (storm rounds from 10, the camouflage ramp from 60); the run stays pinned there while the var is set |
 
+**Hooks not working after a pull?** They compile into `LeafSweeper.dll` —
+`godot-mono --path .` never rebuilds C#, so run `dotnet build` first or new
+hooks silently do nothing while older ones (already in the stale DLL) keep
+working.
+
 **Fresh checkout/worktree?** Run `--headless --import` once before the
 autoplay, or nothing boots and it **silently exits 0 with no `AUTOPLAY`
 output** — grep for `AUTOPLAY`, don't trust the exit code alone.
