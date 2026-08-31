@@ -30,59 +30,81 @@ public partial class UpdateChecker : Node
     /// <summary>Raised with the installed version when no newer release exists, e.g. "v0.0.1".</summary>
     public event Action<string>? UpToDate;
 
+    /// <summary>Raised when the check could not complete (offline, blocked, bad payload).</summary>
+    public event Action? CheckFailed;
+
     public override void _Ready()
     {
-        string installed = InstalledVersion();
-
-        // Test hook: skip the network and pretend the given tag is the
-        // latest release (documented testing surface, like LEAF_STORM).
-        string fake = OS.GetEnvironment("LEAF_FAKE_UPDATE");
-        if (!string.IsNullOrEmpty(fake))
+        try
         {
-            ReportIfNewer(fake, installed);
-            return;
+            string installed = InstalledVersion();
+
+            // Test hook: skip the network and pretend the given tag is the
+            // latest release (documented testing surface, like LEAF_STORM);
+            // "fail" simulates a dead check so the failure state can be
+            // exercised headlessly.
+            string fake = OS.GetEnvironment("LEAF_FAKE_UPDATE");
+            if (!string.IsNullOrEmpty(fake))
+            {
+                if (fake == "fail")
+                    throw new InvalidOperationException(
+                        "simulated via LEAF_FAKE_UPDATE=fail");
+                ReportIfNewer(fake, installed);
+                return;
+            }
+
+            var http = new HttpRequest { Name = "LatestReleaseRequest" };
+            http.Timeout = RequestTimeoutSeconds;
+            http.RequestCompleted += OnRequestCompleted;
+            AddChild(http);
+
+            // GitHub's API requires a User-Agent on every request.
+            Error error = http.Request(LatestReleaseApiUrl,
+                new[] { $"User-Agent: LeafSweeper/{installed}" });
+            if (error != Error.Ok)
+                ReportCheckFailed($"request could not start: {error}");
         }
-
-        var http = new HttpRequest { Name = "LatestReleaseRequest" };
-        http.Timeout = RequestTimeoutSeconds;
-        http.RequestCompleted += OnRequestCompleted;
-        AddChild(http);
-
-        // GitHub's API requires a User-Agent on every request.
-        Error error = http.Request(LatestReleaseApiUrl,
-            new[] { $"User-Agent: LeafSweeper/{installed}" });
-        if (error != Error.Ok)
-            GD.Print($"UPDATE check failed to start: {error}");
+        catch (Exception e)
+        {
+            ReportCheckFailed($"{e.GetType().Name}: {e.Message}");
+        }
     }
 
     private void OnRequestCompleted(long result, long responseCode,
         string[] headers, byte[] body)
     {
-        if (result != (long)HttpRequest.Result.Success)
+        try
         {
-            GD.Print($"UPDATE check failed: request result {result}");
-            return;
-        }
-        if (responseCode != 200)
-        {
-            GD.Print($"UPDATE check failed: HTTP {responseCode}");
-            return;
-        }
+            if (result != (long)HttpRequest.Result.Success)
+            {
+                ReportCheckFailed($"request result {result}");
+                return;
+            }
+            if (responseCode != 200)
+            {
+                ReportCheckFailed($"HTTP {responseCode}");
+                return;
+            }
 
-        string? tag = ExtractTagName(Encoding.UTF8.GetString(body));
-        if (tag == null)
-        {
-            GD.Print("UPDATE check failed: no tag_name in response");
-            return;
+            string? tag = ExtractTagName(Encoding.UTF8.GetString(body));
+            if (tag == null)
+            {
+                ReportCheckFailed("no tag_name in response");
+                return;
+            }
+            ReportIfNewer(tag, InstalledVersion());
         }
-        ReportIfNewer(tag, InstalledVersion());
+        catch (Exception e)
+        {
+            ReportCheckFailed($"{e.GetType().Name}: {e.Message}");
+        }
     }
 
     private void ReportIfNewer(string latestTag, string installed)
     {
         if (!TryParseVersion(latestTag, out Version latest))
         {
-            GD.Print($"UPDATE check failed: unreadable tag '{latestTag}'");
+            ReportCheckFailed($"unreadable tag '{latestTag}'");
             return;
         }
 
@@ -116,6 +138,13 @@ public partial class UpdateChecker : Node
         // reads the numeric core, so trim the prefix and prerelease suffix.
         text = text?.Trim().Split('-')[0].TrimStart('v', 'V') ?? string.Empty;
         return System.Version.TryParse(text, out version!);
+    }
+
+    /// <summary>Single funnel for every dead-check path: log + notify.</summary>
+    private void ReportCheckFailed(string reason)
+    {
+        GD.Print($"UPDATE check failed: {reason}");
+        CheckFailed?.Invoke();
     }
 
     private static string InstalledVersion() =>
