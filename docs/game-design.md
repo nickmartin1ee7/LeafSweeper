@@ -75,8 +75,10 @@ Title menu → Play → Round (sweep debris, find bug) → Tap bug
 - **Cozy tone.** All UI copy is warm and unhurried; the win comment is the
   game's "voice" (see Comments below).
 - **A living floor.** Every couple of seconds a stray draft rustles a little
-  cluster of the litter — the meadow breathes even when you're idle. It is
-  decoration only and never moves the gameplay.
+  cluster of the litter — the meadow breathes even when you're idle (and
+  during storms the drafts come three times as fast, plus spiral gusts and
+  drifting litter of their own). It is decoration only and never moves the
+  gameplay.
 - **Casual-tuned difficulty.** By level 200 the game is only moderately
   harder than level 1. Nothing ever spikes.
 
@@ -111,21 +113,27 @@ what actually spawn and what the collection counts, under names like
   Strider).
 - **4 variants each** — one natural base look plus three natural color
   palettes: 156 book entries in total.
-- Win-card comments stay **per species** (`scripts/BugFlavor.cs`); the
+- Win-card comments stay **per species** (`scripts/BugFlavor.cs`): each pool
+  holds 6+ real, sourced fun facts about the species, and the card shows one
+  at random (variants reuse the species' pool). The
   card's title uses the variant's display name.
 
 ### Prismatic bugs
 
-Every fresh round rolls a **5% chance** (`LEAF_PRISMATIC=1` forces it for
+Every fresh round rolls a **1% chance** (`LEAF_PRISMATIC=1` forces it for
 testing) that the bug is *prismatic*: an overlay state on whatever variant
 spawned, not a catalog entry. The bug's sprite wears a hue-crawling rainbow
 shader with sparkle glints — applied to the bug's sprite only, and the bug
 sits below every debris layer, so the effect can never show through the
 leaves. Camouflage is bypassed so the rare find always reads clearly.
 Finding one erupts a **yellow-sun lens flare** at the winning tap and
-swaps the win card for a **grandiose** variant — radiant gold panel,
-rotating rays, looping sparkles, prismatic title — and the find is counted
-in the save (`prismaticFinds`) and on the book's stats page.
+swaps the win card for a **grandiose** variant — a lighter near-white
+panel with a gold rim, rotating rays, looping sparkles, prismatic title —
+and after the round a shiny **"Prismatic" banner** rides out above the
+dock (the storm sign's mirror image: the storm sign arrives *before* a
+storm round, the prismatic banner *after* a prismatic round) and lingers
+into the next round's opening before dissolving. The find is counted in
+the save (`prismaticFinds`) and on the book's stats page.
 
 ### Storm levels
 
@@ -168,6 +176,21 @@ itself fights back — with your memory, not your reflexes.
   cluster is truncated so the cap is exact); after that only the per-spot
   restoration continues, so swept patches never stay clean but the floor
   never drowns past 3×.
+- **Spiral gusts.** Every 10–20 seconds (`SpiralIntervalMin` /
+  `SpiralIntervalMax`) the storm tightens into a small cyclone: the litter
+  inside a circle around a random epicenter shivers along the clockwise
+  tangent, each piece delayed by its clockwise angle from 12 o'clock, so
+  the swirl visibly spins once through the patch. The swirl never exceeds
+  a fifth of the screen — its radius is a tenth of the playable floor's
+  smaller dimension (`SpiralRadiusFraction`). Cosmetic only: pieces shiver
+  on their sprites and settle right back.
+- **Drifting litter.** A second, independent 10–20s timer
+  (`DriftIntervalMin` / `DriftIntervalMax`) sends a raft of 6–10 loose
+  pieces spiraling across the screen — entering offscreen left, looping in
+  spiral-y arcs while the raft sags downwind, and exiting offscreen right
+  in ~2.4s (`StormDrift.cs`). Pure storm chaos: the raft never lands, so
+  the litter economy never notices it; win, restart or menu ends the
+  crossing early.
 - **Anti-hoarding.** Because gust-cleared ground is re-littered the same way
   as swept ground, banking gust coins can't stockpile permanent clean
   space — a storm round rewards a mental map of where you've been, and

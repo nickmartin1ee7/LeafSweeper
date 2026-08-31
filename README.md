@@ -31,7 +31,7 @@ beetle, lacewing, lanternfly, leafhopper, mayfly, rhinoceros beetle, shield
 bug, silverfish, slug, stag beetle, tiger beetle, tortoise beetle and water
 strider — each with four natural color variants (156 collectible looks,
 named like "Yellow Ladybug"), so you learn to spot shapes rather than
-colors. And 1 round in 20 hides a **prismatic** bug wearing a shifting
+colors. And 1 round in 100 hides a **prismatic** bug wearing a shifting
 rainbow sheen: find it and a yellow-sun lens flare erupts at your tap
 before the grandiose golden win card appears.
 
@@ -47,9 +47,10 @@ before the grandiose golden win card appears.
   collection. Bugs you haven't met yet are drifting black mist silhouettes
   marked "??? (x0)"; found ones show their art and count ("Firefly (x3)").
   Tap anywhere off the page to close it.
-- **Rare prismatic bugs** — a 5% chance per round (test with
+- **Rare prismatic bugs** — a 1% chance per round (test with
   `LEAF_PRISMATIC=1`): rainbow-sheened critter, sun-flare discovery, and a
-  grandiose golden win card.
+  grandiose win card — lifted to a lighter near-white with a gold rim —
+  plus a shiny "Prismatic" banner that rides out the round's end.
 - **Storm levels** — every 10th level (from level 10; test with
   `LEAF_STORM=1`) the sky darkens under wind-carried rain, drifting fog and
   lightning, and each patch you sweep is re-littered a few seconds later —
@@ -58,20 +59,25 @@ before the grandiose golden win card appears.
   escalates: every 4–6 seconds a gust dumps a fresh cluster of 6–12 brand-new
   pieces onto random spots, piling the litter up to 3× the round's starting
   floor before the flood relents (swept patches keep re-littering after
-  that). The round before a storm round warns you with a sparking "Storm
-  Round" sign.
+  that). Two storm-only rhythms layer on more chaos, each on its own
+  10–20s timer: a spiral gust spins a small clockwise swirl through the
+  litter (never wider than a fifth of the screen), and loose debris rafts
+  drift across the screen in spiral-y loops — pure atmosphere; the rafts
+  never land. The round before a storm round warns you with a sparking
+  "Storm Round" sign.
 - **Local save data** (`user://save.json`, app-private on Android — no
   permissions): current level, levels cleared, lifetime sweeps & play time,
   per-bug-variant find counts, prismatic finds, and the last 50 cleared
   levels. Saved atomically after every clear; a corrupt or missing file
   just starts a fresh save.
 - **Between-round comments** picked from templates by how you played,
-  referencing your history ("Your best is 12 sweeps!").
+  referencing your history ("Your best is 12 sweeps!") — plus a real fun
+  fact about the species you just found, picked from its own 6+ fact pool.
 - **Main menu** with lifetime progress and your favorite critter.
 - **Ambient rustles** — every 2–4s a stray draft shivers a localized cluster
-  of about 4–7 pieces of the litter in place. Purely cosmetic: the wobble
-  lives on the pieces' sprites, so coverage, sweeping and the win gyre are
-  never affected.
+  of about 4–7 pieces of the litter in place (three times as often during
+  storms). Purely cosmetic: the wobble lives on the pieces' sprites, so
+  coverage, sweeping and the win gyre are never affected.
 - **Procedurally generated art** — every texture in `assets/textures/` is
   reproducible from `tools/gen_art.mjs` (see `docs/art-style.md`).
 

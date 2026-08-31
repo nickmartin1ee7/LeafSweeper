@@ -35,6 +35,10 @@ public partial class Main : Node2D
 	private List<GustCoin> _coins = new();
 	private StormOverlay _storm = null!;
 	private StormWarn _warn = null!;
+
+	// The "Prismatic" banner that rides out a prismatic find — the storm
+	// sign's mirror image (see PrismaticSign).
+	private PrismaticSign _prismaticSign = null!;
 	private GameState _state = GameState.Menu;
 	private Vector2 _viewSize;
 
@@ -54,6 +58,16 @@ public partial class Main : Node2D
 	private float _clusterCountdown;        // seconds to the next cluster drop
 	private bool _floodDone;                // cap reached: clusters stop
 	private int _clusterPiecesDropped;      // diagnostic total for the self-test
+
+	// Storm event timers (both 10–20s, both cosmetic): the spiral gust
+	// shivers a small clockwise swirl through the litter, and the drift
+	// sends a decorative raft of debris across the screen. The suppress
+	// flag is the autoplay's determinism hook — the self-test triggers
+	// all three cosmetic events by hand so its probes stay deterministic.
+	private float _spiralCountdown;         // seconds to the next spiral gust
+	private float _driftCountdown;          // seconds to the next drift raft
+	private StormDrift? _stormDrift;        // the current drift raft, if any
+	private bool _suppressStormEvents;      // autoplay: event timers off
 
 	/// <summary>A cleared patch of floor and when its storm replacement comes due.</summary>
 	private readonly record struct StormSpot(Vector2 Pos, float DueAt);
@@ -101,6 +115,28 @@ public partial class Main : Node2D
 	private const int StormClusterMin = 6;         // pieces per cluster (min)
 	private const int StormClusterMax = 12;        // pieces per cluster (max)
 	private const int StormFloodCapMultiplier = 3; // cap = this × round start
+
+	// Storm rustle rate: storm drafts comb the litter 3× as often as the
+	// ambient 2–4s cadence — the storm floor never sits still.
+	private const float StormRustleRateScale = 3f;
+
+	// Storm spiral gust: an independent 10–20s timer tightens the wind into
+	// a small cyclone — a clockwise wave of shivers that sweeps once around
+	// an epicenter. The swirl never exceeds a fifth of the screen: the wave
+	// radius is a tenth of the playable floor's smaller dimension.
+	private const float SpiralIntervalMin = 10f;   // seconds between cyclones (min)
+	private const float SpiralIntervalMax = 20f;   // seconds between cyclones (max)
+	private const float SpiralRadiusFraction = 0.1f; // radius = this × min floor dimension
+	private const float SpiralSweepRadPerSec = 7f; // wave's clockwise angular speed
+
+	// Storm drift: a second, independent 10–20s timer sends a raft of
+	// decorative debris spiraling across the screen (offscreen left →
+	// offscreen right). Pure atmosphere — the raft never lands, so the
+	// litter economy never notices it.
+	private const float DriftIntervalMin = 10f;    // seconds between rafts (min)
+	private const float DriftIntervalMax = 20f;    // seconds between rafts (max)
+	private const int DriftPiecesMin = 6;          // pieces per raft (min)
+	private const int DriftPiecesMax = 10;         // pieces per raft (max)
 
 	// Menu gyre density (pieces per px²): a mid-round litter so the home
 	// screen reads as "the floor, alive" without competing with the card.
@@ -170,6 +206,10 @@ public partial class Main : Node2D
 		_save.Reset(); // deterministic: the test assumes a fresh save file
 		_forcePrismatic = true; // this round must roll the rare prismatic bug
 		_forceStorm = true; // this round must run the storm weather too
+		// The cosmetic storm events (rustle pacing, spiral gusts, drift
+		// rafts) run on 10–20s timers that would make the probes flaky —
+		// the self-test triggers every one of them by hand instead.
+		_suppressStormEvents = true;
 
 		// Home screen: the menu spawns a decorative litter lifted straight
 		// into the gyre — it must exist and be riding before play begins,
@@ -250,6 +290,62 @@ public partial class Main : Node2D
 		}
 		bool rustleOk = rustleShivered && rustleGrounded && rustleSettled;
 		GD.Print($"AUTOPLAY rustle: shivered={rustleShivered} grounded={rustleGrounded} settled={rustleSettled}");
+
+		// Storm spiral gust: the swirl must shiver a clockwise wave through
+		// the litter — at least one piece's sprite wobbles, no unswept node
+		// transform moves, and everything (including the delayed tail of
+		// the wave) settles back at rest. The drift raft below rides out
+		// its crossing during the same wait.
+		var spiralProbe = new List<(Debris Piece, Vector2 From)>();
+		foreach (var d in _debris)
+			if (IsInstanceValid(d) && !d.Swept && !d.IsSettling && !d.IsRidingWind)
+				spiralProbe.Add((d, d.Position));
+		TriggerSpiralRustle();
+		bool spiralShivered = false;
+		bool spiralGrounded = true;
+		foreach (var (piece, from) in spiralProbe)
+			if (IsInstanceValid(piece) && !piece.Swept && piece.Position != from)
+				spiralGrounded = false;
+		foreach (var d in _debris)
+			if (IsInstanceValid(d) && d.IsRustling)
+				spiralShivered = true;
+		StormDrift drift = SpawnStormDrift();
+		int driftPieces = drift.PieceCount;
+		int liveBeforeDrift = LiveDebrisCount();
+		Vector2 driftFrom = drift.ProbePosition;
+		// Silence every storm rhythm for the raft's crossing so the
+		// live-count delta isolates the raft: no spot drops, no flood
+		// clusters — the raft alone must add nothing to the litter.
+		bool stormWasRound = _isStormRound;
+		_isStormRound = false;
+		// Wave delay (≤ one revolution at the sweep rate) + shiver length.
+		await ToSignal(GetTree().CreateTimer(2.0), SceneTreeTimer.SignalName.Timeout);
+		bool spiralSettled = true;
+		foreach (var (piece, from) in spiralProbe)
+		{
+			if (!IsInstanceValid(piece) || piece.Swept)
+				continue;
+			if (piece.IsRustling || piece.Position != from)
+				spiralSettled = false;
+		}
+		bool spiralOk = spiralShivered && spiralGrounded && spiralSettled;
+		GD.Print($"AUTOPLAY spiral: shivered={spiralShivered} " +
+				 $"grounded={spiralGrounded} settled={spiralSettled}");
+
+		// Storm drift: by now the raft has visibly advanced (~1.9s of its
+		// 2.4s crossing), the gameplay litter count is untouched, and the
+		// raft frees itself once it has crossed offscreen.
+		bool driftMoved = IsInstanceValid(drift)
+			&& drift.ProbePosition.X > driftFrom.X + 60f;
+		await ToSignal(GetTree().CreateTimer(3.0), SceneTreeTimer.SignalName.Timeout);
+		bool driftFreed = !IsInstanceValid(drift);
+		_isStormRound = stormWasRound;
+		bool driftOk = driftPieces >= DriftPiecesMin && driftPieces <= DriftPiecesMax
+			&& driftMoved && driftFreed
+			&& LiveDebrisCount() == liveBeforeDrift;
+		GD.Print($"AUTOPLAY drift: pieces={driftPieces} moved={driftMoved} " +
+				 $"freed={driftFreed} liveDelta={LiveDebrisCount() - liveBeforeDrift} " +
+				 $"ok={driftOk}");
 
 		// Covered-bug rule: debris parked on the bug blocks selection, and
 		// sweeping every overlapping piece away makes it selectable again.
@@ -522,9 +618,13 @@ public partial class Main : Node2D
 		// forced the storm, so the round AFTER this one is stormy too.
 		bool warnShown = _warn.Visible;
 		bool warnOk = warnShown == NextRoundIsStorm();
+		// The prismatic banner must be up during this same end-round: the
+		// autoplay's round rolled the prismatic bug, so the shiny sign
+		// rides out after the round it crowned.
+		bool prismSignShown = _prismaticSign.Visible;
 		GD.Print($"AUTOPLAY wind: pieces={windPieces} riding={windRiding} " +
 				 $"checked={windChecked} moving={windMoving} clockwise={windClockwise} " +
-				 $"warn={warnShown} warnOk={warnOk}");
+				 $"warn={warnShown} warnOk={warnOk} prismSign={prismSignShown}");
 
 		// The restart probe re-runs the handler, which restarts the save's
 		// current level — not the hardcoded probe level 3 the round began
@@ -547,6 +647,7 @@ public partial class Main : Node2D
 
 		var reloaded = SaveData.Load();
 		bool ok = blocked && uncovered && truthOk && burstOk && rustleOk
+			&& spiralOk && driftOk
 			&& coinSpawned && coinBanked && gustSpent && spamOk
 			&& restartOk && windOk
 			&& menuOk && stormOk && floodOk && capOk
@@ -562,6 +663,7 @@ public partial class Main : Node2D
 			&& reloaded.History[0].Gusts == 1 + spamLanded
 			&& reloaded.PrismaticFinds == 1
 			&& prismaticSpawn && _flareSeen && _grandWinShown
+			&& prismSignShown
 			&& catalogOk
 			&& bookBeforeOk
 			&& bookAfterOk;
@@ -582,6 +684,42 @@ public partial class Main : Node2D
 		GD.Print($"AUTOPLAY coins-storm: level={RoundConfig.StormFirstLevel} " +
 				 $"spawned={_coins.Count} expected={stormExpected} ok={stormCoinsOk}");
 		ok &= stormCoinsOk;
+
+		// Prismatic banner linger: starting the round after a prismatic
+		// find holds the banner up for 2s, then dissolves it over 4s —
+		// the storm sign's ride in reverse. Replays the StartLevel path
+		// directly and awaits real frames. The mid-fade alpha check exists
+		// because the banner is painted wholly by prismatic_sign.gdshader:
+		// if the shader ever stops multiplying the tweened modulate into
+		// its output, the fade silently turns back into a hard cut while
+		// Visible still behaves.
+		_prismaticSign.ShowSign();
+		_prismaticSign.LingerThenFade();
+		bool prismUp = _prismaticSign.Visible;
+		double prismT = 0;
+		while (prismT < 1.2) // inside the 2s hold: must still be up
+		{
+			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+			prismT += GetProcessDeltaTime();
+		}
+		bool prismHeld = _prismaticSign.Visible;
+		while (prismT < 3.0 && _prismaticSign.Visible) // fade starts at 2s
+		{
+			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+			prismT += GetProcessDeltaTime();
+		}
+		bool prismFading = _prismaticSign.Visible && _prismaticSign.FadeAlpha < 1f;
+		float prismAlpha = _prismaticSign.FadeAlpha;
+		while (_prismaticSign.Visible && prismT < 7.5) // hold 2s + fade 4s + slack
+		{
+			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+			prismT += GetProcessDeltaTime();
+		}
+		bool prismGone = !_prismaticSign.Visible;
+		bool prismLingerOk = prismUp && prismHeld && prismFading && prismGone;
+		GD.Print($"AUTOPLAY prismatic-sign: held={prismHeld} fading={prismFading} " +
+				 $"alpha={prismAlpha:F2} gone={prismGone} ok={prismLingerOk}");
+		ok &= prismLingerOk;
 
 		// Storm warn linger: starting the warned-for round holds the sign
 		// up for 2s, then dissolves it over 4s. Replays the StartLevel
@@ -642,6 +780,8 @@ public partial class Main : Node2D
 		{
 			TickStormDrops(delta);
 			TickClusterDrops(delta);
+			TickSpiralRustle(delta);
+			TickStormDrift(delta);
 		}
 	}
 
@@ -653,14 +793,22 @@ public partial class Main : Node2D
 	/// </summary>
 	private void TickAmbientRustle(double delta)
 	{
-		if (_state != GameState.Playing || _awaitingSettle)
+		if (_suppressStormEvents || _state != GameState.Playing || _awaitingSettle)
 			return;
 		_rustleCountdown -= (float)delta;
 		if (_rustleCountdown > 0f)
 			return;
-		_rustleCountdown = _rng.RandfRange(RustleIntervalMin, RustleIntervalMax);
+		_rustleCountdown = NextRustleDelay();
 		TriggerAmbientRustle();
 	}
+
+	/// <summary>
+	/// Seconds to the next stray draft: storms comb the litter 3× as often
+	/// as the ambient 2–4s cadence.
+	/// </summary>
+	private float NextRustleDelay() =>
+		_rng.RandfRange(RustleIntervalMin, RustleIntervalMax)
+		/ (_isStormRound ? StormRustleRateScale : 1f);
 
 	/// <summary>
 	/// One draft: a random at-rest piece is the epicenter and its close
@@ -704,6 +852,97 @@ public partial class Main : Node2D
 			group[i].Piece.Rustle(
 				draft.Rotated(_rng.RandfRange(-0.35f, 0.35f)), falloff, _rng);
 		}
+	}
+
+	/// <summary>
+	/// Storm spiral gust: every 10–20s the storm tightens into a small
+	/// cyclone. The at-rest litter within a capped circle (radius = 1/10 of
+	/// the playable floor's smaller dimension, so the swirl never exceeds
+	/// a fifth of the screen) shivers along the clockwise tangent, and each
+	/// piece's shiver is delayed by its clockwise distance from 12 o'clock —
+	/// a wave that visibly spins once through the patch. Purely cosmetic.
+	/// </summary>
+	private void TickSpiralRustle(double delta)
+	{
+		if (_suppressStormEvents)
+			return;
+		_spiralCountdown -= (float)delta;
+		if (_spiralCountdown > 0f)
+			return;
+		_spiralCountdown = _rng.RandfRange(SpiralIntervalMin, SpiralIntervalMax);
+		TriggerSpiralRustle();
+	}
+
+	/// <summary>
+	/// One spiral gust: the epicenter is inset from the floor edges by the
+	/// swirl radius so the whole spiral stays on-screen, and every close
+	/// piece's shiver is delayed by its clockwise angle from the wave's
+	/// start — the swirl reads as one rotating gust arm.
+	/// </summary>
+	private void TriggerSpiralRustle()
+	{
+		Rect2 floor = PlayableArea();
+		float radius = Mathf.Min(floor.Size.X, floor.Size.Y) * SpiralRadiusFraction;
+		Vector2 epicenter = new(
+			_rng.RandfRange(radius, floor.Size.X - radius),
+			_rng.RandfRange(radius, floor.Size.Y - radius));
+
+		foreach (var d in _debris)
+		{
+			if (!IsInstanceValid(d) || d.Swept || d.IsSettling
+				|| d.IsRidingWind || d.IsRustling)
+				continue;
+			Vector2 offset = d.Position - epicenter;
+			float dist = offset.Length();
+			if (dist > radius)
+				continue;
+			// Clockwise on screen (y down): the tangent for an increasing
+			// angle is the angle plus a quarter turn.
+			Vector2 tangent = Vector2.Right.Rotated(offset.Angle() + Mathf.Pi / 2f);
+			// The wave waits on the piece's clockwise distance from the
+			// 12-o'clock start (screen up = angle -π/2), so the shiver
+			// travels around the swirl.
+			float clockwise = Mathf.PosMod(offset.Angle() + Mathf.Pi / 2f, Mathf.Tau);
+			float falloff = 1f - dist / radius * 0.6f;
+			d.Rustle(
+				tangent.Rotated(_rng.RandfRange(-0.35f, 0.35f)),
+				falloff, _rng, clockwise / SpiralSweepRadPerSec);
+		}
+	}
+
+	/// <summary>
+	/// Storm drift rhythm: an independent 10–20s timer launches a raft of
+	/// decorative debris that spirals across the screen, offscreen left to
+	/// offscreen right. Purely cosmetic — the raft never lands, so the
+	/// litter economy never notices it. Gated like the other storm events.
+	/// </summary>
+	private void TickStormDrift(double delta)
+	{
+		if (_suppressStormEvents)
+			return;
+		_driftCountdown -= (float)delta;
+		if (_driftCountdown > 0f)
+			return;
+		_driftCountdown = _rng.RandfRange(DriftIntervalMin, DriftIntervalMax);
+		SpawnStormDrift();
+	}
+
+	/// <summary>
+	/// One drift raft: loose litter tumbles across the screen in spiral-y
+	/// loops and exits offscreen. Nothing here touches the gameplay debris
+	/// list — the raft cleans itself up when it has crossed.
+	/// </summary>
+	private StormDrift SpawnStormDrift()
+	{
+		var raft = new StormDrift(new Rect2(Vector2.Zero, _viewSize),
+			AirborneTextures, _rng, _rng.RandiRange(DriftPiecesMin, DriftPiecesMax));
+		// Explicit Z ladder: the raft rides just above the top debris layer
+		// (bug 0 → debris 1/2 → drift 3) so it reads as airborne litter,
+		// still under the storm veil on canvas layer 1.
+		raft.ZIndex = 3;
+		_stormDrift = raft;
+		AddChild(raft);
+		return raft;
 	}
 
 	/// <summary>
@@ -1088,8 +1327,9 @@ public partial class Main : Node2D
 
 		// Explicit canvas-layer ladder (Godot draws same-layer CanvasLayers
 		// in non-deterministic order, so each owns a distinct index):
-		// world 0 → storm 1 → menu 2 → hud 3 → bug book 90. The storm veil
-		// and rain sit above the floor but below every UI.
+		// world 0 → storm 1 → menu 2 → hud 3 → warn 4 → prismatic 5 →
+		// bug book 90. The storm veil and rain sit above the floor but
+		// below every UI.
 		_storm = new StormOverlay { Name = "Storm" };
 		AddChild(_storm);
 
@@ -1097,6 +1337,13 @@ public partial class Main : Node2D
 		// its sparks never dim under the storm veil nor sit under UI.
 		_warn = new StormWarn { Name = "StormWarn" };
 		AddChild(_warn);
+
+		// The "Prismatic" banner rides out a prismatic find the same way,
+		// one rung above the storm sign so both can show at once (a
+		// prismatic round immediately before a storm round seats the
+		// banner just below the storm cloud — see PrismaticSign).
+		_prismaticSign = new PrismaticSign { Name = "PrismaticSign" };
+		AddChild(_prismaticSign);
 
 		_hud = new Hud { Name = "Hud" };
 		_hud.Layer = 3;
@@ -1200,6 +1447,18 @@ public partial class Main : Node2D
 		_coins.Clear();
 		_bug.Visible = false;
 		_clearedSpots.Clear();
+		CancelStormDrift();
+	}
+
+	/// <summary>
+	/// Takes the current drift raft (if any) off the screen at once — a
+	/// win or a fresh round ends the weather's chaos mid-crossing.
+	/// </summary>
+	private void CancelStormDrift()
+	{
+		if (_stormDrift != null && IsInstanceValid(_stormDrift))
+			_stormDrift.QueueFree();
+		_stormDrift = null;
 	}
 
 	private void StartLevel(int level)
@@ -1231,6 +1490,8 @@ public partial class Main : Node2D
 		SpawnDebris(level, floor);
 		_roundStartDebris = _debris.Count;
 		_clusterCountdown = _rng.RandfRange(StormSpotDelayMin, StormSpotDelayMax);
+		_spiralCountdown = _rng.RandfRange(SpiralIntervalMin, SpiralIntervalMax);
+		_driftCountdown = _rng.RandfRange(DriftIntervalMin, DriftIntervalMax);
 		_floodDone = false;
 		_awaitingSettle = true;
 
@@ -1252,6 +1513,10 @@ public partial class Main : Node2D
 			_warn.LingerThenFade();
 		else
 			_warn.HideWarning();
+		// Same ride for the prismatic banner: a round that follows a
+		// prismatic find holds it over the opening, then lets it dissolve.
+		if (_prismaticSign.Visible)
+			_prismaticSign.LingerThenFade();
 		SetState(GameState.Playing);
 	}
 
@@ -1262,9 +1527,11 @@ public partial class Main : Node2D
 	/// </summary>
 	/// <summary>
 	/// Chance a fresh round hides a prismatic (rainbow sparkle) bug.
-	/// LEAF_PRISMATIC=1 forces it for manual testing; autoplay forces it too.
+	/// Deliberately very rare — about one round in a hundred — so the find
+	/// stays a story worth telling. LEAF_PRISMATIC=1 forces it for manual
+	/// testing; autoplay forces it too.
 	/// </summary>
-	private const float PrismaticChance = 0.05f;
+	private const float PrismaticChance = 0.01f;
 
 	private bool _forcePrismatic;
 	private bool _forceStorm;
@@ -1292,7 +1559,7 @@ public partial class Main : Node2D
 		SpawnGustCoins(floor);
 
 		_stats.Start(_activeLevel);
-		_rustleCountdown = _rng.RandfRange(RustleIntervalMin, RustleIntervalMax);
+		_rustleCountdown = NextRustleDelay();
 
 		// INSTANT_WIN=1 testing hook: win the moment the floor is dressed,
 		// so the whole win flow (wind, warn sign, win card, next round)
@@ -1346,6 +1613,23 @@ public partial class Main : Node2D
 		("res://assets/textures/rock.svg", DebrisWeight.Heavy, 3),
 		("res://assets/textures/rock2.svg", DebrisWeight.Heavy, 3),
 	};
+
+	/// <summary>
+	/// Airborne litter palette for the storm drift: light and medium pieces
+	/// only — sticks and rocks flying through the air reads wrong.
+	/// Declared after <see cref="DebrisPalette"/> so the static initializer
+	/// sees it.
+	/// </summary>
+	private static readonly string[] AirborneTextures = BuildAirborneTextures();
+
+	private static string[] BuildAirborneTextures()
+	{
+		var paths = new List<string>();
+		foreach (var entry in DebrisPalette)
+			if (entry.Weight != DebrisWeight.Heavy)
+				paths.Add(entry.Path);
+		return paths.ToArray();
+	}
 
 	/// <summary>Builds one debris piece of a random palette kind at <paramref name="pos"/>.</summary>
 	private Debris CreateDebris(Vector2 pos)
@@ -1497,12 +1781,20 @@ public partial class Main : Node2D
 		// The round is over: whatever is still on the floor gets picked up
 		// by a clockwise wind and keeps circling while the card is up, and
 		// the storm eases off with the weather that made the round hard.
+		CancelStormDrift();
 		StartEndRoundWind();
 		_storm.FadeOut();
 		// The round BEFORE a storm round: while the wind carries the
 		// litter away, the electrical "Storm Round" sign crackles on.
 		if (NextRoundIsStorm())
 			_warn.ShowWarning();
+		// A prismatic find rides its own banner out: the shiny "Prismatic"
+		// sign appears after the round it crowned, mirroring how the storm
+		// sign arrives before a storm round. If the storm sign shares this
+		// end-round, the banner yields its perch and slots in below the
+		// storm cloud instead of beside it.
+		if (_bug.IsPrismatic)
+			_prismaticSign.ShowSign(belowStormSign: _warn.Visible);
 		// The win overlay waits for the bug's golden moment.
 		_pendingWinComment = comment;
 		_pendingWinRoundLine = roundLine;
@@ -1515,8 +1807,11 @@ public partial class Main : Node2D
 		{
 			_hud.ShowWin(_pendingWinComment, _pendingWinRoundLine, _pendingWinStats,
 				_bug, grandiose: _bug.IsPrismatic);
+			// The flag doubles as the autoplay's grand-card assertion: it
+			// only sticks when the card actually dressed for the find
+			// (lighter panel + prismatic glow).
 			if (_bug.IsPrismatic)
-				_grandWinShown = true;
+				_grandWinShown = _hud.WinGrandActive;
 		}
 	}
 
@@ -1669,6 +1964,7 @@ public partial class Main : Node2D
 			ClearLevel();
 			_storm.FadeOut();
 			_warn.HideWarning();
+			_prismaticSign.HideSign();
 			_menu.Refresh(_save);
 			SpawnMenuDebris();
 		}

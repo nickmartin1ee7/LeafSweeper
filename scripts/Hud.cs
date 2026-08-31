@@ -233,8 +233,10 @@ public partial class Hud : CanvasLayer
         _winStyle = panelStyle;
         _winGrandStyle = new StyleBoxFlat
         {
-            // Radiant gold for a prismatic find: warm panel, deeper gold rim.
-            BgColor = new Color("ffe9a8"),
+            // Prismatic finds lift the card toward light: a near-white
+            // porcelain instead of the everyday cream, so the prismatic
+            // glow and the gold rim read against a brighter panel.
+            BgColor = new Color("fffdf2"),
             CornerRadiusBottomLeft = 28,
             CornerRadiusBottomRight = 28,
             CornerRadiusTopLeft = 28,
@@ -411,6 +413,13 @@ public partial class Hud : CanvasLayer
         var tween = CreateTween();
         tween.TweenProperty(_winOverlay, "modulate:a", 1f, 0.35f);
     }
+
+    /// <summary>
+    /// Autoplay probe: the prismatic rays/sparkles layer only exists while
+    /// the win card is dressed in its grandiose (lighter, prismatic) style,
+    /// so this proves the card actually took the find's grand form.
+    /// </summary>
+    public bool WinGrandActive => _prismaticGlow != null;
 
     /// <summary>
     /// Dresses (or undresses) the win card for a prismatic find: radiant

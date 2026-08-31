@@ -196,14 +196,15 @@ creates the `id_suffix` / `<Color> <Name>` variants after it. Then add the
 species to the `All` array — everything else (spawns, book pages, counts)
 follows automatically.
 
-`scripts/BugFlavor.cs` — add a `["<id>"]` pool of 3–5 win-card comment
-lines keyed by the **species id** (variants reuse the species' pool):
+`scripts/BugFlavor.cs` — add a `["<id>"]` pool of 6+ **real fun facts**
+(one-sentence, kid-friendly, verified — no folklore or fantasy praise)
+keyed by the **species id** (variants reuse the species' pool):
 
 ```csharp
 ["stag_beetle"] = new[]
 {
-    "Those mandibles could carry a leaf twice its size!",
-    /* 2–4 more lines */
+    "Stag beetle grubs live in rotting wood for 3 to 7 years.",
+    /* 5–6 more verified facts */
 },
 ```
 
@@ -248,7 +249,8 @@ hand-edit an SVG; the next generator run overwrites it.
    (light, mid, dark values; pattern variant welcome).
 4. **Register it** in `scripts/BugTypes.cs` with `Sp(...)`, choosing
    `size`/`tapRadius` from the existing range, and add it to `All`.
-5. **Give it flavor** — a `BugFlavor` pool keyed by the species id.
+5. **Give it flavor** — a `BugFlavor` pool of 6+ real, verified fun facts
+   keyed by the species id.
 6. **Generate + import + preview**: `node tools/gen_art.mjs`,
    `godot-mono --headless --import`, then rsvg-convert every new SVG and
    run the preview checklist.
