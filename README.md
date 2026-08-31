@@ -81,8 +81,8 @@ while the circling litter turns to a swirl of gold and white.
 - **Update notification** — once at boot the title screen checks GitHub
   releases: a gold tappable "🌐 Update Available (vX.Y.Z)" line appears when
   a newer release exists (tapping opens the releases page), otherwise the
-  line quietly shows your current version. Any failure (offline, rate
-  limit) just stays silent.
+  line quietly shows your current version, or "Failed to check for
+  updates" if the check couldn't run (e.g. offline).
 - **Ambient rustles** — every 2–4s a stray draft shivers a localized cluster
   of about 4–7 pieces of the litter in place (three times as often during
   storms). Purely cosmetic: the wobble lives on the pieces' sprites, so
