@@ -368,6 +368,13 @@ fast, so doc alignment is part of the slice, not a cleanup phase.
   bare `--force-with-lease` fails with "stale info" even right after a
   fetch. Pass the known remote tip explicitly:
   `--force-with-lease=refs/heads/<branch>:<old-sha>`.
+- **Negative tests must rebuild and restore.** Probing a failure path by
+  temporarily editing a constant (e.g. reverting a cap) does nothing until
+  `dotnet build` re-runs — a stale assembly silently passes the negative
+  run and leaves the bug in the tree for the next playtest. Always build
+  before the negative run, expect the exit code to flip, and restore the
+  constant (or `git checkout --`) immediately after; grep the constant
+  back to confirm before moving on.
 - **Long-running installs are human-run; exports can be headless.** Android
   SDK/template installation is done from the editor by the human, but the
   APK export itself runs headlessly with the command in the README — the
