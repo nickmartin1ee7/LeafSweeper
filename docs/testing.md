@@ -165,7 +165,12 @@ adb logcat | grep -iE "LeafSweeper|godot|mono|FATAL|AndroidRuntime"
 	page, the installed "vX.Y.Z" muted and inert, or "Failed to check
 	for updates" when the check can't run (airplane mode on device).
 	Requires the exported APK to carry the INTERNET permission
-	(`permissions/internet=true` in the Android export preset).
+	(`permissions/internet=true` in the Android export preset). The
+	installed version it compares against is `config/version`, which the
+	release pipeline stamps to the build's version at build time — only
+	pipeline-built APKs (v0.0.45 and later) report their true version;
+	older or hand-exported APKs say 0.0.1 and will show a spurious
+	"Update Available" even when current.
 
 Useful adb helpers while testing:
 

@@ -8,7 +8,11 @@ name: Release APK
 # segment is GITHUB_RUN_NUMBER, GitHub's per-workflow build counter.
 # Bumping Major or Minor is an edit to this file; the build id always
 # comes from the pipeline. A step stamps the version into
-# export_presets.cfg at build time (version/name + version/code).
+# export_presets.cfg at build time (version/name + version/code) AND into
+# project.godot (config/version) — the latter is what the in-game update
+# check (scripts/UpdateChecker.cs) reads, and Android's versionName is not
+# reachable from Godot C#, so without the stamp every exported build would
+# compare updates against the repo's stale 0.0.1.
 #
 # - Push/merge to main → build, create tag vM.m.N on the commit and
 #   publish a Release with the APK.
@@ -130,15 +134,21 @@ jobs:
           key: gradle-godot-apk-v1
           restore-keys: gradle-godot-apk-v1
 
-      - name: Stamp version into export presets
+      - name: Stamp version into project.godot and export presets
         env:
           VERSION_NAME: ${{ steps.version.outputs.name }}
           VERSION_CODE: ${{ steps.version.outputs.code }}
         run: |
           set -euo pipefail
+          # export presets: Android versionName/versionCode (what the OS and
+          # Play listings show). project.godot: application/config/version,
+          # which travels into the exported pack and is the version the
+          # in-game update check compares releases against.
           sed -i "s/^version\/code=.*/version\/code=$VERSION_CODE/" export_presets.cfg
           sed -i "s/^version\/name=.*/version\/name=\"$VERSION_NAME\"/" export_presets.cfg
+          sed -i "s/^config\/version=.*/config\/version=\"$VERSION_NAME\"/" project.godot
           grep -E '^version\/' export_presets.cfg
+          grep -E '^config\/version=' project.godot
 
       - name: Restore release keystore
         env:
