@@ -53,6 +53,7 @@ public partial class MainMenu : CanvasLayer
 
         var checker = new UpdateChecker { Name = "UpdateChecker" };
         checker.UpdateAvailable += ShowUpdate;
+        checker.UpToDate += ShowInstalledVersion;
 
         box.AddChild(title);
         box.AddChild(subtitle);
@@ -74,8 +75,8 @@ public partial class MainMenu : CanvasLayer
     /// <summary>
     /// The tappable "Update Available" line: styled like the menu's outlined
     /// labels but in a warmer gold so it reads as a link; hidden until the
-    /// update checker confirms a newer release. LinkButton.Uri opens the
-    /// releases page in the browser via OS.ShellOpen on press.
+    /// update checker reports. LinkButton.Uri opens the releases page in the
+    /// browser via OS.ShellOpen on press.
     /// </summary>
     private static LinkButton MakeUpdateLink()
     {
@@ -90,19 +91,49 @@ public partial class MainMenu : CanvasLayer
             SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter,
         };
         link.AddThemeFontSizeOverride("font_size", 40);
-        link.AddThemeColorOverride("font_color", new Color("e8cf8e"));
-        link.AddThemeColorOverride("font_hover_color", new Color("ffe9a8"));
-        link.AddThemeColorOverride("font_pressed_color", new Color("ffe9a8"));
-        link.AddThemeColorOverride("font_outline_color", new Color(0.22f, 0.16f, 0.09f, 0.9f));
-        link.AddThemeConstantOverride("outline_size", 8);
+        StyleLink(link, updateAvailable: true);
         return link;
     }
 
     /// <summary>Shows the update line once a newer release is confirmed.</summary>
     private void ShowUpdate(string latestVersion)
     {
+        StyleLink(_updateLink, updateAvailable: true);
+        _updateLink.Uri = UpdateChecker.ReleasesUrl;
         _updateLink.Text = $"🌐 Update Available ({latestVersion})";
         _updateLink.Visible = true;
+    }
+
+    /// <summary>
+    /// Up to date: the same slot quietly shows the installed version —
+    /// muted, never underlined and inert (no Uri, arrow cursor) so it
+    /// doesn't read as a link.
+    /// </summary>
+    private void ShowInstalledVersion(string installedVersion)
+    {
+        StyleLink(_updateLink, updateAvailable: false);
+        _updateLink.Uri = string.Empty;
+        _updateLink.Text = installedVersion;
+        _updateLink.Visible = true;
+    }
+
+    private static void StyleLink(LinkButton link, bool updateAvailable)
+    {
+        Color main = updateAvailable
+            ? new Color("e8cf8e")
+            : new Color("cfc4a6");
+        Color flash = updateAvailable
+            ? new Color("ffe9a8")
+            : main;
+        link.AddThemeColorOverride("font_color", main);
+        link.AddThemeColorOverride("font_hover_color", flash);
+        link.AddThemeColorOverride("font_pressed_color", flash);
+        link.Underline = updateAvailable
+            ? LinkButton.UnderlineMode.Always
+            : LinkButton.UnderlineMode.Never;
+        link.MouseDefaultCursorShape = updateAvailable
+            ? Control.CursorShape.PointingHand
+            : Control.CursorShape.Arrow;
     }
 
     private void OnUpdateLinkPressed() =>
