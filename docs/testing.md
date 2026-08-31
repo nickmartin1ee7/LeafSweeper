@@ -24,11 +24,13 @@ uncover rule, **verified against alpha ground truth** — the blocker's
 coverage is recomputed straight from its texture's alpha channel and must
 match `Debris.Covers` for a positive and a negative case, printed as
 `truthOk=True` → collect a gust coin and **await its arrival animation** →
-7 sweeps → gust spend → **storm drops land on recorded cleared spots and
-shrink the cleared-spot pool** → **flood clusters grow the litter and stop
-dead at the 3× starting-litter cap** → win → **"Storm Round" warning sign
-is up** → save → reload) and the **warn-linger probe** (a fresh storm-round
-start holds the sign up for 2s, then dissolves it over 4s — the probe also
+7 sweeps → gust spend → **gust spam: thirty rapid clicks must each record one
+pending cleared spot per blown piece — none evicted** → **storm drops land on
+recorded cleared spots and shrink the cleared-spot pool** → **flood clusters
+grow the litter and stop dead at the 3× starting-litter cap** → win →
+**"Storm Round" warning sign is up** → save → reload) and the
+**warn-linger probe** (a fresh storm-round start holds the sign up for 2s,
+then dissolves it over 4s — the probe also
 checks the alpha is caught mid-fade below full, since the sign is painted
 wholly by a shader that must respect the tweened modulate) and verifies
 `currentLevel`, `levelsCleared`, `totalSweeps`, `totalGusts`, `gustPower`,
