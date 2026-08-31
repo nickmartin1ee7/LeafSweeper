@@ -8,12 +8,31 @@ shader_type canvas_item;
 // periodic lightning double-flash. Everything animates off TIME; the
 // game only tweens the `intensity` uniform to fade the storm in and out.
 //
+// `snow` turns the storm into a winter blizzard: the rain dries up, the
+// lightning stops, snowflakes replace the drops (round, wandering — snow
+// sways where rain leans) and the fog veil thickens toward a pale
+// whiteout so visibility itself becomes the challenge.
+//
 // The overlay composites as ordinary alpha blending over the world (no
 // screen-texture copy), which keeps it cheap on mobile: the veil color
 // is near-black blue-grey so blending darkens the scene, and the rain is
 // pale so it reads against the litter.
 
 uniform float intensity : hint_range(0.0, 1.0) = 0.0;
+// 0 = rain storm, 1 = winter blizzard.
+uniform float snow : hint_range(0.0, 1.0) = 0.0;
+
+// Blizzard tunables (gated by playtest): how heavy the fog veil sits over
+// the floor, and the pale grey-blue it tints toward. The first blizzard
+// buried the floor so deep the bug was unfindable even on swept ground
+// (playtest), so the gain stays gentle and the veil breathes: every
+// BlizzardLullSeconds the wind drops and the fog thins by
+// BlizzardLullDepth, a fair window to read the floor before the whiteout
+// closes again — the challenge slows the eye, it never blinds it.
+const float BlizzardFogGain = 0.90;
+const vec3 BlizzardVeil = vec3(0.52, 0.59, 0.68);
+const float BlizzardLullSeconds = 9.0;
+const float BlizzardLullDepth = 0.45;
 
 float hash11(float n)
 {
@@ -64,6 +83,36 @@ float rain_layer(vec2 uv, float aspect, float time, float scale,
     float dash = smoothstep(0.0, 0.06, d) * (1.0 - smoothstep(len * 0.7, len, d));
     float column = smoothstep(thick, 0.0, abs(fract(p.x + colShift + dropShift) - 0.5));
     return column * dash * bright * present;
+}
+
+// One depth layer of snowflakes: round flakes that fall slowly and
+// wander sideways on a per-flake sine — snow sways where rain leans, so
+// the blizzard reads as drifting powder, never as streaks. Same cell
+// machinery as the rain (per-column speed, per-flake size/brightness,
+// ragged density) but no slant and no streak tail.
+float flake_layer(vec2 uv, float aspect, float time, float scale,
+                  float fall_speed, float sway, float size, float seed)
+{
+    vec2 p = vec2(uv.x * aspect, uv.y) * scale;
+    float col = floor(p.x);
+    float colRnd = hash11(col * 4.13 + seed * 71.7);
+    float spd = fall_speed * (0.75 + 0.5 * colRnd);
+    float colShift = (hash11(col * 6.31 + seed * 9.7) - 0.5) * 0.6;
+
+    // Subtract time so the pattern scrolls DOWN the screen: flakes fall.
+    float y = p.y - time * spd;
+    float cell = floor(y);
+    float f = fract(y);
+
+    float present = step(0.18, hash11(cell * 2.71 + col * 9.7 + seed * 5.7));
+    float phase = hash11(cell * 5.17 + col * 3.1 + seed * 11.3) * 6.2831;
+    vec2 c = vec2(
+        fract(p.x + colShift + sin(y * 2.2 + phase) * sway) - 0.5,
+        f - 0.5);
+    float r = size * (0.6 + 0.8 * hash11(cell * 8.3 + col * 13.7 + seed * 7.9));
+    float d = length(c) / r;
+    return smoothstep(1.0, 0.25, d) * present
+        * (0.4 + 0.6 * hash11(cell * 4.7 + col * 6.3 + seed * 3.1));
 }
 
 // Slow, soft blotches of ground fog drifting downwind (screen right)
@@ -128,11 +177,18 @@ void fragment()
     float t = TIME;
 
     // Dark veil: heavy cool storm tint, much deeper toward the edges —
-    // the vignette reaches far into the frame.
+    // the vignette reaches far into the frame. A blizzard tints the veil
+    // pale and multiplies its weight (BlizzardFogGain) — but the weight
+    // itself breathes on the lull cycle, so the whiteout periodically
+    // thins and the floor becomes readable (the lull is snow-only; rain
+    // storms keep their steady dark).
     vec2 centered = (uv - 0.5) * vec2(aspect, 1.0);
     float vig = smoothstep(0.30, 1.10, length(centered));
-    vec3 veil = vec3(0.09, 0.12, 0.17);
-    float veil_alpha = intensity * (0.42 + 0.40 * vig);
+    vec3 veil = mix(vec3(0.09, 0.12, 0.17), BlizzardVeil, snow);
+    float lull = 1.0 - snow * BlizzardLullDepth
+        * (0.5 + 0.5 * sin(t * 6.28318 / BlizzardLullSeconds));
+    float veil_alpha = intensity * mix(1.0, BlizzardFogGain * lull, snow)
+        * (0.42 + 0.40 * vig);
 
     // Cloud shadows roll across on top of the veil.
     veil_alpha += intensity * 0.16 * cloud_bands(uv, t);
@@ -144,7 +200,16 @@ void fragment()
     rain += rain_layer(uv, aspect, t, 30.0, 3.2, -0.30, 0.050, 0.0) * 0.55;
     rain += rain_layer(uv, aspect, t, 46.0, 4.6, -0.42, 0.042, 1.7) * 0.45;
     rain += rain_layer(uv, aspect, t, 68.0, 6.4, -0.55, 0.034, 4.2) * 0.35;
-    rain = clamp(rain, 0.0, 1.0) * intensity;
+    rain = clamp(rain, 0.0, 1.0) * intensity * (1.0 - snow);
+
+    // Blizzard snowfall at three depths: far is a dense fine powder, near
+    // is sparse fat flakes. A blizzard owns the sky; a rain storm owns
+    // the drops (each layer is gated by the other mode).
+    float flakes = 0.0;
+    flakes += flake_layer(uv, aspect, t, 26.0, 0.55, 0.05, 0.055, 7.0) * 0.6;
+    flakes += flake_layer(uv, aspect, t, 36.0, 0.9, 0.09, 0.085, 13.0) * 0.55;
+    flakes += flake_layer(uv, aspect, t, 48.0, 1.4, 0.13, 0.125, 21.0) * 0.5;
+    flakes = clamp(flakes, 0.0, 1.0) * intensity * snow;
 
     // Ground mist drifts through the dim.
     float mist_alpha = intensity * 0.20 * mist(uv, t);
@@ -156,16 +221,22 @@ void fragment()
     wisps = clamp(wisps, 0.0, 1.0);
     float wisp_alpha = intensity * 0.15 * wisps;
 
-    // Lightning brightens the whole wash toward pale storm-white.
-    float flash = lightning(t) * intensity;
+    // Lightning brightens the whole wash toward pale storm-white — never
+    // in a blizzard: thunderstorms don't happen in falling snow.
+    float flash = lightning(t) * intensity * (1.0 - snow);
 
     // Compose: veil + cloud shadows + mist + wisps underneath, pale rain
-    // on top, then the strike lifts everything with a blue-white wash.
+    // and drifting flakes on top, then the strike lifts everything with a
+    // blue-white wash.
     vec3 col = veil;
     float alpha = veil_alpha + mist_alpha + wisp_alpha;
     col = mix(col, vec3(0.56, 0.63, 0.74), wisps * 0.5);
     col = mix(col, vec3(0.78, 0.85, 0.95), rain);
     alpha = max(alpha, rain * 0.9);
+    col = mix(col, vec3(0.94, 0.96, 1.0), flakes);
+    // Flakes cap below full opacity: bright near-opaque dots over the pale
+    // veil were the last thing hiding the bug on swept ground (playtest).
+    alpha = max(alpha, flakes * 0.70);
     col = mix(col, vec3(0.85, 0.90, 1.0), flash * 0.55);
     alpha = max(alpha, flash * 0.38);
     COLOR = vec4(col, clamp(alpha, 0.0, 1.0));
