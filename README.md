@@ -25,6 +25,11 @@ bug never runs away.
   to find), logged in a flip-through Bug Collection Book.
 - **Rare prismatic bugs** — 1 round in 100 hides a rainbow-sheened
   critter with an extra celebration when you find it.
+- **Seasons** — the year turns as you clear levels: Summer storms
+  spawn a tornado that shuffles the floor, Fall washes everything
+  downstream, and Winter buries the bug in ice — crack it out with the
+  hammer you dig up. Finish the year at level 400 for permanent
+  bonuses.
 - **Storm levels** — every 10th level the sky darkens and the wind
   blows fresh litter back onto ground you already swept, so memory
   becomes the challenge.

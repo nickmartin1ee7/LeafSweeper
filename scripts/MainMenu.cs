@@ -171,7 +171,32 @@ public partial class MainMenu : CanvasLayer
             lifetime += $" · {save.TotalGusts} gust{(save.TotalGusts == 1 ? "" : "s")} blown";
 
         string favorite = FavoriteBug(save);
-        _progressLabel.Text = favorite == null ? lifetime : $"{lifetime}\nFavorite critter: {favorite}";
+        string text = SeasonProgressLine(save);
+        if (lifetime.Length > 0)
+            text += $"\n{lifetime}";
+        if (favorite != null)
+            text += $"\nFavorite critter: {favorite}";
+        _progressLabel.Text = text;
+    }
+
+    /// <summary>
+    /// Season progress line: "Season: Summer · 34/100" — which season the
+    /// save's next round plays in and how far into it. The very first
+    /// Spring is the only 99-level season (the game starts at level 1);
+    /// every later season is exactly 100 rounds. Shown even on a fresh
+    /// save so the menu names the stage from the start.
+    /// </summary>
+    private static string SeasonProgressLine(SaveData save)
+    {
+        int level = save.CurrentLevel;
+        var season = RoundConfig.SeasonForLevel(level);
+        int seasonStart = RoundConfig.LoopIndex(level) * RoundConfig.LoopLength
+            + (int)season * RoundConfig.SeasonLength;
+        if (seasonStart == 0)
+            seasonStart = 1;
+        int progress = level - seasonStart + 1;
+        int total = seasonStart == 1 ? 99 : RoundConfig.SeasonLength;
+        return $"Season: {RoundConfig.SeasonName(season)} · {progress}/{total}";
     }
 
     private static string? FavoriteBug(SaveData save)

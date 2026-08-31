@@ -24,8 +24,13 @@ public sealed class Sweeper
 	/// </summary>
 	private const float BurstFlingSpeed = 1800f;
 
-	/// <summary>Max debris one sweep gesture may clear.</summary>
-	public const int MaxDebrisPerSweep = 12;
+	/// <summary>Max debris one sweep gesture may clear — raised by the
+	/// year-loop bonus via <see cref="SetSweepPower"/>.</summary>
+	public int MaxDebrisPerSweep { get; private set; } = RoundConfig.BaseSweepPower;
+
+	/// <summary>Applies the level's sweep power (12 base, +2 per completed
+	/// year) at round start.</summary>
+	public void SetSweepPower(int power) => MaxDebrisPerSweep = Mathf.Max(1, power);
 
 	private readonly Func<IEnumerable<Debris>> _debris;
 	private readonly RandomNumberGenerator _rng;
@@ -116,9 +121,13 @@ public sealed class Sweeper
 	/// nearest <paramref name="center"/> radially outward, still capped at
 	/// <see cref="MaxDebrisPerSweep"/> pieces, and reports through
 	/// <see cref="_onSweepCompleted"/> so it counts like any other sweep.
+	/// The crack tap reuses it with a bigger radius; there
+	/// <paramref name="recordSpots"/> is false — the shockwave's ground
+	/// joins no backfill pool, so the storm never re-litters the dig.
 	/// Returns how many pieces were flung.
 	/// </summary>
-	public int Burst(Vector2 center)
+	public int Burst(Vector2 center, float radius = BurstRadius,
+		bool recordSpots = true)
 	{
 		var hits = new List<(Debris Debris, float Dist)>();
 		foreach (var d in _debris())
@@ -126,7 +135,7 @@ public sealed class Sweeper
 			if (!GodotObject.IsInstanceValid(d) || d.Swept)
 				continue;
 			float dist = d.Position.DistanceTo(center);
-			if (dist <= BurstRadius)
+			if (dist <= radius)
 				hits.Add((d, dist));
 		}
 		if (hits.Count == 0)
@@ -139,7 +148,8 @@ public sealed class Sweeper
 			if (cleared >= MaxDebrisPerSweep)
 				break;
 			Vector2 dir = dist > 1f ? (d.Position - center) / dist : Vector2.Right;
-			_onDebrisSwept(d); // record the vacated spot before it flies
+			if (recordSpots)
+				_onDebrisSwept(d); // record the vacated spot before it flies
 			d.Fling(dir * BurstFlingSpeed, _rng);
 			cleared++;
 		}

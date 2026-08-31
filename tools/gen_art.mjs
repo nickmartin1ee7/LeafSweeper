@@ -1692,6 +1692,168 @@ function ground() {
   write(join(TEX, "ground.svg"), svg);
 }
 
+function groundWinter() {
+  // Winter ground: snow-covered forest floor. Same soft speckle/drift
+  // structure as the summer ground but in cold blue-whites, with frosty
+  // grass instead of green blades and a faint sparkle of ice glints.
+  let seed = 11;
+  const rand = () => {
+    seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  const uni = (a, b) => a + rand() * (b - a);
+  const pick = (arr) => arr[Math.floor(rand() * arr.length)];
+
+  const w = 1080, h = 2340;
+  const bits = [];
+  for (let i = 0; i < 220; i++) {
+    const x = uni(0, w), y = uni(0, h), r = uni(2.5, 12);
+    const c = pick(["#dfe8f2", "#eef4fa", "#d3dfea", "#c9d6e4", "#e4ecf4"]);
+    bits.push(`<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${r.toFixed(1)}" fill="${c}" opacity="${uni(0.18, 0.45).toFixed(2)}"/>`);
+  }
+  for (let i = 0; i < 26; i++) {
+    // Snow drifts: soft pale mounds with a colder shadow edge.
+    const x = uni(0, w), y = uni(0, h), rx = uni(10, 26), ry = uni(7, 16);
+    bits.push(
+      `<ellipse cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" rx="${rx.toFixed(0)}" ry="${ry.toFixed(0)}" fill="#c2d0e0" opacity="0.35"/>` +
+      `<ellipse cx="${(x - rx * 0.2).toFixed(0)}" cy="${(y - ry * 0.25).toFixed(0)}" rx="${(rx * 0.5).toFixed(0)}" ry="${(ry * 0.45).toFixed(0)}" fill="#f2f7fc" opacity="0.4"/>`);
+  }
+  for (let i = 0; i < 40; i++) {
+    // Frost-killed grass: sparse, pale, tips bent under the snow.
+    const x = uni(0, w), y = uni(0, h), n = 2 + Math.floor(rand() * 2);
+    const blades = Array.from({ length: n }, (_, k) => {
+      const dx = k;
+      return `M${(x + dx).toFixed(0)} ${y.toFixed(0)} C${(x + dx + uni(-6, 6)).toFixed(0)} ${(y - uni(8, 16)).toFixed(0)} ${(x + dx + uni(-4, 4)).toFixed(0)} ${(y - uni(14, 26)).toFixed(0)} ${(x + dx + uni(-10, 10)).toFixed(0)} ${(y - uni(20, 34)).toFixed(0)}`;
+    }).join(" ");
+    bits.push(`<g stroke="#9aa8b4" stroke-width="2.6" fill="none" opacity="0.4" stroke-linecap="round">${blades}</g>`);
+  }
+  for (let i = 0; i < 24; i++) {
+    // Ice glints: tiny bright crosses that catch the eye like snow spark.
+    const x = uni(0, w), y = uni(0, h), s = uni(2.5, 5.5);
+    bits.push(`<path d="M${(x - s).toFixed(0)} ${y.toFixed(0)} L${(x + s).toFixed(0)} ${y.toFixed(0)} M${x.toFixed(0)} ${(y - s).toFixed(0)} L${x.toFixed(0)} ${(y + s).toFixed(0)}" stroke="#ffffff" stroke-width="1.4" fill="none" opacity="${uni(0.25, 0.5).toFixed(2)}"/>`);
+  }
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}">
+  <defs>
+    <radialGradient id="gw" cx="0.5" cy="0.42" r="0.85">
+      <stop offset="0" stop-color="#e9f0f7"/>
+      <stop offset="1" stop-color="#c9d6e4"/>
+    </radialGradient>
+  </defs>
+  <rect width="${w}" height="${h}" fill="url(#gw)"/>
+  ${bits.join("\n  ")}
+</svg>`;
+  write(join(TEX, "ground_winter.svg"), svg);
+}
+
+function snowPile() {
+  // A soft snow mound: three stacked white lobes with a cold blue-grey
+  // underside shade — reads as a pliable pile a sweep can push through.
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <ellipse cx="50" cy="68" rx="38" ry="22" fill="#c9d6e4" opacity="0.9"/>
+  <ellipse cx="50" cy="60" rx="34" ry="20" fill="#eef4fa"/>
+  <ellipse cx="38" cy="52" rx="20" ry="13" fill="#ffffff"/>
+  <ellipse cx="62" cy="55" rx="16" ry="11" fill="#f7fbff"/>
+  <ellipse cx="50" cy="74" rx="30" ry="9" fill="#aebfd2" opacity="0.55"/>
+</svg>`;
+  write(join(TEX, "snow_pile.svg"), svg);
+}
+
+function iceChunk() {
+  // An ice block: a pale-blue translucent rounded chunk with two inner
+  // fracture lines and a bright top sheen — the frozen-bug rescue prop.
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <path d="M22 30 C22 18 78 18 78 30 L82 70 C82 84 18 84 18 70 Z" fill="#bcd8ee" opacity="0.92"/>
+  <path d="M22 30 C22 18 78 18 78 30 L82 70 C82 84 18 84 18 70 Z" fill="none" stroke="#e8f4fc" stroke-width="3"/>
+  <path d="M30 34 L48 52 L38 72 M62 30 L54 50 L66 68" fill="none" stroke="#9cc2e0" stroke-width="2.4" opacity="0.8"/>
+  <path d="M30 26 C40 21 62 21 72 27" fill="none" stroke="#ffffff" stroke-width="4" opacity="0.75" stroke-linecap="round"/>
+</svg>`;
+  write(join(TEX, "ice_chunk.svg"), svg);
+}
+
+function iceCracks() {
+  // Fracture overlays for the frozen-bug rescue: jagged radial crack
+  // lines that appear in stages as the player taps the ice (stage 1:
+  // three hairline cracks, stage 2: six, deeper and wider). Centered on
+  // the chunk so they stack 1:1 on ice_chunk.svg.
+  const jag = (cx, cy, ang0, segs, seed) => {
+    const pts = [`M ${cx} ${cy}`];
+    let x = cx, y = cy, a = ang0;
+    for (let i = 0; i < segs; i++) {
+      const len = 15 + ((i * 7919 + seed * 131) % 16);
+      a += (((i * 31 + seed * 17) % 11) - 5) * 0.07;
+      x += Math.cos(a) * len;
+      y += Math.sin(a) * len;
+      pts.push(`L ${x.toFixed(1)} ${y.toFixed(1)}`);
+    }
+    return pts.join(" ");
+  };
+  const lines = (n, seed, w, o) => Array.from({ length: n }, (_, i) =>
+    `<path d="${jag(50, 50, seed + i * (6.283 / n), 4, seed + i)}"
+      fill="none" stroke="#eaf6ff" stroke-width="${w}"
+      stroke-linecap="round" opacity="${o}"/>`).join("\n  ");
+  write(join(TEX, "ice_crack_1.svg"),
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">\n  ${lines(3, 0, 1.6, 0.6)}\n</svg>`);
+  write(join(TEX, "ice_crack_2.svg"),
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">\n  ${lines(6, 3, 2.6, 0.85)}\n</svg>`);
+}
+
+function tornadoFunnel() {
+  // The summer tornado: a tall swirling cone of grey-brown bands that
+  // narrow toward the ground, with a darker churned core and a few
+  // flung-off leaf flecks — drawn as a vertical prop the code tilts and
+  // sways. Origin sits at the bottom tip (the dust ring's center).
+  const w = 120, h = 320;
+  // Swirl bands: stacked ellipse arcs that tighten as they descend.
+  const bands = [];
+  const steps = 9;
+  for (let i = 0; i < steps; i++) {
+    const t = i / (steps - 1);            // 0 top → 1 ground
+    const y = 8 + t * (h - 20);
+    const rx = 14 + t * 34;               // cone widens upward
+    const ry = 7 + t * 13;
+    const c = i % 2 === 0 ? "#8d8272" : "#a89a86";
+    bands.push(
+      `<ellipse cx="60" cy="${y.toFixed(0)}" rx="${rx.toFixed(0)}" ry="${ry.toFixed(0)}" fill="none" stroke="${c}" stroke-width="${(5 - t * 2).toFixed(1)}" opacity="0.8"/>`);
+  }
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}">
+  <defs>
+    <linearGradient id="tf" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8d8272" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#a89a86" stop-opacity="0.6"/>
+    </linearGradient>
+  </defs>
+  <path d="M60 300 C48 220 28 120 26 18 L94 18 C92 120 72 220 60 300 Z" fill="url(#tf)"/>
+  ${bands.join("\n  ")}
+  <ellipse cx="60" cy="16" rx="34" ry="12" fill="#7c7260" opacity="0.85"/>
+  <ellipse cx="60" cy="12" rx="26" ry="8" fill="#948a76" opacity="0.9"/>
+  <circle cx="34" cy="96" r="4" fill="#7fae4e" opacity="0.7"/>
+  <circle cx="88" cy="150" r="4" fill="#d9583b" opacity="0.7"/>
+  <circle cx="30" cy="205" r="3.4" fill="#e8b64c" opacity="0.7"/>
+</svg>`;
+  write(join(TEX, "tornado_funnel.svg"), svg);
+}
+
+function dustRing() {
+  // The tornado's skirt: a loose ring of dust puffs that the code spins
+  // around the funnel's ground tip.
+  const puffs = [];
+  const count = 10;
+  for (let i = 0; i < count; i++) {
+    const a = (i / count) * Math.PI * 2;
+    const x = 60 + Math.cos(a) * 42;
+    const y = 60 + Math.sin(a) * 20;
+    const r = 9 + (i % 3) * 3;
+    const c = i % 2 === 0 ? "#c4b6a0" : "#b0a28c";
+    puffs.push(`<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${r}" fill="${c}" opacity="0.7"/>`);
+  }
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  ${puffs.join("\n  ")}
+</svg>`;
+  write(join(TEX, "dust_ring.svg"), svg);
+}
+
 // ------------------------------------------------------------------ main ---
 
 leafMaple("leaf_red", "#d9583b", "#a93a26", "#7c2818");
@@ -1706,6 +1868,12 @@ petal("petal_pink", "#f2b7c6", "#d97e97", "#b05a74");
 petal("petal_white", "#f7f2e8", "#e4d9c6", "#c2b49c");
 petal("petal_purple", "#b39bd6", "#8a6cb3", "#67498c");
 ground();
+groundWinter();
+snowPile();
+iceChunk();
+iceCracks();
+tornadoFunnel();
+dustRing();
 // ---- Existing species (base "classic" variant keeps the legacy id) ----
 ladybug();
 ladybug({ b1: "#f2c53d", b2: "#d19a1f", outline: "#7a5a10" }, "ladybug_yellow");

@@ -10,8 +10,9 @@ namespace LeafSweeper;
 /// around and through the lettering, sparks and flicker — set into a
 /// roiling storm cloud the same shader paints behind the lettering.
 /// Fades in with the crackle, fades out when the next round begins. Own
-/// canvas layer above the HUD — explicit ladder: world 0 → storm 1 →
-/// menu 2 → hud 3 → warn 4 → prismatic 5 → bug book 90.
+/// canvas layer above the HUD — explicit ladder: world 0 → season grade 1 →
+/// storm 2 → menu 3 → hud 4 → warn 5 → prismatic 6 → season banner 7 →
+/// bug book 90.
 /// </summary>
 public partial class StormWarn : CanvasLayer
 {
@@ -60,7 +61,7 @@ public partial class StormWarn : CanvasLayer
 
     public StormWarn()
     {
-        Layer = 4;
+        Layer = 5;
         Visible = false;
     }
 

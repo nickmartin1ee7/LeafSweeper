@@ -90,11 +90,20 @@ public partial class Debris : Node2D
 
     // Round-start settle state: initialized by SettleIn().
     private bool _settling;
+    // True for the round-start fall (fades in from empty air); false for
+    // tornado/stream relocations (the piece was already visible).
+    private bool _settleFadeIn;
+    // Relocation arc: the piece leaves along a raised quadratic path
+    // (through the funnel) instead of the settle's vertical fall. Slide
+    // relocations (fall streams) wash along the floor with a low hop.
+    private bool _relocating;
+    private bool _relocSlide;
+    private const float RelocateArcHeight = 220f; // apex rise above the midpoint
+    private const float SlideArcHeight = 60f;     // low hop for the wash
     private float _settleAge;
     private float _settleSeconds;
     private Vector2 _settleFrom;
-    private Vector2 _settleTarget;
-    private float _settleFromRot;
+    private Vector2 _settleTarget;    private float _settleFromRot;
     private float _settleTargetRot;
 
     // Ambient rustle state: initialized by Rustle().
@@ -105,6 +114,14 @@ public partial class Debris : Node2D
     private float _rustleAmp;
     private float _rustleWobbleRate;
     private float _rustleTurn;
+
+    // Blocker flash: when a rescue tap on the winter ice is refused, the
+    // pieces still covering it pulse warm so the player sees WHAT to
+    // clear. A pure Modulate effect — transform, weight and coverage
+    // never move.
+    private const float FlashSeconds = 0.6f;
+    private static readonly Color FlashColor = new(1f, 0.72f, 0.35f); // warm amber
+    private float _flashAge = -1f; // -1 = no flash in flight
 
     // Alpha-mask resolution: one cache byte per 4px texture cell. Fine
     // enough to hug the drawn piece's shape, coarse enough that the mask
@@ -219,6 +236,7 @@ public partial class Debris : Node2D
     public void SettleIn(RandomNumberGenerator rng, float delay)
     {
         _settling = true;
+        _settleFadeIn = true;
         _settleAge = -delay;
         _settleSeconds = SettleSeconds * rng.RandfRange(0.85f, 1.15f);
         _settleTarget = Position;
@@ -230,6 +248,33 @@ public partial class Debris : Node2D
         Position = _settleFrom;
         RotationDegrees = _settleFromRot;
         Modulate = new Color(1f, 1f, 1f, 0f);
+    }
+
+    /// <summary>
+    /// Tornado/stream relocation: the piece arcs up off its spot, tumbles
+    /// through the apex and lands on a new one — a raised quadratic path,
+    /// so it departs smoothly instead of popping into the air. Slide mode
+    /// (the fall wash) hops low and tumbles gently, reading as swept
+    /// along the floor rather than flung. Only at-rest pieces should call
+    /// this; swept, settling and wind-riding pieces are ignored.
+    /// </summary>
+    public void RelocateTo(Vector2 target, RandomNumberGenerator rng, float delay, bool slide = false)
+    {
+        if (Swept || _settling || _windActive)
+            return;
+        _settling = true;
+        _relocating = true;
+        _relocSlide = slide;
+        _settleFadeIn = false;
+        _settleAge = -delay;
+        _settleSeconds = SettleSeconds * rng.RandfRange(0.85f, 1.15f);
+        _settleTarget = target;
+        _settleTargetRot = rng.RandfRange(0f, 360f);
+        _settleFrom = Position;
+        _settleFromRot = slide
+            ? RotationDegrees + rng.RandfRange(-0.5f, 0.5f) * 360f
+            : RotationDegrees + rng.RandfRange(-1f, 1f) * SettleSpinTurns * 360f;
+        Modulate = Colors.White;
     }
 
     /// <summary>
@@ -253,6 +298,21 @@ public partial class Debris : Node2D
         _rustleWobbleRate = RustleWobbleRate
             * rng.RandfRange(1f - RustleWobbleJitter, 1f + RustleWobbleJitter);
         _rustleTurn = rng.RandfRange(-RustleTurn, RustleTurn);
+    }
+
+    /// <summary>
+    /// Pulses the piece warm for a beat: the winter rescue taps the ice
+    /// through its covering debris, and this is how the floor answers
+    /// "not yet — these pieces are in the way". Skipped while the piece
+    /// is mid-settle, riding the wind or already swept — those modes own
+    /// Modulate.
+    /// </summary>
+    public void FlashBlocker()
+    {
+        if (Swept || _settling || _windActive)
+            return;
+        _flashAge = 0f;
+        Modulate = FlashColor;
     }
 
     private void UpdateRustle(float dt)
@@ -298,13 +358,34 @@ public partial class Debris : Node2D
         float t = Mathf.Clamp(_settleAge / _settleSeconds, 0f, 1f);
         // Quart-out: a fast entry that eases into a soft landing.
         float eased = 1f - Mathf.Pow(1f - t, 4f);
-        Position = _settleFrom.Lerp(_settleTarget, eased);
+        if (_relocating)
+        {
+            // Raised quadratic arc: the piece lifts off its spot, crests
+            // through the funnel's churn and descends onto the new spot;
+            // the wash's slide hops low, reading as swept along the floor.
+            float arcHeight = _relocSlide ? SlideArcHeight : RelocateArcHeight;
+            Vector2 apex = (_settleFrom + _settleTarget) * 0.5f
+                + Vector2.Up * arcHeight;
+            Vector2 a = _settleFrom.Lerp(apex, eased);
+            Vector2 b = apex.Lerp(_settleTarget, eased);
+            Position = a.Lerp(b, eased);
+        }
+        else
+        {
+            Position = _settleFrom.Lerp(_settleTarget, eased);
+        }
         RotationDegrees = Mathf.Lerp(_settleFromRot, _settleTargetRot, eased);
-        // Fade in over the first third of the fall so pieces don't pop.
-        Modulate = new Color(1f, 1f, 1f, Mathf.Min(t * 3f, 1f));
+        // Fade in over the first third of the fall so pieces don't pop —
+        // but only when falling from empty air; a relocated piece was
+        // already visible and just lifts off.
+        Modulate = _settleFadeIn
+            ? new Color(1f, 1f, 1f, Mathf.Min(t * 3f, 1f))
+            : Colors.White;
         if (t >= 1f)
         {
             _settling = false;
+            _relocating = false;
+            _relocSlide = false;
             Modulate = Colors.White;
             Position = _settleTarget;
             RotationDegrees = _settleTargetRot;
@@ -499,6 +580,17 @@ public partial class Debris : Node2D
     public override void _Process(double delta)
     {
         float dt = (float)delta;
+        // Flash decay composes with every mode: it only owns Modulate, so
+        // settle, rustle and wind keep driving transform underneath. A
+        // piece swept mid-flash drops out here and the fade takes over.
+        if (_flashAge >= 0f && !Swept)
+        {
+            _flashAge += dt;
+            float t = Mathf.Clamp(_flashAge / FlashSeconds, 0f, 1f);
+            Modulate = FlashColor.Lerp(Colors.White, t);
+            if (t >= 1f)
+                _flashAge = -1f;
+        }
         // Wind and settle modes own the piece completely — a swept fling
         // cancels them implicitly by falling through to the slide below.
         if (_windActive && !Swept)

@@ -95,6 +95,112 @@ Implemented in `scripts/RoundConfig.cs`, all curves saturate at level 200:
 Camouflage tints the bug slightly toward the leaf palette — a whisper of
 extra challenge in late levels, never a color hunt.
 
+## Seasons
+
+Seasons are the difficulty progression: the year is a 400-level loop and
+each season layers a new vibe (and, from Summer on, a new weather
+mechanic) on top of the existing curve. All of it is a pure function of
+the level number in `RoundConfig` (`SeasonForLevel`, `LoopIndex`):
+
+| Levels   | Season | What's new                                            |
+|----------|--------|-------------------------------------------------------|
+| 1–99     | Spring | The base game                                          |
+| 100–199  | Summer | Tornado storm rounds shuffle half the floor every 20s  |
+| 200–299  | Fall   | Water streams reposition everything every 20s          |
+| 300–399  | Winter | Blizzards: poor visibility, snow piles, ice-bound bugs |
+| 400–799  | Year 2 | Back to Spring, with permanent stacking bonuses        |
+
+- **Year loop & bonuses** — clearing level 400 loops back to Spring of
+  Year 2 (`LoopIndex(level) = level / 400`): every sweep clears
+  `+2` more debris (`SweepPowerForLevel`, applied at round start via
+  `Sweeper.SetSweepPower`) and every round buries `+1`
+  extra gust coin (`GustCoinsForLevel`). Bonuses stack each completed
+  year (800+ → +4/+2 …) and never reset.
+- **Season debuts** — the first level of each season (100/200/300) is a
+  celebration round: the new vibe and its intro banner only, no new
+  mechanic yet (the season's event first fires on the second storm of
+  the season). A memory game adds one new thing at a time.
+- **Season banner** — a soft card announces each season change ("Summer — Storms gather over the meadow"); a loop restart shows the
+  bonus card instead ("Year 2 begins — +2 Sweep Power · +1 Gust Coin").
+  Fixed fraction of the screen wide, its height sized by its text so
+  long flavor lines never stretch it (portrait playtest: the first
+  fixed-height card collapsed into a one-letter-per-line column).
+- **After-storm relief** — the level right after any storm sweeps a
+  lighter floor (`AfterStormReliefFactor`, ×0.9 coverage): the difficulty
+  rhythm alternates spikes with breathers.
+- **Summer tornado** — on Summer storm rounds past the debut (110+), a
+  funnel telegraphs for ~1.5s (spins up in place, touching nothing — a
+  memory game never cheats), then crosses the floor over ~2s while it
+  churns: **half** of the at-rest debris **plus the bug and every
+  uncollected gust coin** relocate to fresh random floor spots every
+  `TornadoInterval` (20s). Repositions animate — debris lifts, tumbles
+  and lands like the round-start settle; the bug and coins glide in an
+  arc — never a teleport. ZIndex never changes, so a shuffled bug or coin
+  may surface uncovered (fun, allowed); touches stay locked while the
+  churn is mid-flight.
+- **Fall streams** — on Fall storm rounds past the debut (210+), the
+  floor **shimmers** for ~1.5s (the wash is coming, nothing moves), then
+  water streams wash across it over ~2s: **all** at-rest debris plus the
+  bug and every uncollected gust coin slide **downstream** to fresh
+  spots every `StreamInterval` (20s). Repositions animate — pieces hop
+  low along the floor in the stream's direction and spread onto new
+  spots; the bug and coins slide flat. Touches stay locked while the
+  wash is mid-flight.
+- **Winter blizzard** — on Winter storm rounds (300+) the storm becomes
+  a blizzard: snowflakes drift where rain fell (capped at 70% opacity so
+  bright flakes never bury the bug), the lightning stops and the fog
+  veil thickens ×0.9 toward a pale whiteout (`BlizzardFogGain` in
+  `storm.gdshader`) — difficult visibility is the mechanic, and the
+  memory game never tips into unreadable (playtest gate checks it). The
+  whiteout **breathes**: every ~9s the wind lulls and the fog thins by
+  45% (`BlizzardLullSeconds`/`BlizzardLullDepth`), a fair window to read
+  the floor. The storm's **flood** drops **snow piles** instead of
+  litter — the randomly timed white dump is the blizzard's signature,
+  and on Winter it hits far harder than a summer/fall cluster: 20–34
+  pieces per dump (`WinterFloodMin`/`WinterFloodMax` vs 6–12), so the
+  floor visibly vanishes under white in a single beat. The per-spot
+  backfill restores ordinary winter-palette litter instead
+  (solid-white replacements for every swept piece read as a rendering
+  bug, not weather). Same sweeping action, same re-hiding of the bug and
+  coins either way. All Winter levels keep the snowy style; only storm
+  rounds run blizzard weather.
+- **Ice mechanics** — blizzard rounds also **freeze the bug in an ice
+  block** (`IceBlock`), and the crack is gated behind a second hidden
+  item: **the hammer**. One mallet per blizzard round is buried in the
+  litter like a gust coin — clearing the debris over it exposes a tap
+  target; collecting it plays the coin's golden swell, then a rising
+  **clockwise** spiral (the coin's counter-clockwise one mirrored) that
+  dashes to the **top middle of the screen**, where the hammer floats
+  and bobs as a held power-up for the rest of the round — parked at
+  roughly **twice the size it was found**, swelling into that size with
+  a springy overshoot on arrival so the top-middle slot reads as an
+  armed power-up banner, not a shrunken leftover. Only then can
+  the ice be cracked: three taps through three visible fracture stages
+  (each tap shakes the block), and the final tap shatters it in a shard
+  burst (juice on par with the coin collect) and **picks up the bug —
+  the round is won** (no second hunt across the fog for the freed bug).
+  Every crack tap also fires the hammer's **shockwave**: a radial
+  dispersal of the litter around the dig — the double-tap burst's
+  mechanics at **twice its radius** (260px) — that visibly blasts the
+  clutter off the rescue zone. Unlike a normal sweep or burst, the
+  ground that dispersal clears **never backfills**: no spots are
+  recorded, so the storm can't re-litter the dig the hammer just
+  worked. Swipes stay sweeping. Every refusal has a reason: a tap on the ice
+  that IS still covered pulses the offending pieces warm
+  (`Debris.FlashBlocker`) so it reads as "clear these", and a tap on
+  cleared ice without the hammer flares the chunk red
+  (`IceBlock.PulseLocked`) so it reads as "not armed yet" — never a
+  silent no-op. The blizzard also never drops anything — flood or
+  backfill — close enough for its pixels to reach the ice's visible
+  edge (`BlizzardRescueClearance`, the blocker ring plus the widest
+  piece's reach plus margin, ~170px around the bug): the round-start
+  litter burying the ice is the dig, but the weather may not re-bury
+  the spot the player is excavating, or the rescue becomes an
+  unwinnable race. And "over the ice" is judged against the chunk's
+  visible edge (`IceBlock.BlockerRadius`), not the forgiving tap
+  radius — leaves lying beside the chunk don't block the crack, or
+  the amber flash accuses litter the player can't see a reason for.
+
 ## Bug catalog
 
 Each round picks a random species, then a random color variant of it
