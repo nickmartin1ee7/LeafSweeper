@@ -12,6 +12,7 @@ public partial class MainMenu : CanvasLayer
     private Label _progressLabel = null!;
     private Button _playButton = null!;
     private Button _newGameButton = null!;
+    private LinkButton _updateLink = null!;
 
     public event Action? PlayPressed;
     public event Action? NewGamePressed;
@@ -47,6 +48,12 @@ public partial class MainMenu : CanvasLayer
         _newGameButton = Hud.MakeButton("New game", new Color("a08a68"), 56);
         _newGameButton.Pressed += () => NewGamePressed?.Invoke();
 
+        _updateLink = MakeUpdateLink();
+        _updateLink.Pressed += OnUpdateLinkPressed;
+
+        var checker = new UpdateChecker { Name = "UpdateChecker" };
+        checker.UpdateAvailable += ShowUpdate;
+
         box.AddChild(title);
         box.AddChild(subtitle);
         box.AddChild(Spacer());
@@ -55,11 +62,51 @@ public partial class MainMenu : CanvasLayer
         box.AddChild(_playButton);
         box.AddChild(Spacer());
         box.AddChild(_newGameButton);
+        box.AddChild(Spacer());
+        box.AddChild(_updateLink);
 
         center.AddChild(box);
         dim.AddChild(center);
         AddChild(dim);
+        AddChild(checker);
     }
+
+    /// <summary>
+    /// The tappable "Update Available" line: styled like the menu's outlined
+    /// labels but in a warmer gold so it reads as a link; hidden until the
+    /// update checker confirms a newer release. LinkButton.Uri opens the
+    /// releases page in the browser via OS.ShellOpen on press.
+    /// </summary>
+    private static LinkButton MakeUpdateLink()
+    {
+        var link = new LinkButton
+        {
+            Visible = false,
+            Uri = UpdateChecker.ReleasesUrl,
+            FocusMode = Control.FocusModeEnum.None,
+            // LinkButton paints its text at the control's left edge (no
+            // alignment property), so let the control shrink to the text
+            // and let the container center it instead.
+            SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter,
+        };
+        link.AddThemeFontSizeOverride("font_size", 40);
+        link.AddThemeColorOverride("font_color", new Color("e8cf8e"));
+        link.AddThemeColorOverride("font_hover_color", new Color("ffe9a8"));
+        link.AddThemeColorOverride("font_pressed_color", new Color("ffe9a8"));
+        link.AddThemeColorOverride("font_outline_color", new Color(0.22f, 0.16f, 0.09f, 0.9f));
+        link.AddThemeConstantOverride("outline_size", 8);
+        return link;
+    }
+
+    /// <summary>Shows the update line once a newer release is confirmed.</summary>
+    private void ShowUpdate(string latestVersion)
+    {
+        _updateLink.Text = $"🌐 Update Available ({latestVersion})";
+        _updateLink.Visible = true;
+    }
+
+    private void OnUpdateLinkPressed() =>
+        GD.Print($"UPDATE link pressed: {UpdateChecker.ReleasesUrl}");
 
     private static Control Spacer() =>
         new() { CustomMinimumSize = new Vector2(0, 10) };

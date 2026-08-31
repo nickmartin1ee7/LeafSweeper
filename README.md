@@ -77,6 +77,10 @@ before the grandiose golden win card appears.
   referencing your history ("Your best is 12 sweeps!") — plus a real fun
   fact about the species you just found, picked from its own 6+ fact pool.
 - **Main menu** with lifetime progress and your favorite critter.
+- **Update notification** — once at boot the title screen checks GitHub
+  releases and shows a tappable "🌐 Update Available (vX.Y.Z)" line when a
+  newer release exists; tapping it opens the releases page so you can grab
+  the new version. Any failure (offline, rate limit) just stays silent.
 - **Ambient rustles** — every 2–4s a stray draft shivers a localized cluster
   of about 4–7 pieces of the litter in place (three times as often during
   storms). Purely cosmetic: the wobble lives on the pieces' sprites, so
