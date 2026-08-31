@@ -34,8 +34,9 @@ It's just you, the leaves, and a very patient ladybug. 🐞
   you haven't met yet wait as little misty silhouettes, and each find is
   counted as you go.
 - **1 in 100 rounds hides something special** — a ✨ **prismatic** bug
-  wearing a shifting rainbow sheen. Find it and the whole sky
-  celebrates with you.
+  wearing a shifting rainbow sheen. Find it and it rides a sun flare up
+  to a grandiose near-white win card while the circling litter turns to
+  a swirl of gold and white.
 
 ## And then the weather turns 🌧️
 

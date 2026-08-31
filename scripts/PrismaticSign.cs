@@ -42,9 +42,11 @@ public partial class PrismaticSign : CanvasLayer
     // When the storm sign shares the end-round (a prismatic find right
     // before a storm round) the banner yields the upper quarter and slots
     // in just below the storm sign's cloud instead of beside it — the
-    // cloud's puffs bleed past the sign's box bottom, so the gap can even
-    // dip slightly negative and still read as a clean stack.
-    private const float StormGapFraction = -0.003f;
+    // cloud's puffs bleed past the sign's box bottom, so the gap can dip
+    // negative and still read as a clean stack. Playtest-pixel tuned: this
+    // seats the lettering center at ~0.214 of the viewport height, inside
+    // the band the playtest marked between the cloud and the win card.
+    private const float StormGapFraction = -0.026f;
     private const float StormFollowTopAnchor =
         StormWarn.BoxBottomFraction + StormGapFraction + HeightFraction / 2f;
 
