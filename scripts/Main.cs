@@ -1883,7 +1883,7 @@ public partial class Main : Node2D
 	{
 		if (_state != GameState.Playing)
 			return;
-		StartLevel(_save.CurrentLevel);
+		StartLevel(SaveStartLevel());
 	}
 
 	private void PetalSparkle()
@@ -1923,7 +1923,23 @@ public partial class Main : Node2D
 		}
 	}
 
-	private void OnPlayPressed() => StartLevel(_save.CurrentLevel);
+	/// <summary>
+	/// INITIAL_LEVEL=&lt;n&gt; testing hook: save-driven round starts (Play,
+	/// Next, Restart) begin at level &lt;n&gt; instead of the save's current
+	/// level, so manual playtests can jump straight to a difficulty tier
+	/// (storm rounds from 10, the camouflage ramp from 60). While the var is
+	/// set the run stays pinned to &lt;n&gt; — clearing the level still bumps
+	/// the save, same caveat as INITIAL_GUSTS.
+	/// </summary>
+	private int SaveStartLevel()
+	{
+		if (int.TryParse(OS.GetEnvironment("INITIAL_LEVEL"), out int forcedLevel)
+			&& forcedLevel > 0)
+			return forcedLevel;
+		return _save.CurrentLevel;
+	}
+
+	private void OnPlayPressed() => StartLevel(SaveStartLevel());
 
 	private void OnNewGamePressed()
 	{
@@ -1931,7 +1947,7 @@ public partial class Main : Node2D
 		StartLevel(1);
 	}
 
-	private void OnNextPressed() => StartLevel(_save.CurrentLevel);
+	private void OnNextPressed() => StartLevel(SaveStartLevel());
 
 	private void OnMenuPressed()
 	{
