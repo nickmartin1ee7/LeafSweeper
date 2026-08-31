@@ -27,6 +27,9 @@ public partial class UpdateChecker : Node
     /// <summary>Raised with the newest release version, e.g. "v0.2.0".</summary>
     public event Action<string>? UpdateAvailable;
 
+    /// <summary>Raised with the installed version when no newer release exists, e.g. "v0.0.1".</summary>
+    public event Action<string>? UpToDate;
+
     public override void _Ready()
     {
         string installed = InstalledVersion();
@@ -87,7 +90,9 @@ public partial class UpdateChecker : Node
         // — only a readable, >= latest install suppresses the line.
         if (TryParseVersion(installed, out Version current) && latest <= current)
         {
+            string installedDisplay = "v" + current;
             GD.Print($"UPDATE up to date: installed {current}, latest {latest}");
+            UpToDate?.Invoke(installedDisplay);
             return;
         }
 
