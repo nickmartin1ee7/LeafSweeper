@@ -358,6 +358,16 @@ fast, so doc alignment is part of the slice, not a cleanup phase.
   https://<user>:$(gh auth token)@github.com/<owner>/<repo>.git <branch>`.
   `/tmp` is volatile between agent tool calls — keep scratch artifacts in
   persistent paths.
+- **Rebases in agent shells need a non-interactive editor.** When
+  `git rebase --continue` stops on a resolved conflict, the `git commit -e`
+  it spawns opens an editor and hangs forever in a non-tty agent shell.
+  Kill the stuck commit and re-run with `GIT_EDITOR=true git rebase
+  --continue`.
+- **`--force-with-lease` needs an explicit expectation after URL pushes.**
+  Pushing via the token URL (above) creates no remote-tracking ref, so a
+  bare `--force-with-lease` fails with "stale info" even right after a
+  fetch. Pass the known remote tip explicitly:
+  `--force-with-lease=refs/heads/<branch>:<old-sha>`.
 - **Long-running installs are human-run; exports can be headless.** Android
   SDK/template installation is done from the editor by the human, but the
   APK export itself runs headlessly with the command in the README — the
