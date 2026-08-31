@@ -126,12 +126,19 @@ spawned, not a catalog entry. The bug's sprite wears a hue-crawling rainbow
 shader with sparkle glints — applied to the bug's sprite only, and the bug
 sits below every debris layer, so the effect can never show through the
 leaves. Camouflage is bypassed so the rare find always reads clearly.
-Finding one erupts a **yellow-sun lens flare** at the winning tap and
-swaps the win card for a **grandiose** variant — a lighter near-white
+Finding one erupts a **yellow-sun lens flare** that rides behind the bug
+from the winning tap to its seat in the win card, turns the circling
+end-of-round litter into a **gold-and-white celebration** (a shared
+`gold_mix` shader on every piece: shaded leaf tones go gold, the brightest
+tips bloom white, nothing else — exact passthrough on every non-prismatic
+round — ramped in with the find and released over the next
+round's opening with the storm label's 4s dissolve pacing), and swaps the
+win card for a **grandiose** variant — a lighter near-white
 panel with a gold rim, rotating rays, looping sparkles, prismatic title —
-and after the round a shiny **"Prismatic" banner** rides out above the
-dock (the storm sign's mirror image: the storm sign arrives *before* a
-storm round, the prismatic banner *after* a prismatic round) and lingers
+and after the round a shiny **"Prismatic" banner** rides out (the storm
+sign's mirror image: the storm sign arrives *before* a storm round, the
+prismatic banner *after* a prismatic round; when the storm sign shares
+the end-round the banner seats just below the storm cloud) and lingers
 into the next round's opening before dissolving. The find is counted in
 the save (`prismaticFinds`) and on the book's stats page.
 

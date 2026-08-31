@@ -5,7 +5,10 @@ namespace LeafSweeper;
 /// <summary>
 /// A yellow-sun lens flare for a prismatic bug's winning tap: an additive
 /// core with cross streaks, slowly rotating rays and staggered expanding
-/// rings. Spawns at the bug, plays once and frees itself.
+/// rings. Main adds it as a child of the celebrated bug, so the bug's own
+/// transform carries it — erupting at the winning tap, riding behind the
+/// bug to its seat in the win card, and glowing there until it fades.
+/// Plays once and frees itself.
 /// </summary>
 public partial class SunFlare : Node2D
 {
@@ -20,8 +23,11 @@ public partial class SunFlare : Node2D
 
     public override void _Ready()
     {
-        // One above the celebrated bug (Z 100): the sun outshines everything.
-        ZIndex = 101;
+        // Exactly one rung below the celebrated bug (relative z): the sun
+        // glows behind the bug itself yet outshines everything else around
+        // it, wherever the bug is — no cross-space position tracking.
+        ZIndex = -1;
+        ShowBehindParent = true;
         Material = new CanvasItemMaterial
         {
             BlendMode = CanvasItemMaterial.BlendModeEnum.Add,

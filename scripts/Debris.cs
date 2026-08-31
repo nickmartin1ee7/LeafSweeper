@@ -453,12 +453,24 @@ public partial class Debris : Node2D
 
         _sprite = new Sprite2D { Texture = GD.Load<Texture2D>(texturePath) };
         _sprite.Scale = new Vector2(scale, scale);
+        // Shared celebration shader (Main-owned): gold_mix 0 is an exact
+        // passthrough, so pieces only tint when a prismatic find is
+        // celebrating — and every piece flips at once via the one material.
+        if (CelebrationMaterial != null)
+            _sprite.Material = CelebrationMaterial;
         AddChild(_sprite);
 
         // Per-instance variety so identical textures don't look stamped.
         _sprite.SelfModulate = new Color(1, 1, 1, 1).Lerp(
             new Color(0.92f, 0.92f, 0.88f, 1), rng.Randf());
     }
+
+    /// <summary>
+    /// Main's shared prismatic-celebration ShaderMaterial, handed to every
+    /// piece before Setup so the whole litter can be tinted gold/white
+    /// with a single uniform tween.
+    /// </summary>
+    public ShaderMaterial? CelebrationMaterial { get; set; }
 
     public void Fling(Vector2 pointerVelocity, RandomNumberGenerator rng)
     {

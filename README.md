@@ -35,8 +35,9 @@ bug, silverfish, slug, stag beetle, tiger beetle, tortoise beetle and water
 strider — each with four natural color variants (156 collectible looks,
 named like "Yellow Ladybug"), so you learn to spot shapes rather than
 colors. And 1 round in 100 hides a **prismatic** bug wearing a shifting
-rainbow sheen: find it and a yellow-sun lens flare erupts at your tap
-before the grandiose golden win card appears.
+rainbow sheen: find it and a yellow-sun lens flare rides the bug up to its
+seat behind the win card before the grandiose near-white card appears,
+while the circling litter turns to a swirl of gold and white.
 
 ## Features
 
