@@ -1,5 +1,8 @@
 # LeafSweeper
 
+<img width="537" height="1003" alt="image" src="https://github.com/user-attachments/assets/89bf9134-a3db-4fc9-a90c-830a428b829b" />
+<img width="537" height="1003" alt="image" src="https://github.com/user-attachments/assets/9b7c085a-21c6-4406-bf30-38ab9fd5e7b2" />
+
 A cozy, pressure-free 2D mobile puzzle game about tidying up nature's mess.
 Sweep leaves, petals, sticks and stones off a patch of forest floor until you
 reveal the little creature hiding underneath — then tap it to win the round.
