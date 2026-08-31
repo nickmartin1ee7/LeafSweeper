@@ -622,9 +622,20 @@ public partial class Main : Node2D
 		// autoplay's round rolled the prismatic bug, so the shiny sign
 		// rides out after the round it crowned.
 		bool prismSignShown = _prismaticSign.Visible;
+		// The celebration tint must be fully ramped in while the win card
+		// is up: the find started the 0.45s ramp, and the next StartLevel
+		// releases it — so this is the only window where it reads 1.
+		double goldT = 0;
+		while (CelebrationGoldMix < 0.99f && goldT < 2.0)
+		{
+			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+			goldT += GetProcessDeltaTime();
+		}
+		bool goldShown = CelebrationGoldMix >= 0.99f;
 		GD.Print($"AUTOPLAY wind: pieces={windPieces} riding={windRiding} " +
 				 $"checked={windChecked} moving={windMoving} clockwise={windClockwise} " +
-				 $"warn={warnShown} warnOk={warnOk} prismSign={prismSignShown}");
+				 $"warn={warnShown} warnOk={warnOk} prismSign={prismSignShown} " +
+				 $"gold={goldShown}");
 
 		// The restart probe re-runs the handler, which restarts the save's
 		// current level — not the hardcoded probe level 3 the round began
@@ -693,7 +704,7 @@ public partial class Main : Node2D
 		// if the shader ever stops multiplying the tweened modulate into
 		// its output, the fade silently turns back into a hard cut while
 		// Visible still behaves.
-		_prismaticSign.ShowSign();
+		_prismaticSign.ShowSign(belowStormSign: _warn.Visible);
 		_prismaticSign.LingerThenFade();
 		bool prismUp = _prismaticSign.Visible;
 		double prismT = 0;
@@ -720,6 +731,44 @@ public partial class Main : Node2D
 		GD.Print($"AUTOPLAY prismatic-sign: held={prismHeld} fading={prismFading} " +
 				 $"alpha={prismAlpha:F2} gone={prismGone} ok={prismLingerOk}");
 		ok &= prismLingerOk;
+
+		// Celebration tint: replay the ramp/release cycle on this probe's
+		// own clock (the real StartLevel release is timing-coupled to the
+		// settle, so a direct read could straddle its 4s window). The
+		// mid-fade check (strictly between 0 and 1) proves the release is
+		// a tween rather than a snap, and the tail check proves it lands.
+		bool goldOk = goldShown;
+		float goldPeak, goldMid = 0f;
+		CelebrateGold();
+		{
+			double goldProbeT = 0;
+			while (CelebrationGoldMix < 0.99f && goldProbeT < 2.0)
+			{
+				await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+				goldProbeT += GetProcessDeltaTime();
+			}
+			goldPeak = CelebrationGoldMix;
+			ReleaseGold();
+			goldProbeT = 0; // anchor the mid/tail reads to the release itself
+			while (goldProbeT < 1.5) // release t=1.5/4: must be mid-fade
+			{
+				await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+				goldProbeT += GetProcessDeltaTime();
+			}
+			goldMid = CelebrationGoldMix;
+			while (goldProbeT < 5.0) // release is 4s + slack
+			{
+				await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+				goldProbeT += GetProcessDeltaTime();
+			}
+		}
+		float goldEnd = CelebrationGoldMix;
+		goldOk &= goldPeak >= 0.99f;
+		goldOk &= goldMid > 0f && goldMid < 1f;
+		goldOk &= goldEnd <= 0.01f;
+		GD.Print($"AUTOPLAY prismatic-gold: peak={goldPeak:F2} mid={goldMid:F2} " +
+				 $"end={goldEnd:F2} ok={goldOk}");
+		ok &= goldOk;
 
 		// Storm warn linger: starting the warned-for round holds the sign
 		// up for 2s, then dissolves it over 4s. Replays the StartLevel
@@ -1345,6 +1394,13 @@ public partial class Main : Node2D
 		_prismaticSign = new PrismaticSign { Name = "PrismaticSign" };
 		AddChild(_prismaticSign);
 
+		// One shared celebration material for the whole litter (pieces pick
+		// it up at spawn — see Debris.CelebrationMaterial).
+		_celebrationMat = new ShaderMaterial
+		{
+			Shader = GD.Load<Shader>("res://assets/shaders/prismatic_celebration.gdshader"),
+		};
+
 		_hud = new Hud { Name = "Hud" };
 		_hud.Layer = 3;
 		_hud.NextPressed += OnNextPressed;
@@ -1465,6 +1521,9 @@ public partial class Main : Node2D
 	{
 		ClearLevel();
 		FitGround();
+		// A celebrating litter sheds its gold/white mix over the opening —
+		// the storm label's dissolve pacing.
+		ReleaseGold();
 
 		// The bug may still be seated on the win card from the last round;
 		// take it back into the world before the next round hides it again.
@@ -1538,6 +1597,17 @@ public partial class Main : Node2D
 	private bool _flareSeen;
 	private bool _grandWinShown;
 	private SunFlare? _sunFlare;
+
+	// Shared celebration shader for the whole litter: gold_mix is tweened
+	// on this one material, so every circling piece flips to gold/white
+	// together and releases back together. Null-checked at use sites —
+	// only pieces spawned while it exists carry it.
+	private ShaderMaterial? _celebrationMat;
+	private Tween? _celebrationTween;
+
+	// Autoplay probe: the celebration tint's current strength.
+	public float CelebrationGoldMix =>
+		_celebrationMat?.GetShaderParameter("gold_mix").As<float>() ?? 0f;
 
 	private void OnSettleFinished()
 	{
@@ -1650,7 +1720,7 @@ public partial class Main : Node2D
 			}
 		}
 
-		var debris = new Debris();
+		var debris = new Debris { CelebrationMaterial = _celebrationMat };
 		debris.Setup(path, pos,
 			_rng.RandfRange(0f, 360f),
 			_rng.RandfRange(1.25f, 1.9f),
@@ -1743,13 +1813,14 @@ public partial class Main : Node2D
 		_stats.Stop();
 		SetState(GameState.Won);
 
-		// A prismatic find erupts in a yellow-sun lens flare right at the
-		// winning tap, before the bug's golden moment begins.
+		// A prismatic find erupts in a yellow-sun lens flare parented to the
+		// winning bug itself — its transform carries the sun from the tap,
+		// behind the bug, all the way to its seat in the win card.
 		_flareSeen |= _bug.IsPrismatic;
 		if (_bug.IsPrismatic)
 		{
-			_sunFlare = new SunFlare { Position = _bug.Position };
-			AddChild(_sunFlare);
+			_sunFlare = new SunFlare();
+			_bug.AddChild(_sunFlare);
 		}
 
 		// Copy uses pre-save history so "best" refers to earlier rounds.
@@ -1794,11 +1865,53 @@ public partial class Main : Node2D
 		// end-round, the banner yields its perch and slots in below the
 		// storm cloud instead of beside it.
 		if (_bug.IsPrismatic)
+		{
 			_prismaticSign.ShowSign(belowStormSign: _warn.Visible);
+			// The litter circling in the win wind turns gold and white for
+			// the celebration, releasing as the next round opens.
+			CelebrateGold();
+		}
 		// The win overlay waits for the bug's golden moment.
 		_pendingWinComment = comment;
 		_pendingWinRoundLine = roundLine;
 		_pendingWinStats = stats;
+	}
+
+	// The celebration tint rides the same pacing as the prismatic banner:
+	// a quick ramp in with the find (0.45s, the banner's FadeSeconds), then
+	// a slow 4s release over the next round's opening — the storm label's
+	// fade pacing — so the litter returns to its own colors as play begins.
+	private const float CelebrationRampSeconds = 0.45f;
+	private const float CelebrationReleaseSeconds = 4f;
+
+	/// <summary>Flips the circling litter to its gold/white celebration mix.</summary>
+	private void CelebrateGold()
+	{
+		if (_celebrationMat == null)
+			return;
+		_celebrationTween?.Kill();
+		_celebrationTween = CreateTween();
+		// Tween a method, not the material property: headless Godot's dummy
+		// renderer never compiles the shader, so "shader_parameter/gold_mix"
+		// isn't exposed as a property there and TweenProperty silently fails.
+		_celebrationTween.TweenMethod(
+			Callable.From<float>(v => _celebrationMat.SetShaderParameter("gold_mix", v)),
+			CelebrationGoldMix, 1f, CelebrationRampSeconds);
+	}
+
+	/// <summary>
+	/// Releases the celebration tint over the next round's opening, the
+	/// same pacing the storm label dissolves with.
+	/// </summary>
+	private void ReleaseGold()
+	{
+		if (_celebrationMat == null || CelebrationGoldMix <= 0f)
+			return;
+		_celebrationTween?.Kill();
+		_celebrationTween = CreateTween();
+		_celebrationTween.TweenMethod(
+			Callable.From<float>(v => _celebrationMat.SetShaderParameter("gold_mix", v)),
+			CelebrationGoldMix, 0f, CelebrationReleaseSeconds);
 	}
 
 	private void OnBugCelebrationFinished()
@@ -1999,6 +2112,10 @@ public partial class Main : Node2D
 	private void OnMenuPressed()
 	{
 		_hud.HideWin();
+		// The menu's decorative litter always shows its true colors.
+		_celebrationTween?.Kill();
+		if (_celebrationMat != null)
+			_celebrationMat.SetShaderParameter("gold_mix", 0f);
 		SetState(GameState.Menu);
 	}
 }
