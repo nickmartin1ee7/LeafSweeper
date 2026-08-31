@@ -51,6 +51,7 @@ them working:
 | `LEAF_PRISMATIC=1` | Forces the 1% prismatic bug roll |
 | `INSTANT_WIN=1` | Wins each round the moment the settle finishes — replays the win flow (wind, warn sign, win card, next round) without sweeping, and walks the level counter up to the storm rounds quickly |
 | `INITIAL_GUSTS=<n>` | Tops the persistent gust power up to `<n>` at every round start, so gusts can be spent freely without first banking gust coins |
+| `INITIAL_LEVEL=<n>` | Starts every save-driven round (Play, Next, Restart) at level `<n>` instead of the save's current level — jump straight to a difficulty tier (storm rounds from 10, the camouflage ramp from 60); the run stays pinned there while the var is set |
 
 **Fresh checkout/worktree?** Run `--headless --import` once before the
 autoplay, or nothing boots and it **silently exits 0 with no `AUTOPLAY`
