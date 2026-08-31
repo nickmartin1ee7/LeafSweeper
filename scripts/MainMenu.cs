@@ -54,6 +54,7 @@ public partial class MainMenu : CanvasLayer
         var checker = new UpdateChecker { Name = "UpdateChecker" };
         checker.UpdateAvailable += ShowUpdate;
         checker.UpToDate += ShowInstalledVersion;
+        checker.CheckFailed += ShowCheckFailed;
 
         box.AddChild(title);
         box.AddChild(subtitle);
@@ -101,6 +102,18 @@ public partial class MainMenu : CanvasLayer
         StyleLink(_updateLink, updateAvailable: true);
         _updateLink.Uri = UpdateChecker.ReleasesUrl;
         _updateLink.Text = $"🌐 Update Available ({latestVersion})";
+        _updateLink.Visible = true;
+    }
+
+    /// <summary>
+    /// The check died (offline, blocked, bad payload): same muted inert
+    /// style as the version line, saying so instead of staying silent.
+    /// </summary>
+    private void ShowCheckFailed()
+    {
+        StyleLink(_updateLink, updateAvailable: false);
+        _updateLink.Uri = string.Empty;
+        _updateLink.Text = "Failed to check for updates";
         _updateLink.Visible = true;
     }
 

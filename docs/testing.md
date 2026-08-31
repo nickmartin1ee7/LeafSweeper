@@ -52,7 +52,7 @@ them working:
 | `INSTANT_WIN=1` | Wins each round the moment the settle finishes — replays the win flow (wind, warn sign, win card, next round) without sweeping, and walks the level counter up to the storm rounds quickly |
 | `INITIAL_GUSTS=<n>` | Tops the persistent gust power up to `<n>` at every round start, so gusts can be spent freely without first banking gust coins |
 | `INITIAL_LEVEL=<n>` | Starts every save-driven round (Play, Next, Restart) at level `<n>` instead of the save's current level — jump straight to a difficulty tier (storm rounds from 10, the camouflage ramp from 60); the run stays pinned there while the var is set |
-| `LEAF_FAKE_UPDATE=<tag>` | Skips the update check's network call and reports `<tag>` as the latest release tag (e.g. `9.9.9`), so the menu's "🌐 Update Available" line shows without needing a real newer GitHub release |
+| `LEAF_FAKE_UPDATE=<tag>` | Skips the update check's network call and reports `<tag>` as the latest release tag (e.g. `9.9.9`), so the menu's "🌐 Update Available" line shows without needing a real newer GitHub release; `LEAF_FAKE_UPDATE=fail` simulates a dead check so the "Failed to check for updates" state can be exercised headlessly |
 
 **Hooks not working after a pull?** They compile into `LeafSweeper.dll` —
 `godot-mono --path .` never rebuilds C#, so run `dotnet build` first or new
@@ -160,6 +160,12 @@ adb logcat | grep -iE "LeafSweeper|godot|mono|FATAL|AndroidRuntime"
 	into the storm round's opening and then fades out over four more
 	seconds; on win/menu the weather
 	fades back out.
+16. **Update check** — on the menu, the line under the buttons shows one
+	of: "🌐 Update Available (vX.Y.Z)" tappable into the GitHub releases
+	page, the installed "vX.Y.Z" muted and inert, or "Failed to check
+	for updates" when the check can't run (airplane mode on device).
+	Requires the exported APK to carry the INTERNET permission
+	(`permissions/internet=true` in the Android export preset).
 
 Useful adb helpers while testing:
 
