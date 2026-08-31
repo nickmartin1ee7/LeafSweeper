@@ -32,7 +32,7 @@ public partial class MainMenu : CanvasLayer
         title.HorizontalAlignment = HorizontalAlignment.Center;
 
         var subtitle = Hud.MakeLabel(48, false, new Color("f0e2c4"));
-        subtitle.Text = "A cozy little search";
+        subtitle.Text = "A cozy little forest sweeping bug hunt";
         subtitle.HorizontalAlignment = HorizontalAlignment.Center;
 
         _progressLabel = Hud.MakeLabel(42, true, new Color("f5e8cd"));
@@ -73,7 +73,7 @@ public partial class MainMenu : CanvasLayer
         _newGameButton.Visible = save.LevelsCleared > 0;
 
         string lifetime = save.LevelsCleared == 0
-            ? "A fresh patch of forest awaits."
+            ? string.Empty
             : $"{save.LevelsCleared} bug{(save.LevelsCleared == 1 ? "" : "s")} found · " +
               $"{LevelStats.FormatTime(save.TotalSeconds)} of sweeping";
         if (save.TotalGusts > 0)
