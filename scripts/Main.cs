@@ -75,10 +75,20 @@ public partial class Main : Node2D
 	// re-littered 4–6 seconds after it was cleared, one fresh piece per
 	// cleared piece — from the player's view, swept ground never stays
 	// clean for long and the storm floor never thins out. StormSpotsCap is
-	// how many patches the floor remembers.
+	// how many patches the floor remembers. It must outsize the worst
+	// burst of cleared ground inside one restore window: a spam of gusts
+	// flings 25% of the floor per click, and the flood caps total live
+	// debris at 3× the round's starting litter, so clearing the whole
+	// flooded floor in one 4–6s window records ≈3× the round's starting
+	// litter — ≈6.4k spots at the level-200 litter (each restore consumes
+	// a spot, so live + pending stays bounded by start + flood pieces).
+	// Anything smaller evicts the oldest pending spots first (the ones
+	// due soonest), and their debris silently never returns; 16384 keeps
+	// the eviction branch unreachable in live play with ~2.6× headroom
+	// while still bounding the pool (~12B/spot ≈ 192KB steady at cap).
 	private const float StormSpotDelayMin = 4f; // clean-patch lifetime (s, min)
 	private const float StormSpotDelayMax = 6f; // clean-patch lifetime (s, max)
-	private const int StormSpotsCap = 400;      // remembered cleared spots (max)
+	private const int StormSpotsCap = 16384;    // remembered cleared spots (max)
 
 	// Storm flood: independent of the swept-ground restoration, each 4–6s
 	// gust dumps a whole cluster (6–12 pieces) of brand-new litter onto
@@ -353,12 +363,48 @@ public partial class Main : Node2D
 		OnWindPressed(); // spends one gust power and counts the use
 		bool gustSpent = _save.GustPower == SaveData.StartingGustPower;
 
-		// Storm rounds: the weather must be on, and the gust above recorded
-		// the spots it vacated through the real sweep path. Every cleared
-		// patch must re-litter itself when its own 4–6s timer comes due,
-		// and be consumed from the pool. On the same cadence the flood
-		// dumps cluster drops of brand-new debris onto random spots —
-		// those pieces land off the recorded ground on purpose.
+		// Gust spam: rapid-fire gusts fling 25% of the floor per click, so
+		// a handful of clicks records hundreds of pending storm spots in
+		// well under a second. Every blown piece must leave exactly one
+		// remembered spot — a pool too small evicts the oldest spots first
+		// (the ones due soonest) and their debris never comes back. The
+		// spam mirrors the playtest finding: 30 clicks milliseconds apart.
+		// The storm probe below waits out the same window and proves every
+		// one of those spots re-litters itself and leaves the pool.
+		const int SpamClicks = 30;
+		const int SpamPower = SaveData.StartingGustPower + SpamClicks + 1;
+		_save.GustPower = SpamPower;
+		_hud.ShowGustPower(_save.GustPower);
+		int spotsBeforeSpam = _clearedSpots.Count;
+		int spamBlown = 0;
+		int spamLanded = 0; // clicks that actually blew something away
+		for (int i = 0; i < SpamClicks; i++)
+		{
+			int liveBefore = LiveDebrisCount();
+			OnWindPressed();
+			int blown = liveBefore - LiveDebrisCount();
+			spamBlown += blown;
+			// Once the floor empties mid-spam, dry clicks spend and count
+			// nothing — a gust is only spent when it blows something away.
+			if (blown > 0)
+				spamLanded++;
+		}
+		// Every flung piece must still be pending: nothing evicted, nothing
+		// dropped early (the restore timers are 4–6s, none due inside the
+		// same-frame spam).
+		bool spamOk = spamLanded > 0
+			&& _clearedSpots.Count == spotsBeforeSpam + spamBlown;
+		GD.Print($"AUTOPLAY gust-spam: clicks={SpamClicks} landed={spamLanded} " +
+				 $"blown={spamBlown} " +
+				 $"spots={spotsBeforeSpam}->{_clearedSpots.Count} ok={spamOk}");
+
+		// Storm rounds: the weather must be on, and the gusts above recorded
+		// the spots they vacated through the real gust path — one pending
+		// spot per blown piece, spam included. Every cleared patch must
+		// re-litter itself when its own 4–6s timer comes due, and be
+		// consumed from the pool. On the same cadence the flood dumps
+		// cluster drops of brand-new debris onto random spots — those
+		// pieces land off the recorded ground on purpose.
 		bool stormEngaged = _storm.Active && _storm.Intensity > 0f;
 		int spotsBefore = _clearedSpots.Count;
 		var spotPool = new List<Vector2>();
@@ -501,18 +547,19 @@ public partial class Main : Node2D
 
 		var reloaded = SaveData.Load();
 		bool ok = blocked && uncovered && truthOk && burstOk && rustleOk
-			&& coinSpawned && coinBanked && gustSpent && restartOk && windOk
+			&& coinSpawned && coinBanked && gustSpent && spamOk
+			&& restartOk && windOk
 			&& menuOk && stormOk && floodOk && capOk
 			&& reloaded.CurrentLevel == playedLevel + 1
 			&& reloaded.LevelsCleared == 1
 			&& reloaded.TotalSweeps == 8
-			&& reloaded.TotalGusts == 1
-			&& reloaded.GustPower == SaveData.StartingGustPower
+			&& reloaded.TotalGusts == 1 + spamLanded
+			&& reloaded.GustPower == SpamPower - spamLanded
 			&& reloaded.BugFindCounts.Count == 1
 			&& reloaded.BugFindCounts.ContainsKey(_bug.Variant.Id)
 			&& reloaded.History.Count == 1
 			&& reloaded.History[0].Level == playedLevel
-			&& reloaded.History[0].Gusts == 1
+			&& reloaded.History[0].Gusts == 1 + spamLanded
 			&& reloaded.PrismaticFinds == 1
 			&& prismaticSpawn && _flareSeen && _grandWinShown
 			&& catalogOk
