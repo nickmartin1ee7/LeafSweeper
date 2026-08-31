@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="head" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#d8825a"/>
+      <stop offset="0.55" stop-color="#c06a44"/>
+      <stop offset="1" stop-color="#9c5232"/>
+    </linearGradient>
+    <linearGradient id="handle" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#c49a6c"/>
+      <stop offset="1" stop-color="#a2764c"/>
+    </linearGradient>
+  </defs>
+  <!-- handle -->
+  <rect x="45" y="34" width="10" height="54" rx="5" fill="url(#handle)" stroke="#6e4f34" stroke-width="2.5"/>
+  <!-- ferrule -->
+  <rect x="42" y="34" width="16" height="8" rx="3" fill="#8a6a3a" stroke="#5c4426" stroke-width="1.6"/>
+  <!-- head -->
+  <rect x="20" y="12" width="60" height="26" rx="10" fill="url(#head)" stroke="#6e3a22" stroke-width="3"/>
+  <path d="M27 18 C40 14 60 14 73 18" fill="none" stroke="#f2c4a4" stroke-width="3.4" stroke-linecap="round" opacity="0.8"/>
+</svg>

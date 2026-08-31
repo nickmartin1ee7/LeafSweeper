@@ -46,7 +46,17 @@ rain pattern reads as drops sliding along their streaks) — all falling
 downward and leaning downwind (screen right, one consistent wind for rain,
 clouds, mist and wisps) — plus rolling cloud shadows, drifting mist, fog
 wisps that flare in and dissipate on their own cycles,
-and a ~7s lightning double-flash. The round before a storm round shows the
+and a ~7s lightning double-flash. A `snow` uniform flips the same shader
+into the winter blizzard: the rain dries up, the lightning stops, three
+depths of round snowflakes replace the drops (per-flake sway — snow
+wanders where rain leans; flakes cap at 70% opacity so bright dots never
+bury the bug), and the fog veil thickens ×0.9 toward a pale grey-blue
+whiteout (`BlizzardFogGain`, the named tunable the playtest gates — the
+first blizzard buried the floor at ×1.55 and the bug became unfindable
+even on swept ground). The whiteout also **breathes**: every ~9s the wind
+lulls and the fog thins by 45% (`BlizzardLullSeconds` / `BlizzardLullDepth`),
+giving a fair window to read the floor before it closes again — the
+challenge slows the eye, it never blinds it. The round before a storm round shows the
 "Storm Round" warning sign: `warn_sparks.gdshader` repaints the lettering
 (from its SubViewport glyph mask) as living electricity — a neon rim hugging
 every glyph, jagged bolts arcing through the letters, sparks and
@@ -54,7 +64,65 @@ failing-neon flicker — set into a roiling storm cloud the same shader paints
 behind the lettering (breathing puffs over a flat raining underside, fbm
 churn, lightning simmering in the belly). All shaders are driven by a
 single 0–1 intensity uniform (or just TIME) and stay alpha-composited over
-the scene (no screen texture) to keep them cheap on mobile.
+the scene (no screen texture) to keep them cheap on mobile. The fall's
+season event adds `water.gdshader` (`scripts/WaterStream.cs`, full-floor,
+world-space so the storm veil still dims it): a translucent sheet of
+flowing streaks in three scales with foam flecks riding the brightest —
+one `intensity` knob runs the whole show, from the slow shimmer telegraph
+pulses to the racing wash, and a `direction` uniform flips the flow to
+match the downstream slide of the litter.
+
+## Seasons (vibe grade, ground, litter mix)
+
+Every level grades itself with the season's general mood
+(`assets/shaders/season.gdshader` on `scripts/SeasonGrade.cs`, canvas
+layer 1, directly above the world and below the storm veil so weather
+draws on top of it and UI above that):
+
+- **Spring** — fresh & green: slight green lift and vibrance plus a soft
+  fresh-green cast.
+- **Summer** — warm golden haze: warm tint, brightness lift, plus a
+  screen-blended golden cast — the mood reads at a glance.
+- **Fall** — amber low-sun: strong amber tint plus a deep amber cast over
+  a slightly dimmer floor.
+- **Winter** — cold and pale: strong desaturation (62%) plus a cool blue
+  tint and cast; difficult *visibility* comes from the blizzard weather,
+  not the grade.
+
+Every season pairs its tint with a **cast** — the season's hue
+screen-blended over the graded image (lifts shadows toward the hue,
+keeps highlights). The first pass shipped tint-only grades and the
+playtest couldn't tell spring/summer/fall apart; the cast is what makes
+each season's atmosphere definite.
+
+The grade is the game's **only screen-reading node** (one full-screen
+back-buffer copy per frame — accepted cost, per-pixel math is a few dot
+products). If a device playtest shows the cost, `SeasonGrade` ships a
+fallback: flip its `ScreenReadGrade` const off and the grade becomes a
+plain alpha-composite tint veil (storm-style, no screen read). The grade
+fades in over ~1.4s with the round and fades out on the menu.
+
+Two more seasonal touches ride along: **winter swaps the ground sprite**
+for `ground_winter.svg` — snow-covered floor, frost-killed grass, ice
+glints (a tint can't fake snow) — and the **litter mix follows the
+season** (`Main.EffectiveFrequency` re-weights the shared debris palette:
+summer leans green leaves and moss, fall goes red/gold and drops petals,
+winter thins leaves and mixes white snow-fleck petals in). Vibe only —
+weights never change piece weights or sweep behavior. Blizzard storm
+rounds drop chunky `snow_pile.svg` mounds in the flood clusters, and the
+frozen bug sits inside an `ice_chunk.svg` block whose fracture overlays
+(`ice_crack_1/2.svg` — jagged radial hairlines that thicken per stage)
+deepen with each crack until the shatter burst scatters tumbling
+chunk shards. The rescue key is a hand-drawn `assets/icons/hammer.svg`
+mallet (warm rust head, wooden handle, 100×100 icon grid like the coin
+and wind icons) — found under the litter, collected with the gold
+outline shine, and parked floating at the top middle of the screen
+while it arms the ice cracks.
+The summer storm rounds add the tornado prop: a hand-drawn
+`tornado_funnel.svg` cone (swirl bands tightening toward the ground tip,
+leaf flecks flung off it) over a spinning `dust_ring.svg` skirt — the
+code tilts and sways the cone rather than rotating it, so it never tips
+over.
 
 ## Regenerating assets
 

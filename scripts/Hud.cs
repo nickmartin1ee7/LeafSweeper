@@ -306,7 +306,12 @@ public partial class Hud : CanvasLayer
     public event Action? WindPressed;
     public event Action? RestartConfirmed;
 
-    public void ShowLevel(int level) => _levelLabel.Text = $"Level {level}";
+    /// <summary>Level tag with its season, e.g. "Level 120 · Summer".</summary>
+    public void ShowLevel(int level, RoundConfig.Season season) =>
+        _levelLabel.Text = $"Level {level} · {RoundConfig.SeasonName(season)}";
+
+    /// <summary>The current level tag text, for the autoplay probe.</summary>
+    public string LevelText => _levelLabel.Text;
 
     public void ShowSweeps(int sweeps) => _sweepLabel.Text = $"{sweeps} Sweeps";
 

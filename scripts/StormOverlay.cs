@@ -24,16 +24,20 @@ public partial class StormOverlay : CanvasLayer
     /// <summary>True while the storm should be on (fade in either direction).</summary>
     public bool Active { get; private set; }
 
+    /// <summary>True while the storm runs as a blizzard (snow mode).</summary>
+    public bool IsSnow { get; private set; }
+
     /// <summary>Current shader intensity — 0 hidden, 1 full storm.</summary>
     public float Intensity { get; private set; }
 
     public StormOverlay()
     {
         // Explicit canvas ladder (declared in Main.BuildTree): world 0 →
-        // storm 1 → menu 2 → hud 3 → book 90. Godot draws same-layer
-        // CanvasLayers in non-deterministic order, so the storm owns
-        // its own index.
-        Layer = 1;
+        // season grade 1 → storm 2 → menu 3 → hud 4 → warn 5 → prismatic 6
+        // → season banner 7 → book 90. Godot draws same-layer CanvasLayers
+        // in non-deterministic order, so the storm owns its own index and
+        // rides above the seasonal grade — weather on top of the vibe.
+        Layer = 2;
         Visible = false;
     }
 
@@ -50,11 +54,17 @@ public partial class StormOverlay : CanvasLayer
         _rect.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
     }
 
-    /// <summary>Fades the storm in and leaves it running.</summary>
-    public void FadeIn()
+    /// <summary>
+    /// Fades the storm in and leaves it running. <paramref name="snow"/>
+    /// switches the storm into a winter blizzard: drifting flakes instead
+    /// of rain, no lightning, and a heavier pale fog veil.
+    /// </summary>
+    public void FadeIn(bool snow = false)
     {
         Active = true;
+        IsSnow = snow;
         Visible = true;
+        _material.SetShaderParameter("snow", snow ? 1f : 0f);
         FadeTo(1f);
     }
 
@@ -62,6 +72,8 @@ public partial class StormOverlay : CanvasLayer
     public void FadeOut()
     {
         Active = false;
+        IsSnow = false;
+        _material.SetShaderParameter("snow", 0f);
         FadeTo(0f);
     }
 

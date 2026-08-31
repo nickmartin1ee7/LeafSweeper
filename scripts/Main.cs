@@ -16,6 +16,19 @@ public partial class Main : Node2D
 	private readonly RandomNumberGenerator _rng = new();
 
 	private Node2D _ground = null!;
+	// Ground textures for the winter swap (loaded once in BuildTree).
+	private Texture2D _summerGround = null!;
+	private Texture2D _winterGround = null!;
+	// The summer tornado prop: telegraphs, then crosses the floor while
+	// ShuffleRound moves the litter (see Tornado).
+	private Tornado _tornado = null!;
+	private WaterStream _waterStream = null!;
+	// The frozen-bug rescue (blizzard rounds): wraps the bug in ice.
+	private IceBlock _ice = null!;
+	// The churn prop currently on screen (tornado or water stream); set
+	// by TriggerSeasonEvent, polled at touchdown.
+	private FloorChurn _activeChurn = null!;
+
 	private Node2D _debrisBottom = null!;
 	private Node2D _debrisTop = null!;
 	private Bug _bug = null!;
@@ -39,7 +52,56 @@ public partial class Main : Node2D
 	// The "Prismatic" banner that rides out a prismatic find — the storm
 	// sign's mirror image (see PrismaticSign).
 	private PrismaticSign _prismaticSign = null!;
+
+	// The seasonal vibe grade: full-floor color grade for the level's
+	// season, sitting between the world and the storm veil (see
+	// SeasonGrade).
+	private SeasonGrade _seasonGrade = null!;
+
+	// The season-intro banner: calm announcement card for season changes
+	// and the year-loop bonus (see SeasonBanner).
+	private SeasonBanner _seasonBanner = null!;
+
+	// Season announcements fire once per session per season (and once per
+	// loop restart). They must NOT reset on ClearLevel, or every round
+	// would re-announce; a fresh app boot re-announces the current season
+	// once, which is intended — and so does New Game, which resets them
+	// (a second completed year must re-earn its bonus card).
+	private RoundConfig.Season? _announcedSeason;
+	private int _announcedLoop = -1;
+
+	// Debris mix season: vibe only (see EffectiveFrequency). Defaults to
+	// the spring mix for the menu's decorative litter; StartLevel sets it
+	// to the round's resolved season.
+	private RoundConfig.Season _debrisSeason = RoundConfig.Season.Spring;
 	private GameState _state = GameState.Menu;
+
+	// Winter storm rounds are blizzards: the storm overlay runs its snow
+	// mode and every fresh storm drop is a snow pile. Resolved with the
+	// storm round itself in StartLevel; cleared on the menu.
+	private bool _blizzardRound;
+
+	// The blizzard rescue key: one mallet per blizzard round, buried in
+	// the litter like the coins. Null on every other round. Collecting
+	// it parks a floating power-up at the top middle of the screen that
+	// arms the three-tap ice crack (see Hammer).
+	private Hammer? _hammer;
+	private bool _hammerArmed;
+
+	// Season-event pacing: the tornado/stream countdown (seeded when the
+	// floor dresses), the pending touchdown (telegraph done → shuffle
+	// starts) and the shuffle lock (touches stay locked while the floor
+	// is mid-flight; the telegraph itself stays playable). The triggering
+	// season rides along to touchdown — the autoplay hand-trigger can run
+	// on any level, and the fraction (half vs everything) must follow the
+	// event, not the level.
+	private float _seasonEventCountdown;
+	private bool _seasonEventTouchdownPending;
+	private bool _shuffleInFlight;
+	private RoundConfig.Season _activeEventSeason = RoundConfig.Season.Summer;
+
+	// Bug/coin relocation glides in flight (see GlideNode).
+	private readonly List<RelocationGlide> _glides = new();
 	private Vector2 _viewSize;
 
 	// Storm round state: the weather flag follows the level (see StartLevel).
@@ -429,7 +491,7 @@ public partial class Main : Node2D
 			// Exactly the nearest halo pieces fling (capped like a sweep) and
 			// the burst counts as exactly one sweep.
 			burstOk = halo > 0
-				&& sweptAfter == sweptBefore + Mathf.Min(halo, Sweeper.MaxDebrisPerSweep)
+				&& sweptAfter == sweptBefore + Mathf.Min(halo, _sweeper.MaxDebrisPerSweep)
 				&& _stats.Sweeps == sweepsBefore + 1;
 		}
 		GD.Print($"AUTOPLAY burst: found={burstAt != null} ok={burstOk}");
@@ -806,6 +868,258 @@ public partial class Main : Node2D
 				 $"alpha={lingerAlpha:F2} gone={lingerGone} ok={lingerOk}");
 		ok &= lingerOk;
 
+		// Seasons: pure math plus the banner/tag surface. All deterministic
+		// — no waits beyond one frame for the banner tween.
+		(int Level, RoundConfig.Season Season)[] seasonCases =
+		{
+			(1, RoundConfig.Season.Spring), (99, RoundConfig.Season.Spring),
+			(100, RoundConfig.Season.Summer), (199, RoundConfig.Season.Summer),
+			(200, RoundConfig.Season.Fall), (300, RoundConfig.Season.Winter),
+			(399, RoundConfig.Season.Winter), (400, RoundConfig.Season.Spring),
+			(799, RoundConfig.Season.Winter), (800, RoundConfig.Season.Spring),
+		};
+		bool seasonMathOk = true;
+		foreach (var (lvl, want) in seasonCases)
+			seasonMathOk &= RoundConfig.SeasonForLevel(lvl) == want;
+		seasonMathOk &= RoundConfig.LoopIndex(1) == 0
+			&& RoundConfig.LoopIndex(399) == 0
+			&& RoundConfig.LoopIndex(400) == 1
+			&& RoundConfig.LoopIndex(799) == 1
+			&& RoundConfig.LoopIndex(800) == 2;
+		seasonMathOk &= RoundConfig.SweepPowerForLevel(1) == 12
+			&& RoundConfig.SweepPowerForLevel(400) == 14
+			&& RoundConfig.SweepPowerForLevel(800) == 16;
+		seasonMathOk &= RoundConfig.GustCoinsForLevel(1) == 1
+			&& RoundConfig.GustCoinsForLevel(10) == 3
+			&& RoundConfig.GustCoinsForLevel(401) == 2
+			&& RoundConfig.GustCoinsForLevel(410) == 4;
+		_seasonBanner.ShowBanner("Test", "sub", Colors.White);
+		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+		bool bannerShown = _seasonBanner.Visible && _seasonBanner.FadeAlpha > 0f;
+		_seasonBanner.HideBanner();
+		// Grade uniforms follow the season: winter is the cold pale look
+		// (desaturated, cool tint), spring the fresh clear one; the grade
+		// shows both instantly via Current, then the look is restored.
+		var springGrade = _seasonGrade.Current;
+		_seasonGrade.ShowSeason(RoundConfig.Season.Winter);
+		var winterGrade = _seasonGrade.Current;
+		bool gradeOk = _seasonGrade.Visible
+			&& winterGrade == SeasonGrade.Grades[3]
+			&& winterGrade.Saturation < springGrade.Saturation
+			&& winterGrade.Tint.B > springGrade.Tint.B;
+		_seasonGrade.ShowSeason(RoundConfig.Season.Spring);
+		// The autoplay's round starts are all low levels — every tag reads
+		// "Level N · Spring".
+		bool seasonOk = seasonMathOk && bannerShown && !_seasonBanner.Visible
+			&& gradeOk && _hud.LevelText.Contains("Spring");
+		GD.Print($"AUTOPLAY seasons: math={seasonMathOk} banner={bannerShown} " +
+				 $"grade={gradeOk} tag={_hud.LevelText} ok={seasonOk}");
+		ok &= seasonOk;
+
+		// Summer tornado: hand-triggered (the season timers are suppressed
+		// in autoplay) on the still-live storm round. The funnel must
+		// telegraph untouched first, then half the at-rest litter, the bug
+		// and every uncollected coin relocate to fresh spots — animated,
+		// never teleported.
+		var restBefore = new List<(Debris Piece, Vector2 Pos)>();
+		foreach (var d in _debris)
+			if (IsInstanceValid(d) && !d.Swept && !d.IsSettling && !d.IsRidingWind)
+				restBefore.Add((d, d.Position));
+		Vector2 bugBefore = _bug.Position;
+		var coinsBefore = new List<(GustCoin Coin, Vector2 Pos)>();
+		foreach (var c in _coins)
+			if (IsInstanceValid(c) && !c.Collected)
+				coinsBefore.Add((c, c.Position));
+		TriggerSeasonEvent(RoundConfig.Season.Summer);
+		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+		bool telegraphOk = _tornado.Active && _tornado.Telegraphing;
+		double tornadoT = 0;
+		while ((_tornado.Active || _shuffleInFlight) && tornadoT < 12)
+		{
+			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+			tornadoT += GetProcessDeltaTime();
+		}
+		int expectedMoves = (int)MathF.Round(restBefore.Count * TornadoShuffleFraction);
+		int moved = 0;
+		foreach (var (d, pos) in restBefore)
+			if (d.Position.DistanceTo(pos) > 8f)
+				moved++;
+		int coinsMoved = 0;
+		foreach (var (c, pos) in coinsBefore)
+			if (c.Position.DistanceTo(pos) > 8f)
+				coinsMoved++;
+		bool bugMoved = _bug.Position.DistanceTo(bugBefore) > 8f;
+		bool tornadoOk = telegraphOk && !_tornado.Active && !_shuffleInFlight
+			&& bugMoved
+			&& coinsMoved == coinsBefore.Count && coinsBefore.Count > 0
+			// Storm cluster drops landing mid-telegraph join the mover
+			// pool after restBefore was captured; their random picks
+			// skew the count by up to one fresh batch (≤ StormClusterMax).
+			&& Mathf.Abs(moved - expectedMoves) <= 2 + StormClusterMax;
+		GD.Print($"AUTOPLAY tornado: telegraph={telegraphOk} atRest={restBefore.Count} " +
+				 $"moved={moved}/{expectedMoves} bug={bugMoved} " +
+				 $"coins={coinsMoved}/{coinsBefore.Count} ok={tornadoOk}");
+		ok &= tornadoOk;
+
+		// Fall streams: hand-triggered on the same live storm round. The
+		// floor must shimmer untouched first, then every at-rest piece,
+		// the bug and all coins wash to fresh spots along the stream.
+		var restFall = new List<(Debris Piece, Vector2 Pos)>();
+		foreach (var d in _debris)
+			if (IsInstanceValid(d) && !d.Swept && !d.IsSettling && !d.IsRidingWind)
+				restFall.Add((d, d.Position));
+		Vector2 bugFall = _bug.Position;
+		var coinsFall = new List<(GustCoin Coin, Vector2 Pos)>();
+		foreach (var c in _coins)
+			if (IsInstanceValid(c) && !c.Collected)
+				coinsFall.Add((c, c.Position));
+		TriggerSeasonEvent(RoundConfig.Season.Fall);
+		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+		await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+		bool shimmerOk = _waterStream.Active && _waterStream.Telegraphing;
+		double streamT = 0;
+		while ((_waterStream.Active || _shuffleInFlight) && streamT < 14)
+		{
+			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+			streamT += GetProcessDeltaTime();
+		}
+		int movedFall = 0;
+		foreach (var (d, pos) in restFall)
+			if (d.Position.DistanceTo(pos) > 8f)
+				movedFall++;
+		int coinsMovedFall = 0;
+		foreach (var (c, pos) in coinsFall)
+			if (c.Position.DistanceTo(pos) > 8f)
+				coinsMovedFall++;
+		bool bugMovedFall = _bug.Position.DistanceTo(bugFall) > 8f;
+		bool streamOk = shimmerOk && !_waterStream.Active && !_shuffleInFlight
+			&& bugMovedFall
+			&& coinsMovedFall == coinsFall.Count && coinsFall.Count > 0
+			&& movedFall == restFall.Count && restFall.Count > 0;
+		GD.Print($"AUTOPLAY streams: shimmer={shimmerOk} atRest={restFall.Count} " +
+				 $"moved={movedFall}/{restFall.Count} bug={bugMovedFall} " +
+				 $"coins={coinsMovedFall}/{coinsFall.Count} ok={streamOk}");
+		ok &= streamOk;
+
+		// Winter blizzard: level 310 is a true winter storm round, so the
+		// weather must run its snow mode (flakes, no lightning, heavier
+		// fog) and the flood dump must be white snow piles — the same
+		// sweeping action, the same re-hiding, just cold. The per-spot
+		// backfill is ordinary winter litter instead (the piles are the
+		// flood's signature, not every replacement piece), proven here by
+		// a hand backfill drop far from the bug. The piles floor forgives
+		// the flood pieces the wider ice shelter (BlizzardRescueClearance,
+		// ~12% of the floor) diverts away from the dig.
+		StartLevel(310);
+		while (_awaitingSettle)
+			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+		await ToSignal(GetTree().CreateTimer(10.0), SceneTreeTimer.SignalName.Timeout);
+		bool blizzardWeather = _storm.Active && _storm.IsSnow
+			&& _storm.Intensity > 0f;
+		int piles = 0;
+		foreach (var d in _debris)
+			if (IsInstanceValid(d) && !d.Swept
+				&& d.Texture.ResourcePath.Contains("snow_pile"))
+				piles++;
+		// (60, 60) sits outside the bug's spawn margins, so this spot can
+		// never fall inside the rescue zone and get skipped.
+		int before = _debris.Count;
+		DropStormDebris(new Vector2(60f, 60f));
+		bool backfillSpawned = _debris.Count == before + 1;
+		bool backfillLitter = backfillSpawned
+			&& !_debris[_debris.Count - 1].Texture.ResourcePath
+				.Contains("snow_pile");
+		bool blizzardOk = blizzardWeather && _blizzardRound
+			&& piles >= WinterFloodMin * 3 / 4 && backfillLitter;
+		GD.Print($"AUTOPLAY blizzard: weather={blizzardWeather} piles={piles} " +
+				 $"min={WinterFloodMin} backfillLitter={backfillLitter} ok={blizzardOk}");
+		ok &= blizzardOk;
+
+		// Frozen-bug rescue: a fresh blizzard round wraps the bug in ice
+		// AND buries one hammer in the litter. The lock is proven first:
+		// without the hammer power-up an ice tap is refused (no crack —
+		// just the locked pulse). Then the hammer is collected through
+		// its real path (clockwise spiral up to the top-middle power-up
+		// slot, where it floats) which arms the crack; three cracks
+		// shatter the block and pick up the bug — the round is won. The
+		// probe runs inside the flood's first window (~4s), before new
+		// piles can land, and the flood skips the rescue zone anyway.
+		StartLevel(310);
+		while (_awaitingSettle)
+			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+		bool iceUp = _ice.Active && _ice.ContainsPoint(_bug.Position)
+			&& BugIsCovered();
+		bool hammerBuried = _hammer != null && IsInstanceValid(_hammer)
+			&& !_hammer.Collected && !_hammer.Floating;
+		bool tappedLocked = TryIceCrackTap();
+		bool lockedWithoutHammer = !tappedLocked && _ice.Hits == 0
+			&& _ice.Active;
+		// Fling every piece whose alpha covers the ice — Burst's 130px
+		// center radius can't reach big snow piles that still overlap the
+		// chunk (players drag sweeps through them instead).
+		foreach (var d in _debris)
+			if (IsInstanceValid(d) && !d.Swept && d.Covers(_ice.Position, IceBlock.BlockerRadius))
+				d.Fling(Vector2.Right * 1800f, _rng);
+		bool iceClear = !_hammerArmed && _ice.Active && !_ice.Shattered
+			&& !DebrisOverlaps(_ice.Position, IceBlock.BlockerRadius);
+		if (_hammer != null && IsInstanceValid(_hammer))
+			CollectHammer(_hammer);
+		// Bounded like the other waits: a broken collect→arm chain fails
+		// the armed assertion below instead of hanging the run.
+		for (int i = 0; i < 600 && !_hammerArmed; i++)
+			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+		bool hammerArmed = _hammerArmed && _hammer != null
+			&& IsInstanceValid(_hammer) && _hammer.Floating;
+		// The crack's shockwave: the first armed crack flings the litter
+		// off the dig (a radial dispersal at twice the burst radius) and
+		// records NO backfill spots — its ground stays clean, so the
+		// storm can't re-litter the rescue zone it just worked.
+		int litterBefore = 0;
+		foreach (var d in _debris)
+			if (IsInstanceValid(d) && !d.Swept)
+				litterBefore++;
+		bool crack1 = TryIceCrackTap();
+		int litterAfter = 0;
+		foreach (var d in _debris)
+			if (IsInstanceValid(d) && !d.Swept)
+				litterAfter++;
+		int dispersed = litterBefore - litterAfter;
+		bool shockwave = crack1 && dispersed > 0;
+		bool noBackfillSpots = crack1 && _clearedSpots.Count == 0;
+		bool stage1 = crack1 && _ice.Hits == 1 && !_ice.Shattered;
+		bool crack2 = TryIceCrackTap();
+		bool stage2 = crack2 && _ice.Hits == 2 && !_ice.Shattered;
+		bool crack3 = TryIceCrackTap();
+		bool bugPicked = crack3 && _ice.Shattered && !_ice.Active
+			&& _state == GameState.Won;
+		bool iceOk = iceUp && hammerBuried && lockedWithoutHammer && iceClear
+			&& hammerArmed && shockwave && noBackfillSpots && stage1
+			&& stage2 && bugPicked;
+		GD.Print($"AUTOPLAY ice: wrapped={iceUp} buried={hammerBuried} " +
+				 $"locked={lockedWithoutHammer} clear={iceClear} armed={hammerArmed} " +
+				 $"flung={dispersed} noBackfill={noBackfillSpots} " +
+				 $"stage1={stage1} stage2={stage2} win={bugPicked} ok={iceOk}");
+		ok &= iceOk;
+
+		// Year-loop bonus: level 401 is the first Spring of year 2 — the
+		// sweep clears 14 pieces (12 + 2) and every round buries 2 gust
+		// coins (1 + 1), and the banner shows the bonus card instead of a
+		// season intro.
+		StartLevel(401);
+		while (_awaitingSettle)
+			await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+		bool loopPower = _sweeper.MaxDebrisPerSweep
+			== RoundConfig.SweepPowerForLevel(401)
+			&& _sweeper.MaxDebrisPerSweep == 14;
+		bool loopCoins = _coins.Count == RoundConfig.GustCoinsForLevel(401)
+			&& _coins.Count == 2;
+		bool loopBanner = _announcedLoop == RoundConfig.LoopIndex(401);
+		bool loopOk = loopPower && loopCoins && loopBanner;
+		GD.Print($"AUTOPLAY loop-bonus: power={_sweeper.MaxDebrisPerSweep} " +
+				 $"coins={_coins.Count} banner={loopBanner} ok={loopOk}");
+		ok &= loopOk;
+
 		GD.Print($"AUTOPLAY save: level={_save.CurrentLevel} cleared={_save.LevelsCleared} " +
 				 $"sweeps={_save.TotalSweeps} gusts={_save.TotalGusts} " +
 				 $"bugs={_save.BugFindCounts.Count} hist={_save.History.Count}");
@@ -824,6 +1138,8 @@ public partial class Main : Node2D
 		_stats.Tick(delta);
 		if (_awaitingSettle)
 			CheckSettleFinished();
+		TickGlides((float)delta);
+		UpdateShuffleLock();
 		TickAmbientRustle(delta);
 		if (_isStormRound && _state == GameState.Playing && !_awaitingSettle)
 		{
@@ -831,6 +1147,8 @@ public partial class Main : Node2D
 			TickClusterDrops(delta);
 			TickSpiralRustle(delta);
 			TickStormDrift(delta);
+			TickSeasonEvent(delta);
+			CheckSeasonEventTouchdown();
 		}
 	}
 
@@ -1015,11 +1333,314 @@ public partial class Main : Node2D
 	/// <summary>Monotonic engine clock the patch timers run on (seconds).</summary>
 	private float StormNow => Time.GetTicksMsec() / 1000f;
 
+	// Season event pacing. The tornado (summer) and the water streams
+	// (fall) re-churn a settled storm round on their fixed cadence; the
+	// autoplay suppresses the timers and hand-triggers the events for
+	// deterministic probes.
+	private const float TornadoShuffleFraction = 0.5f; // half the floor
+	// Per-piece lift delay: 30ms when few pieces move, but the whole
+	// stagger window is capped at ~0.9s so a dense floor still churns as
+	// one wave inside the funnel's ~2s crossing.
+	private const float ShuffleStaggerSeconds = 0.03f;
+	private const float ShuffleStaggerWindow = 0.9f;
+	// Smallest shuffle displacement that reads as a real move (and keeps
+	// the autoplay's moved-everything assertion deterministic).
+	private const float ShuffleMinMove = 32f;
+	private const float GlideSeconds = 1.1f;           // bug/coin relocation glide
+	private const float GlideArcHeight = 180f;         // tornado arc apex
+
+	// Blizzard rescue zone: storm drops never land this close to the bug
+	// while a blizzard round runs. The round-start litter still buries the
+	// ice — the dig is the challenge — but the blizzard must not re-bury
+	// the one spot the player is actively excavating, or the rescue turns
+	// into an unwinnable race against the flood.
+	// Widest litter bounding radius: a 100px texture at the max spawn
+	// scale (1.9) — the upper bound of Debris.ExtentRadius.
+	private const float MaxDebrisExtent = 95f;
+
+	// The ice dig's weather shelter: no flood pile or backfill may land
+	// close enough for its pixels to reach the ice's visible edge
+	// (BlockerRadius). A piece's pixels can only reach that ring if its
+	// CENTER sits within BlockerRadius + its bounding extent, so the
+	// shelter is that reach plus a margin. Anything less and the flood
+	// keeps re-burying the dig from just outside the ring — the rescue
+	// becomes an unwinnable race no sweep can win.
+	private const float BlizzardRescueClearance =
+		IceBlock.BlockerRadius + MaxDebrisExtent + 20f;
+
+	// Blizzard floods hit far harder than a summer/fall cluster: the
+	// winter storm's exhale dumps a huge drift of snow at once, so the
+	// floor visibly vanishes under white in a single beat (the same
+	// 3× flood cap still tapers the round out).
+	private const int WinterFloodMin = 20;
+	private const int WinterFloodMax = 34;
+
+	// The hammer crack's shockwave: each crack tap blasts the litter off
+	// the rescue dig with a radial dispersal twice the double-tap burst's
+	// radius — and that dispersal never joins the backfill pool, so the
+	// storm can't reclaim the ground the hammer worked.
+	private const float CrackDispersalRadius = Sweeper.BurstRadius * 2f;
+
+	// The collected hammer's power-up slot: top middle of the screen,
+	// below the level-label strip, clear of the dock.
+	private const float HammerFloatHeight = 150f;
+
+	/// <summary>
+	/// Season event timer: on storm rounds of the event's season (summer →
+	/// tornado, fall → streams), past the season's debut grace, the floor
+	/// churns itself every fixed interval. The season debut level stays a
+	/// celebration round (see RoundConfig.SeasonEventAllowed).
+	/// </summary>
+	private void TickSeasonEvent(double delta)
+	{
+		if (_suppressStormEvents || _shuffleInFlight)
+			return;
+		if (!RoundConfig.SeasonEventAllowed(_activeLevel))
+			return;
+		RoundConfig.Season season = RoundConfig.SeasonForLevel(_activeLevel);
+		if (season is not (RoundConfig.Season.Summer or RoundConfig.Season.Fall))
+			return;
+		_seasonEventCountdown -= (float)delta;
+		if (_seasonEventCountdown > 0f)
+			return;
+		_seasonEventCountdown = season == RoundConfig.Season.Summer
+			? RoundConfig.TornadoInterval
+			: RoundConfig.StreamInterval;
+		TriggerSeasonEvent(season);
+	}
+
+	/// <summary>
+	/// Starts the season's churn: the tornado telegraphs its crossing
+	/// (summer) or the shimmer wash rolls in (fall), and the shuffle fires
+	/// when the telegraph touches down.
+	/// </summary>
+	private void TriggerSeasonEvent(RoundConfig.Season season)
+	{
+		if (_tornado.Active || _waterStream.Active || _glides.Count > 0)
+			return; // a churn is already in flight
+		_activeEventSeason = season;
+		Rect2 floor = PlayableArea();
+		if (season == RoundConfig.Season.Summer)
+		{
+			bool leftToRight = _rng.Randf() < 0.5f;
+			float y1 = _rng.RandfRange(floor.Size.Y * 0.35f, floor.Size.Y * 0.8f);
+			float y2 = _rng.RandfRange(floor.Size.Y * 0.35f, floor.Size.Y * 0.8f);
+			Vector2 from = new(leftToRight ? -60f : floor.Size.X + 60f, y1);
+			Vector2 to = new(leftToRight ? floor.Size.X + 60f : -60f, y2);
+			_tornado.Begin(from, to);
+			_activeChurn = _tornado;
+		}
+		else
+		{
+			_waterStream.Begin(Vector2.Zero, floor.Size);
+			_activeChurn = _waterStream;
+		}
+		_seasonEventTouchdownPending = true;
+	}
+
+	/// <summary>
+	/// The shared churn core behind the tornado (half the floor) and the
+	/// fall streams (everything): picks a fraction of the at-rest unswept
+	/// debris plus the bug and every uncollected gust coin and sends them
+	/// to fresh random floor spots — debris lifts and tumbles, the bug and
+	/// coins glide. ZIndex never changes: bug and coins stay beneath the
+	/// litter, and the covered rule re-evaluates per tap, so a shuffled
+	/// bug may surface uncovered (fun, allowed).
+	/// </summary>
+	private void ShuffleRound(float fraction, bool slide, float direction = 0f)
+	{
+		var rest = new List<Debris>();
+		foreach (var d in _debris)
+			if (IsInstanceValid(d) && !d.Swept && !d.IsSettling && !d.IsRidingWind)
+				rest.Add(d);
+		// Fisher–Yates the rest list, then take the leading fraction as
+		// the movers — a random, unbiased sample of the floor.
+		for (int i = rest.Count - 1; i > 0; i--)
+		{
+			int j = _rng.RandiRange(0, i);
+			(rest[i], rest[j]) = (rest[j], rest[i]);
+		}
+		int movers = (int)MathF.Round(rest.Count * fraction);
+		Rect2 floor = PlayableArea();
+		float stagger = movers > 1
+			? Mathf.Min(ShuffleStaggerSeconds, ShuffleStaggerWindow / (movers - 1))
+			: 0f;
+		float delay = 0f;
+		Vector2 SpotFor()
+		{
+			Vector2 s = RandomFloorSpot(floor, 14f);
+			if (slide)
+			{
+				// Bias the target downstream so the wash reads: pieces
+				// slide along the stream, then spread onto fresh spots.
+				float shift = _rng.RandfRange(0.15f, 0.5f) * floor.Size.X * direction;
+				s.X = Mathf.Wrap(s.X + shift - 14f, 0f, floor.Size.X - 28f) + 14f;
+			}
+			return s;
+		}
+		for (int i = 0; i < movers; i++)
+		{
+			// A "relocated" piece that lands within a leaf's width of its
+			// old spot reads as a glitch (and once broke the autoplay's
+			// moved-everything assertion as a rare random near-hit) —
+			// resample until the move is visibly real.
+			Vector2 spot = SpotFor();
+			for (int guard = 0;
+				spot.DistanceTo(rest[i].Position) < ShuffleMinMove && guard < 8;
+				guard++)
+			{
+				spot = SpotFor();
+			}
+			rest[i].RelocateTo(spot, _rng, delay, slide);
+			delay += stagger;
+		}
+		// The bug and the uncollected coins ride the churn too, gliding to
+		// their usual spawn-margin spots — never a teleport.
+		if (_bug.Visible)
+		{
+			Vector2 bugSpot = RandomBugSpot(floor);
+			for (int guard = 0;
+				bugSpot.DistanceTo(_bug.Position) < ShuffleMinMove && guard < 8;
+				guard++)
+				bugSpot = RandomBugSpot(floor);
+			GlideNode(_bug, bugSpot, slide);
+		}
+		foreach (var c in _coins)
+		{
+			if (!IsInstanceValid(c) || c.Collected)
+				continue;
+			// Same near-hit guard as the debris above: a glide that lands
+			// within a leaf's width of the origin reads as a glitch (and
+			// would flake the autoplay's moved-everything assertion).
+			Vector2 coinSpot = RandomFloorSpot(floor, 150f);
+			for (int guard = 0;
+				coinSpot.DistanceTo(c.Position) < ShuffleMinMove && guard < 8;
+				guard++)
+				coinSpot = RandomFloorSpot(floor, 150f);
+			GlideNode(c, coinSpot, slide);
+		}
+		_shuffleInFlight = true;
+	}
+
+	/// <summary>A random spot inside the floor with a uniform margin.</summary>
+	private Vector2 RandomFloorSpot(Rect2 floor, float margin)
+	{
+		margin = Mathf.Min(margin, Mathf.Min(floor.Size.X, floor.Size.Y) / 2f);
+		return new Vector2(
+			_rng.RandfRange(margin, floor.Size.X - margin),
+			_rng.RandfRange(margin, floor.Size.Y - margin));
+	}
+
+	/// <summary>The bug's spawn-margin spot (same bounds as round start).</summary>
+	private Vector2 RandomBugSpot(Rect2 floor) => new(
+		_rng.RandfRange(180f, floor.Size.X - 180f),
+		_rng.RandfRange(320f, floor.Size.Y - 200f));
+
+	/// <summary>
+	/// One bug/coin relocation: an eased glide from its spot to the target
+	/// — a raised arc for the tornado (up through the funnel), a flat
+	/// slide for the fall streams. Updated by hand in _Process so the
+	/// motion is exact and cancellable with no tween bookkeeping.
+	/// </summary>
+	private void GlideNode(Node2D node, Vector2 target, bool slide)
+	{
+		_glides.Add(new RelocationGlide
+		{
+			Node = node,
+			From = node.Position,
+			To = target,
+			Age = 0f,
+			Seconds = GlideSeconds * _rng.RandfRange(0.9f, 1.15f),
+			Slide = slide,
+		});
+	}
+
+	private void TickGlides(float delta)
+	{
+		for (int i = _glides.Count - 1; i >= 0; i--)
+		{
+			RelocationGlide g = _glides[i];
+			if (!IsInstanceValid(g.Node))
+			{
+				_glides.RemoveAt(i);
+				continue;
+			}
+			g.Age += delta;
+			float t = Mathf.Clamp(g.Age / g.Seconds, 0f, 1f);
+			float eased = Mathf.SmoothStep(0f, 1f, t);
+			Vector2 pos = g.From.Lerp(g.To, eased);
+			if (!g.Slide)
+				pos += Vector2.Up * Mathf.Sin(Mathf.Pi * eased) * GlideArcHeight;
+			g.Node.Position = pos;
+			if (t >= 1f)
+				_glides.RemoveAt(i);
+		}
+	}
+
+	/// <summary>
+	/// Touchdown: the telegraph finished, the churn begins. Runs on the
+	/// storm gate so the shuffle only starts on a live, settled round.
+	/// </summary>
+	private void CheckSeasonEventTouchdown()
+	{
+		if (!_seasonEventTouchdownPending)
+			return;
+		if (_activeChurn == null || !_activeChurn.Active || _activeChurn.Telegraphing)
+			return;
+		_seasonEventTouchdownPending = false;
+		// Summer's tornado takes half the floor with it; fall's streams
+		// wash everything downstream.
+		bool slide = _activeEventSeason == RoundConfig.Season.Fall;
+		ShuffleRound(
+			slide ? 1f : TornadoShuffleFraction,
+			slide,
+			direction: slide ? _waterStream.Direction : 0f);
+	}
+
+	/// <summary>
+	/// The shuffle lock: touches stay locked from the churn's first lift
+	/// until every relocated piece has landed and every glide finished.
+	/// </summary>
+	private void UpdateShuffleLock()
+	{
+		if (!_shuffleInFlight)
+			return;
+		if (_glides.Count > 0)
+			return;
+		foreach (var d in _debris)
+			if (IsInstanceValid(d) && d.IsSettling)
+				return;
+		_shuffleInFlight = false;
+	}
+
+	/// <summary>Kills any churn in flight (win / menu / restart).</summary>
+	private void CancelShuffle()
+	{
+		_glides.Clear();
+		_shuffleInFlight = false;
+		_seasonEventTouchdownPending = false;
+		_tornado.EndShow();
+		_waterStream.EndShow();
+	}
+
+	private class RelocationGlide
+	{
+		public Node2D Node = null!;
+		public Vector2 From;
+		public Vector2 To;
+		public float Age;
+		public float Seconds;
+		public bool Slide;
+	}
+
 	/// <summary>
 	/// One storm drop: fresh debris tumbles back down onto a remembered
 	/// cleared patch. The spot is consumed — once debris sits there again
 	/// it is unswept ground, and it can only rejoin the pool by being
-	/// swept once more.
+	/// swept once more. The backfill is the round's ordinary litter even
+	/// on blizzard rounds — the solid-white piles are the flood's
+	/// signature, not every replacement piece — and it never lands in the
+	/// ice rescue zone.
 	/// </summary>
 	private void DropStormDebris(Vector2 spot)
 	{
@@ -1031,31 +1652,57 @@ public partial class Main : Node2D
 			Mathf.Clamp(spot.X, 14f, floor.Size.X - 14f),
 			Mathf.Clamp(spot.Y, 14f, floor.Size.Y - 14f));
 
-		SpawnStormDebris(pos);
+		// The blizzard never piles onto the rescue: a remembered cleared
+		// patch that falls inside the ice zone stays clean (the spot is
+		// consumed either way — the wind can't reach it there).
+		if (_blizzardRound
+			&& pos.DistanceTo(_bug.Position) <= BlizzardRescueClearance)
+			return;
+
+		SpawnStormDebris(pos, snowPile: false);
 	}
 
 	/// <summary>
 	/// The shared storm spawn path: one fresh unswept piece tumbles down
 	/// onto <paramref name="pos"/> (SettleIn) and lands wherever it may —
 	/// fresh debris follows the normal overlap rules, so it can re-cover
-	/// the bug and the gust coins.
+	/// the bug and the gust coins. Blizzard rounds split the look: the
+	/// flood dump (<paramref name="snowPile"/>) drops its signature white
+	/// snow piles, while the per-spot backfill restores ordinary winter
+	/// litter. Sweeping either is the same action and both re-hide the
+	/// bug and coins exactly like any other piece.
 	/// </summary>
-	private void SpawnStormDebris(Vector2 pos)
+	private void SpawnStormDebris(Vector2 pos, bool snowPile)
 	{
-		Debris debris = CreateDebris(pos);
+		Debris debris = snowPile && _blizzardRound
+			? NewSnowPile(pos)
+			: CreateDebris(pos);
 		debris.SettleIn(_rng, _rng.RandfRange(0f, 0.3f));
 		_debris.Add(debris);
 		(_rng.Randf() < 0.35f ? _debrisTop : _debrisBottom).AddChild(debris);
+	}
+
+	/// <summary>A blizzard flood piece: a fresh white snow pile.</summary>
+	private Debris NewSnowPile(Vector2 pos)
+	{
+		var debris = new Debris();
+		debris.Setup(SnowPilePath, pos,
+			_rng.RandfRange(0f, 360f),
+			_rng.RandfRange(1.25f, 1.9f),
+			DebrisWeight.Medium,
+			_rng);
+		return debris;
 	}
 
 	/// <summary>
 	/// Storm flood rhythm: every 4–6s a gust dumps a whole cluster (6–12
 	/// pieces) of brand-new litter onto random floor spots — debris that
 	/// was never swept, so the storm escalates instead of just undoing
-	/// progress. Once the live debris count reaches the cap (3× the
-	/// round's starting litter) the flood abates for the round; the
-	/// per-spot restoration above keeps going regardless. Gated to live,
-	/// settled rounds like the spot drops.
+	/// progress (on blizzard rounds the cluster is the white snow-pile
+	/// dump, kept clear of the ice rescue zone). Once the live debris
+	/// count reaches the cap (3× the round's starting litter) the flood
+	/// abates for the round; the per-spot restoration above keeps going
+	/// regardless. Gated to live, settled rounds like the spot drops.
 	/// </summary>
 	private void TickClusterDrops(double delta)
 	{
@@ -1075,11 +1722,19 @@ public partial class Main : Node2D
 		}
 		// The final cluster is truncated to the room left, so the cap is
 		// exact and the flood tapers out instead of overshooting.
+		// Blizzard rounds drop their own, far heavier burst size.
+		int clusterMin = _blizzardRound ? WinterFloodMin : StormClusterMin;
+		int clusterMax = _blizzardRound ? WinterFloodMax : StormClusterMax;
 		DropStormCluster(Mathf.Min(
-			_rng.RandiRange(StormClusterMin, StormClusterMax), room));
+			_rng.RandiRange(clusterMin, clusterMax), room));
 	}
 
-	/// <summary>One cluster drop: <paramref name="count"/> fresh pieces tumble onto random floor spots.</summary>
+	/// <summary>
+	/// One cluster drop: <paramref name="count"/> fresh pieces tumble onto
+	/// random floor spots. Blizzard rounds drop snow piles — the flood is
+	/// the blizzard's signature event — re-rolled out of the ice rescue
+	/// zone.
+	/// </summary>
 	private void DropStormCluster(int count)
 	{
 		Rect2 floor = PlayableArea();
@@ -1088,7 +1743,23 @@ public partial class Main : Node2D
 			Vector2 pos = new(
 				_rng.RandfRange(14f, floor.Size.X - 14f),
 				_rng.RandfRange(14f, floor.Size.Y - 14f));
-			SpawnStormDebris(pos);
+			// The flood skips the ice rescue zone: a pile landing on the
+			// block the player is excavating reads as the game fighting
+			// the rescue, not as weather.
+			for (int guard = 0;
+				_blizzardRound
+				&& pos.DistanceTo(_bug.Position) <= BlizzardRescueClearance
+				&& guard < 8;
+				guard++)
+			{
+				pos = new(
+					_rng.RandfRange(14f, floor.Size.X - 14f),
+					_rng.RandfRange(14f, floor.Size.Y - 14f));
+			}
+			if (_blizzardRound
+				&& pos.DistanceTo(_bug.Position) <= BlizzardRescueClearance)
+				continue;
+			SpawnStormDebris(pos, snowPile: true);
 			_clusterPiecesDropped++;
 		}
 	}
@@ -1134,8 +1805,10 @@ public partial class Main : Node2D
 
 	public override void _UnhandledInput(InputEvent @event)
 	{
-		// Touches stay locked while the round-start settle is in flight.
-		if (_state != GameState.Playing || _awaitingSettle)
+		// Touches stay locked while the round-start settle is in flight,
+		// and while a season churn (tornado / streams) has the floor
+		// mid-flight.
+		if (_state != GameState.Playing || _awaitingSettle || _shuffleInFlight)
 			return;
 
 		switch (@event)
@@ -1153,6 +1826,25 @@ public partial class Main : Node2D
 					CollectCoin(coin);
 					return;
 				}
+				// The hammer power-up: hidden below the debris on blizzard
+				// rounds like the coins. An uncovered hammer is collected
+				// instead of starting a sweep; a covered one falls through
+				// to sweeping.
+				Hammer hammer = SelectableHammerAt(world);
+				if (hammer != null)
+				{
+					_tapArmed = false; // selection taps never chain into a burst
+					CollectHammer(hammer);
+					return;
+				}
+				// The frozen-bug rescue: with the hammer power-up armed, a
+				// tap on cleared ice cracks the block (three taps shatter
+				// it and pick up the bug). Debris still over the ice falls
+				// through to sweeping — but the tap pulses the offending
+				// pieces first; without the hammer the chunk itself pulses
+				// a red "locked" cue, so a refusal always has a reason.
+				if (_ice.Active && _ice.ContainsPoint(world) && TryIceCrackTap())
+					return;
 				// The bug hides below the debris: while any unswept piece
 				// overlaps its visible body a tap just starts sweeping there.
 				if (_bug.ContainsPoint(world) && !BugIsCovered())
@@ -1293,11 +1985,72 @@ public partial class Main : Node2D
 	}
 
 	/// <summary>
-	/// True while any unswept debris still overlaps the bug's visible body
-	/// (OcclusionRadius — much tighter than the forgiving TapRadius): the
-	/// bug can only be selected (and the round won) once it's uncovered.
+	/// True while the bug can't be selected: unswept debris overlaps its
+	/// visible body (OcclusionRadius — much tighter than the forgiving
+	/// TapRadius), or a blizzard's ice block still wraps it — the ice is
+	/// itself cover until it shatters.
 	/// </summary>
-	private bool BugIsCovered() => DebrisOverlaps(_bug.Position, _bug.OcclusionRadius);
+	private bool BugIsCovered() =>
+		_ice.Active || DebrisOverlaps(_bug.Position, _bug.OcclusionRadius);
+
+	/// <summary>
+	/// Pulses every piece still covering the ice: the blocked rescue tap's
+	/// answer to "why didn't that crack?" — the offenders light up warm.
+	/// </summary>
+	private void FlashIceBlockers()
+	{
+		foreach (var d in _debris)
+			if (IsInstanceValid(d) && !d.Swept
+				&& d.Covers(_ice.Position, IceBlock.BlockerRadius))
+				d.FlashBlocker();
+	}
+
+	/// <summary>
+	/// One tap on the ice chunk: with the hammer power-up armed and the
+	/// debris cleared it cracks the block — the third tap shatters it and
+	/// picks up the bug, winning the round ("crack it and pick up the
+	/// bug", one less hunt after the rescue). Every crack tap also fires
+	/// the hammer's shockwave: a radial dispersal of the litter around
+	/// the dig, twice the double-tap burst's radius, whose cleared ground
+	/// never backfills. Without the hammer the tap is refused: the chunk
+	/// flares a red locked cue, and debris still over it pulses amber.
+	/// Returns true only when the tap cracked.
+	/// </summary>
+	private bool TryIceCrackTap()
+	{
+		bool clear = !DebrisOverlaps(_ice.Position, IceBlock.BlockerRadius);
+		if (_hammerArmed && clear)
+		{
+			_tapArmed = false; // crack taps never chain into a burst
+			_ice.Crack();
+			// The shockwave: like a double-tap burst on the ice, but
+			// twice the radius and its ground stays clean — recordSpots
+			// is false, so no backfill spot is recorded for it.
+			_sweeper.Burst(_ice.Position, CrackDispersalRadius, recordSpots: false);
+			if (_ice.Shattered)
+				WinLevel();
+			return true;
+		}
+		if (!_hammerArmed)
+			_ice.PulseLocked();
+		if (!clear)
+			FlashIceBlockers();
+		return false;
+	}
+
+	/// <summary>The buried hammer under a tap, or null (see SelectableCoinAt).</summary>
+	private Hammer SelectableHammerAt(Vector2 world)
+	{
+		if (_hammer == null || !IsInstanceValid(_hammer) || _hammer.Collected)
+			return null!;
+		// A covered hammer can't be collected — the tap starts sweeping
+		// there instead. Coverage is judged against the hammer's visible
+		// face (OcclusionRadius), not its tap area.
+		if (!_hammer.ContainsPoint(world)
+			|| DebrisOverlaps(_hammer.Position, _hammer.OcclusionRadius))
+			return null!;
+		return _hammer;
+	}
 
 	/// <summary>The nearest uncovered gust coin under a tap, or null.</summary>
 	private GustCoin SelectableCoinAt(Vector2 world)
@@ -1337,6 +2090,40 @@ public partial class Main : Node2D
 	}
 
 	/// <summary>
+	/// A collected hammer flies its clockwise spiral up to the top-middle
+	/// power-up slot and floats there for the rest of the round; the
+	/// ice-crack gate arms the moment it parks.
+	/// </summary>
+	private void CollectHammer(Hammer hammer)
+	{
+		Vector2 screenPos = GetCanvasTransform() * hammer.Position;
+		hammer.FloatStarted += OnHammerFloatStarted;
+		hammer.Reparent(_hud);
+		hammer.Position = screenPos;
+		hammer.Collect(new Vector2(_viewSize.X / 2f, HammerFloatHeight));
+	}
+
+	private void OnHammerFloatStarted()
+	{
+		_hammerArmed = true;
+	}
+
+	/// <summary>
+	/// The blizzard rescue key: one mallet per winter storm round, buried
+	/// in the litter like the coins. Without it the ice can't be cracked
+	/// — the rescue is a two-step dig: find the tool, then free the bug.
+	/// </summary>
+	private void SpawnHammer(Rect2 floor)
+	{
+		var hammer = new Hammer { Name = "Hammer" };
+		hammer.Setup(_rng.RandfRange(78f, 90f), _rng);
+		// CoinSpot keeps the mallet spread out from the bug and coins.
+		hammer.Position = CoinSpot(floor);
+		AddChild(hammer);
+		_hammer = hammer;
+	}
+
+	/// <summary>
 	/// A coin reached the gust button: bank the power, persist it, and make
 	/// the counter burst as it ticks up.
 	/// </summary>
@@ -1353,10 +2140,21 @@ public partial class Main : Node2D
 	private void BuildTree()
 	{
 		_ground = new Node2D { Name = "Ground" };
-		var groundSprite = new Sprite2D { Texture = GD.Load<Texture2D>("res://assets/textures/ground.svg") };
+		_summerGround = GD.Load<Texture2D>(GroundPath);
+		_winterGround = GD.Load<Texture2D>(GroundWinterPath);
+		var groundSprite = new Sprite2D { Texture = _summerGround };
 		groundSprite.Name = "Sprite";
 		_ground.AddChild(groundSprite);
 		AddChild(_ground);
+
+		// The summer tornado: a world-space prop above the litter (ZIndex
+		// 4), shown only while a tornado crosses.
+		_tornado = new Tornado { Name = "Tornado" };
+		AddChild(_tornado);
+		_waterStream = new WaterStream { Name = "WaterStream" };
+		AddChild(_waterStream);
+		_ice = new IceBlock { Name = "IceBlock" };
+		AddChild(_ice);
 
 		_bug = new Bug { Name = "Bug" };
 		// The bug node is reused across levels, so connect the celebration
@@ -1376,13 +2174,17 @@ public partial class Main : Node2D
 
 		// Explicit canvas-layer ladder (Godot draws same-layer CanvasLayers
 		// in non-deterministic order, so each owns a distinct index):
-		// world 0 → storm 1 → menu 2 → hud 3 → warn 4 → prismatic 5 →
-		// bug book 90. The storm veil and rain sit above the floor but
-		// below every UI.
+		// world 0 → season grade 1 → storm 2 → menu 3 → hud 4 → warn 5 →
+		// prismatic 6 → season banner 7 → bug book 90. The seasonal grade
+		// sits directly above the floor; the storm veil and rain ride
+		// above it, and every UI above that.
+		_seasonGrade = new SeasonGrade { Name = "SeasonGrade" };
+		AddChild(_seasonGrade);
+
 		_storm = new StormOverlay { Name = "Storm" };
 		AddChild(_storm);
 
-		// The "Storm Round" warning sign lives above the HUD (layer 4) so
+		// The "Storm Round" warning sign lives above the HUD (layer 5) so
 		// its sparks never dim under the storm veil nor sit under UI.
 		_warn = new StormWarn { Name = "StormWarn" };
 		AddChild(_warn);
@@ -1401,8 +2203,15 @@ public partial class Main : Node2D
 			Shader = GD.Load<Shader>("res://assets/shaders/prismatic_celebration.gdshader"),
 		};
 
+		// The season banner rides one rung above the prismatic sign: the
+		// season note opens a round, the find banners close one — they
+		// never share the screen in practice, and if they ever do the
+		// season note yields the top.
+		_seasonBanner = new SeasonBanner { Name = "SeasonBanner" };
+		AddChild(_seasonBanner);
+
 		_hud = new Hud { Name = "Hud" };
-		_hud.Layer = 3;
+		_hud.Layer = 4;
 		_hud.NextPressed += OnNextPressed;
 		_hud.MenuPressed += OnMenuPressed;
 		_hud.WindPressed += OnWindPressed;
@@ -1417,7 +2226,7 @@ public partial class Main : Node2D
 		AddChild(_book);
 
 		_menu = new MainMenu { Name = "Menu" };
-		_menu.Layer = 2;
+		_menu.Layer = 3;
 		_menu.PlayPressed += OnPlayPressed;
 		_menu.NewGamePressed += OnNewGamePressed;
 		AddChild(_menu);
@@ -1488,6 +2297,19 @@ public partial class Main : Node2D
 		foreach (var c in _coins)
 			if (IsInstanceValid(c) && !c.Collected)
 				c.Position *= floorRatio;
+		// A floating hammer parks at a screen-relative slot, so it rides
+		// the new size; one mid-flight jumps straight to the new slot
+		// (its tween path was computed against the old screen); a buried
+		// one scales with the floor like the bug.
+		if (_hammer != null && IsInstanceValid(_hammer))
+		{
+			if (_hammer.Floating)
+				_hammer.SnapFloat(new Vector2(_viewSize.X / 2f, HammerFloatHeight));
+			else if (_hammer.Collected)
+				_hammer.SkipToFloat(new Vector2(_viewSize.X / 2f, HammerFloatHeight));
+			else
+				_hammer.Position *= floorRatio;
+		}
 	}
 
 	private void ClearLevel()
@@ -1501,6 +2323,10 @@ public partial class Main : Node2D
 			if (IsInstanceValid(c))
 				c.QueueFree();
 		_coins.Clear();
+		if (_hammer != null && IsInstanceValid(_hammer))
+			_hammer.QueueFree();
+		_hammer = null;
+		_hammerArmed = false;
 		_bug.Visible = false;
 		_clearedSpots.Clear();
 		CancelStormDrift();
@@ -1520,6 +2346,7 @@ public partial class Main : Node2D
 	private void StartLevel(int level)
 	{
 		ClearLevel();
+		CancelShuffle();
 		FitGround();
 		// A celebrating litter sheds its gold/white mix over the opening —
 		// the storm label's dissolve pacing.
@@ -1539,11 +2366,18 @@ public partial class Main : Node2D
 		// and the gust coins take their new random spots underneath it
 		// (OnSettleFinished). Touches stay locked until the floor is set.
 		_activeLevel = level;
+		// Year-loop bonus: the sweep clears more debris from level 400 on.
+		_sweeper.SetSweepPower(RoundConfig.SweepPowerForLevel(level));
 		_isStormRound = _forceStorm
 			|| OS.GetEnvironment("LEAF_STORM") == "1"
 			|| RoundConfig.IsStormLevel(level);
+		// Winter storm rounds are blizzards: the overlay runs its snow
+		// mode and every storm drop is a snow pile. Mechanics key off the
+		// true level season (LEAF_SEASON restyles, never re-mechanics).
+		_blizzardRound = _isStormRound
+			&& RoundConfig.SeasonForLevel(level) == RoundConfig.Season.Winter;
 		if (_isStormRound)
-			_storm.FadeIn();
+			_storm.FadeIn(snow: _blizzardRound);
 		else
 			_storm.FadeOut();
 		SpawnDebris(level, floor);
@@ -1554,7 +2388,16 @@ public partial class Main : Node2D
 		_floodDone = false;
 		_awaitingSettle = true;
 
-		_hud.ShowLevel(level);
+		RoundConfig.Season season = ResolveSeason(level);
+		_hud.ShowLevel(level, season);
+		AnnounceSeason(level, season);
+		// Seasonal vibe: the grade and the litter mix follow the display
+		// season, and winter swaps the ground for its snow-covered twin —
+		// a tint can't fake snow.
+		_seasonGrade.ShowSeason(season);
+		_debrisSeason = season;
+		_ground.GetChild<Sprite2D>(0).Texture = season == RoundConfig.Season.Winter
+			? _winterGround : _summerGround;
 		_hud.ShowSweeps(0);
 		// INITIAL_GUSTS=<n> testing hook: top the persistent gust power up
 		// to <n> at every round start, so manual playtests can spend gusts
@@ -1625,11 +2468,21 @@ public partial class Main : Node2D
 			_rng.RandfRange(180f, floor.Size.X - 180f),
 			_rng.RandfRange(320f, floor.Size.Y - 200f));
 		_bug.Visible = true;
+		// Blizzard rescue: winter storm rounds freeze the bug in ice;
+		// every other round frees it.
+		if (_blizzardRound)
+			_ice.Place(_bug.Position);
+		else
+			_ice.Reset();
 
 		SpawnGustCoins(floor);
+		// The blizzard rescue key: one mallet buried with the rest.
+		if (_blizzardRound)
+			SpawnHammer(floor);
 
 		_stats.Start(_activeLevel);
 		_rustleCountdown = NextRustleDelay();
+		_seasonEventCountdown = RoundConfig.TornadoInterval; // summer cadence; fall reads StreamInterval when its turn comes
 
 		// INSTANT_WIN=1 testing hook: win the moment the floor is dressed,
 		// so the whole win flow (wind, warn sign, win card, next round)
@@ -1701,18 +2554,25 @@ public partial class Main : Node2D
 		return paths.ToArray();
 	}
 
+	// Winter ground: snow-covered forest floor swapped in for winter
+	// levels — a tint can't fake snow (generated by tools/gen_art.mjs).
+	private const string GroundPath = "res://assets/textures/ground.svg";
+	private const string GroundWinterPath = "res://assets/textures/ground_winter.svg";
+	// Blizzard storm drops: fresh snow piles the round's winds pile on.
+	private const string SnowPilePath = "res://assets/textures/snow_pile.svg";
+
 	/// <summary>Builds one debris piece of a random palette kind at <paramref name="pos"/>.</summary>
 	private Debris CreateDebris(Vector2 pos)
 	{
 		int total = 0;
 		foreach (var entry in DebrisPalette)
-			total += entry.Freq;
+			total += EffectiveFrequency(entry);
 
 		int roll = _rng.RandiRange(1, total);
 		(string path, DebrisWeight weight, _) = DebrisPalette[0];
 		foreach (var entry in DebrisPalette)
 		{
-			roll -= entry.Freq;
+			roll -= EffectiveFrequency(entry);
 			if (roll <= 0)
 			{
 				(path, weight, _) = entry;
@@ -1727,6 +2587,26 @@ public partial class Main : Node2D
 			weight,
 			_rng);
 		return debris;
+	}
+
+	// The litter matches the trees: each season re-weights the shared
+	// palette — summer leans green, fall goes red/gold, winter mixes snow
+	// flecks in and thins the leaves (vibe only; weights never change what
+	// a piece weighs or how it sweeps). Spring keeps the base mix.
+	private int EffectiveFrequency((string Path, DebrisWeight Weight, int Freq) entry)
+	{
+		float f = entry.Freq;
+		return (int)MathF.Round(_debrisSeason switch
+		{
+			RoundConfig.Season.Summer => entry.Path.Contains("leaf_green") ? f * 2.4f
+				: entry.Path.Contains("moss") ? f * 1.5f : f,
+			RoundConfig.Season.Fall => entry.Path.Contains("leaf_red")
+				|| entry.Path.Contains("leaf_yellow") ? f * 2f
+				: entry.Path.Contains("petal") ? f * 0.5f : f,
+			RoundConfig.Season.Winter => entry.Path.Contains("petal_white") ? f * 2.5f
+				: entry.Path.Contains("leaf") ? f * 0.7f : f,
+			_ => f,
+		});
 	}
 
 	private void ScatterDebris(Rect2 floor, int count, bool dropIn)
@@ -1853,6 +2733,7 @@ public partial class Main : Node2D
 		// by a clockwise wind and keeps circling while the card is up, and
 		// the storm eases off with the weather that made the round hard.
 		CancelStormDrift();
+		CancelShuffle();
 		StartEndRoundWind();
 		_storm.FadeOut();
 		// The round BEFORE a storm round: while the wind carries the
@@ -2076,10 +2957,60 @@ public partial class Main : Node2D
 		{
 			ClearLevel();
 			_storm.FadeOut();
+			_seasonGrade.HideGrade();
 			_warn.HideWarning();
 			_prismaticSign.HideSign();
+			_seasonBanner.HideBanner();
+			CancelShuffle();
+			// Full vibe reset: a blizzard round quit mid-dig must not
+			// strand its ice chunk, snow ground or winter litter mix on
+			// the menu.
+			_ice.Reset();
+			_ground.GetChild<Sprite2D>(0).Texture = _summerGround;
+			_debrisSeason = RoundConfig.Season.Spring;
+			_blizzardRound = false;
 			_menu.Refresh(_save);
 			SpawnMenuDebris();
+		}
+	}
+
+	/// <summary>
+	/// The season shown for this level's HUD tag and intro banner.
+	/// LEAF_SEASON=spring|summer|fall|winter forces the display/vibe season
+	/// for testing — level-derived mechanics always key off the true level
+	/// season (INITIAL_LEVEL=&lt;n&gt; forces the whole level instead).
+	/// </summary>
+	private RoundConfig.Season ResolveSeason(int level)
+	{
+		switch (OS.GetEnvironment("LEAF_SEASON").ToLowerInvariant())
+		{
+			case "spring": return RoundConfig.Season.Spring;
+			case "summer": return RoundConfig.Season.Summer;
+			case "fall": return RoundConfig.Season.Fall;
+			case "winter": return RoundConfig.Season.Winter;
+			default: return RoundConfig.SeasonForLevel(level);
+		}
+	}
+
+	/// <summary>
+	/// Season announcements: the year-loop bonus card when a new year
+	/// begins, otherwise the season's intro note the first time that season
+	/// shows in the session. A loop restart shows the bonus card INSTEAD of
+	/// the plain season intro — the restart must read as a reward.
+	/// </summary>
+	private void AnnounceSeason(int level, RoundConfig.Season season)
+	{
+		int loop = RoundConfig.LoopIndex(level);
+		if (loop > 0 && loop > _announcedLoop)
+		{
+			_announcedLoop = loop;
+			_announcedSeason = season;
+			_seasonBanner.ShowLoopBonus(loop);
+		}
+		else if (_announcedSeason != season)
+		{
+			_announcedSeason = season;
+			_seasonBanner.ShowSeason(season);
 		}
 	}
 
@@ -2104,6 +3035,11 @@ public partial class Main : Node2D
 	private void OnNewGamePressed()
 	{
 		_save.Reset();
+		// A fresh run re-earns its announcements: without this reset the
+		// year-loop bonus card could never fire a second time in one
+		// session (loop > _announcedLoop would stay false).
+		_announcedSeason = null;
+		_announcedLoop = -1;
 		StartLevel(1);
 	}
 

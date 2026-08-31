@@ -8,8 +8,9 @@ namespace LeafSweeper;
 /// crawling through the lettering, bright specular bands sweeping through
 /// it like light over foil, star glints, a soft pastel aura. Fades in with
 /// the win card, holds over the next round's opening, then fades out. Own
-/// canvas layer above the storm warn — explicit ladder: world 0 → storm 1 →
-/// menu 2 → hud 3 → warn 4 → prismatic 5 → bug book 90. Solo finds perch
+/// canvas layer above the storm warn — explicit ladder: world 0 → season grade 1 →
+/// storm 2 → menu 3 → hud 4 → warn 5 → prismatic 6 → season banner 7 →
+/// bug book 90. Solo finds perch
 /// high above the win card; when the storm sign shares the end-round the
 /// banner yields and slots in just below the storm cloud.
 /// </summary>
@@ -69,7 +70,7 @@ public partial class PrismaticSign : CanvasLayer
 
     public PrismaticSign()
     {
-        Layer = 5;
+        Layer = 6;
         Visible = false;
     }
 
