@@ -166,6 +166,9 @@ Start each dev task here; the *why* behind every step lives in
 
   10) **REVIEW: Subagent review** — Launch a high-reasoning review agent for independent inspection.
      - TODO id: `agents-10-review-subagent`
+     - Docs-only slices (no code or runtime change) skip this gate on the
+       human's standing instruction — mark the review todo done as waived
+       instead of launching a reviewer.
      - The reviewer must NEVER attempt to execute the Godot engine (no
        `godot`/`godot-mono` runs — no import, boot, or autoplay). Runtime and
        build validation is already done by the validating session; trust it.

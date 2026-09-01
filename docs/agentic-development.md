@@ -293,7 +293,9 @@ in-progress edits. Validate and commit in the worktree, push the branch,
 and open a GitHub PR — `main` advances only through PRs, never through a
 local `git merge`. Once the PR is merged, clean up without being asked:
 `git worktree remove` the slice directory and `git branch -d` the merged
-branch. Merged branches are never left behind.
+branch. Merged branches are never left behind. Run the removal from the
+main checkout and make it the very last filesystem action of a session —
+see *Slice lessons (seasonal difficulty)* for why.
 
 An agent session whose working directory *is* the main checkout must treat
 that as a trap, not an invitation: the folder-backed session makes the
@@ -379,6 +381,54 @@ fast, so doc alignment is part of the slice, not a cleanup phase.
   SDK/template installation is done from the editor by the human, but the
   APK export itself runs headlessly with the command in the README — the
   42 MB signed demo APK builds in a few minutes once gradle is warm.
+
+## Slice lessons (seasonal difficulty)
+
+Patterns captured from the seasonal-difficulty slice (PR #41), on top of
+the ones already recorded above:
+
+- **Every autoplay wait must be frame-bounded.** Cap each `LEAF_AUTOPLAY`
+  wait loop's iterations — `for (int i = 0; i < 600 && !_hammerArmed;
+  i++) await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame)` —
+  because an unbounded `while` turns any regression into a silent hang of
+  the headless run instead of a failed assertion. Related trap: only the
+  reload probe line prints the *cumulative* `ok` flag, so a `False`
+  cumulative beside all-`True` printed lines means an unprinted condition
+  inside the big combined probe failed — audit the probe's condition
+  list, don't re-run and hope.
+- **Menu teardown resets every round-scoped state, including vibe.**
+  `SetState(GameState.Menu)` must undo everything a round can change —
+  gameplay nodes *and* vibe state (season grade, ground sprite swap,
+  debris mix season, blizzard flag, ice block). Any new round-scoped
+  field must be reset in both `StartLevel` and the menu branch of
+  `SetState`, or quitting mid-round strands the round's visuals into the
+  menu.
+- **"Once per session" state still needs a New Game reset.** Announcement
+  state that must survive round restarts (`_announcedSeason`,
+  `_announcedLoop`) also has to be cleared in the New Game handler — a
+  fresh run must re-earn the year-loop bonus card, not inherit it from
+  the abandoned run.
+- **Kill screen-space tweens on viewport resize.** Screen-space tweens
+  precompute their path points, so resizing mid-flight lands the object
+  on a stale anchor. On resize, kill the tween and jump the object
+  straight to its new slot (see `Hammer.SkipToFloat`, called from the
+  resize handler).
+- **Autoplay probes need flake windows.** An assertion comparing counts
+  captured before an async window must accept state joining the pool
+  mid-window — storm-cluster drops landing during a tornado telegraph
+  widened the accepted delta by one cluster max. And every random target
+  near its origin needs the `ShuffleMinMove` resample guard: a
+  "relocated" piece landing within a leaf's width of its start both looks
+  like a glitch and flakes the moved-everything assertions.
+- **Never remove the worktree your own shell is sitting in.** Worktree
+  cleanup runs from the main checkout and is the very last filesystem
+  action of a session — removing the session's own cwd makes every
+  subsequent shell spawn fail with `ENOENT` and bricks the session.
+- **Rebase-conflict triage when a doc was since rewritten.** When a
+  conflict involves a doc that got rewritten upstream mid-flight (the
+  README became a player-facing advert), prefer the incoming rewrite
+  wholesale and re-add only the new feature's bullet in the rewrite's
+  style, rather than merging line-by-line against the dead version.
 
 ## Quick reference
 
